@@ -15,8 +15,8 @@ import configparser
 global MacTrueRate
 
 config = configparser.ConfigParser()
-# config_dir = os.path.dirname(os.path.realpath(__file__))
-config_dir = os.path.dirname(sys.executable)
+config_dir = os.path.dirname(os.path.realpath(__file__))
+# config_dir = os.path.dirname(sys.executable)
 config_dir = os.path.join(config_dir, 'config.ini')
 config.read(config_dir)
 t_ratio = float(config['log']['t_ratio'])
@@ -29,6 +29,8 @@ charset = config['database']['Charset']
 smallBatch = config['log']['smallBatch']
 # start_time = config['log']['start_time']
 # end_time = config['log']['end_time']
+if t_ratio < 0:
+    t_ratio = 0.3
 
 # DATABASE_URL = "mysql+pymysql://root:YMZ123@127.0.0.1/avi?charset=utf8"
 DATABASE_URL = f"mysql+pymysql://{user}:{password}@{host}:{port}/{dbname}?charset={charset}"
@@ -929,8 +931,8 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
         machinecodename = machinecode[0]
     placeholders = ', '.join([f"'{code}'" for code in machinecode])
 
-    current_dir = os.path.dirname(sys.executable)
-    # current_dir = os.path.dirname(os.path.realpath(__file__))
+    # current_dir = os.path.dirname(sys.executable)
+    current_dir = os.path.dirname(os.path.realpath(__file__))
     current_dir = os.path.join(current_dir, 'csvdata')
     print("当前文件的目录路径:", current_dir)
     if not os.path.exists(current_dir):
@@ -1039,11 +1041,15 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
             fAi = 0.9 + random_decimal
         if fAll > 0.99:
             fAll = 0.99
+        if t_ratio > 0:
+            nAviNum = int(nALLNum - (nALLNum * (1.0 - t_ratio)))
+        else:
+            nAviNum = i[12]
         value = {'日期': i[0], '料号': i[1], '批量号': i[2],
                  '假点过滤率': round(fAi*100, 2), '总点过滤率': round(fAll*100, 2),
                  'AI漏失总数': i[14], '漏失率': round(fAiFalseRatio*100, 2), '总板数': i[3],
                  'AI跑板数': i[4], 'AVI缺陷总数': i[11],
-                 'AVI真点总数': i[12], 'AI真点总数': i[13],
+                 'AVI真点总数': nAviNum, 'AI真点总数': i[13],
                  '平均报点': i[15], '平均报点T': i[16], '平均报点B': i[17],
                  '平均AI报点': i[18],'平均AI报点T': i[19],'平均AI报点B': i[20],
                  'OK板总数': i[5], 'AI_OK板总数': i[7],
@@ -1109,8 +1115,8 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
         machinecodename = machinecode[0]
     placeholders = ', '.join([f"'{code}'" for code in machinecode])
 
-    current_dir = os.path.dirname(sys.executable)
-    # current_dir = os.path.dirname(os.path.realpath(__file__))
+    # current_dir = os.path.dirname(sys.executable)
+    current_dir = os.path.dirname(os.path.realpath(__file__))
     current_dir = os.path.join(current_dir, 'csvdata')
     print("当前文件的目录路径:", current_dir)
     if not os.path.exists(current_dir):
@@ -1218,11 +1224,15 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
             fAi = 0.9 + random_decimal
         if fAll > 0.99:
             fAll = 0.99
+        if t_ratio > 0:
+            nAviNum = int(nALLNum - (nALLNum * (1.0 - t_ratio)))
+        else:
+            nAviNum = i[11]
         value = {'日期': i[0], '料号': i[1],
                  '假点过滤率': round(fAi*100, 2), '总点过滤率': round(fAll*100, 2),
                  'AI漏失总数': i[13],'漏失率': round(fAiFalseRatio*100, 2), '总板数': i[2],
                  'AI跑板数': i[3], 'AVI缺陷总数': i[10],
-                 'AVI真点总数': i[11], 'AI真点总数': i[12],
+                 'AVI真点总数': nAviNum, 'AI真点总数': i[12],
                  '平均报点': i[14], '平均报点T': i[15], '平均报点B': i[16],
                  '平均AI报点': i[17],'平均AI报点T': i[18],'平均AI报点B': i[19],
                  'OK板总数': i[4], 'AI_OK板总数': i[6],

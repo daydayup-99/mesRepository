@@ -15,8 +15,8 @@ app = Flask(__name__)
 @app.route('/static')
 def statics():
     config = configparser.ConfigParser()
-    # config_dir = os.path.dirname(os.path.realpath(__file__))
-    config_dir = os.path.dirname(sys.executable)
+    config_dir = os.path.dirname(os.path.realpath(__file__))
+    # config_dir = os.path.dirname(sys.executable)
     config_dir = os.path.join(config_dir, 'config.ini')
     config.read(config_dir)
     export_time = config['log']['autoTime']
