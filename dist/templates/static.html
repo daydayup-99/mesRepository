@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>统计分析</title>
+    <link rel="stylesheet" href="../static/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../static/css/base.css">
+    <link rel="stylesheet" href="../static/css/static.css">
+    <link rel="stylesheet" href="../static/css/layui.css">
+    <link rel="stylesheet" href="../static/css/jquery-ui.css">
+    <link rel="stylesheet" href="../static/css/select2.min.css">
+<!--    <link rel="stylesheet" href="../static/css/exportcsv.css">-->
+    <script src="../static/js/jquery.js"></script>
+    <script src="../static/js/jquery-ui.min.js"></script>
+    <script src="../static/js/echarts-all.js"></script>
+    <script src="../static/js/car_analysis.js"></script>
+    <script src="../static/js/layui.js"></script>
+    <script src="../static/js/echarts.js"></script>
+    <script src="../static/js/select2.min.js"></script>
+
+    <script>
+        function sendRequest() {
+            var start_time = $('#start_time').val().split('T')[0];
+            var start_time_hour = $('#start_time').val().split('T')[1];
+            var end_time = $('#end_time').val().split('T')[0];
+            var end_time_hour = $('#end_time').val().split('T')[1];
+            var MacNum = $('#MacNum').val();
+            console.log("Selected MacNum:", MacNum);
+            $.ajax({
+                url: '/getTrueRate',
+                type: 'POST',
+                data: {
+                    start_time: start_time,
+                    end_time: end_time,
+                    start_time_hour: start_time_hour,
+                    end_time_hour: end_time_hour,
+                    MacNum: MacNum,
+<!--                    MaxNum: maxnum,-->
+                },
+                async: false,
+                success: function (response) {
+                },
+                error: function (xhr, status, error) {
+                    console.error(error);
+                }
+            });
+
+            $.ajax({
+                url: '/AllErrRate',
+                type: 'POST',
+                data: {
+                    start_time: start_time,
+                    end_time: end_time,
+                    start_time_hour: start_time_hour,
+                    end_time_hour: end_time_hour,
+                    MacNum: MacNum,
+                },
+                success: function (response) {
+                        var Data = JSON.parse(response);
+                        var errJobtypedata = [];
+                        var errJobNumData = [];
+                        var errJobRateData = [];
+                        var errAllNumData = [];
+                        var errPlnoNameData = [];
+                        for (var i = 0; i < Data.length; i++) {
+                            errJobtypedata.push(Data[i].errtype);
+                            errJobNumData.push(Data[i].JobTypeNum);
+                            errJobRateData.push(Data[i].JobTypeRate);
+                            errAllNumData.push(Data[i].errAllNum);
+                            errPlnoNameData.push((Data[i].jobname));
+                        }
+                        generateJobErr(errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0])
+                        $('#jobname').html('料号缺陷占比数量: ' + errPlnoNameData[0]);
+                },
+                error: function (xhr, status, error) {
+                    console.error(error);
+                }
+            });
+
+            $.ajax({
+                url: '/staticSubmit',
+                type: 'POST',
+                data: {
+                    start_time: start_time,
+                    end_time: end_time,
+                    start_time_hour: start_time_hour,
+                    end_time_hour: end_time_hour,
+                    MacNum: MacNum,
+                },
+                success: function (response) {
+                    var Data = JSON.parse(response);
+                    var dates = [];
+                    var fAllAiData = [];
+                    var fPassData = [];
+                    var fAiData = [];
+                    var fMeaAllData = [];
+                    var fMeaAiData = [];
+                    var nAllBoardData = []
+                    for (var i = 0; i < Data.length; i++) {
+                        dates.push(Data[i].date);
+                        fAllAiData.push(Data[i].fAllAi);
+                        fPassData.push(Data[i].fPass);
+                        fAiData.push(Data[i].fAi);
+                        fMeaAllData.push(Data[i].fMeaAll)
+                        fMeaAiData.push(Data[i].fMeaAi)
+                        nAllBoardData.push(Data[i].nAllBoard)
+                    }
+                    generateAi(dates, fAiData)
+                    generateAllAi(dates, fAllAiData,fAiData)
+                    generateOKPass(dates, fPassData)
+                    generateMean(dates, fMeaAllData, fMeaAiData)
+                },
+                error: function (xhr, status, error) {
+                    console.error(error);
+                }
+            });
+
+            $.ajax({
+                url: '/LiaohualvSubmit',
+                type: 'POST',
+                data: {
+                    start_time: start_time,
+                    end_time: end_time,
+                    start_time_hour: start_time_hour,
+                    end_time_hour: end_time_hour,
+                    MacNum: MacNum,
+                },
+                async: false,
+                success: function (response) {
+                    var Data = JSON.parse(response);
+                    var jobnamedata = [];
+                    var fJobMeaAllData = [];
+                    var fJobMeaAliData = [];
+                    var fJobAiPassData = [];
+                    for (var i = 0; i < Data.length; i++) {
+                        jobnamedata.push(Data[i].jobname);
+                        fJobMeaAllData.push(Data[i].fJobMeanAll);
+                        fJobMeaAliData.push(Data[i].fJobMeanAi);
+                        fJobAiPassData.push(Data[i].fJobAiPass);
+                    }
+                    generateJobMean(jobnamedata, fJobMeaAllData, fJobMeaAliData)
+                    generateJobAi(jobnamedata, fJobAiPassData)
+                },
+                error: function (xhr, status, error) {
+                    console.error(error);
+                }
+            });
+            $.ajax({
+                url: '/selectJob',  // 此处为获取数据的路由
+                type: 'POST',
+                data: {
+                    start_time: start_time,
+                    end_time: end_time,
+                    start_time_hour: start_time_hour,
+                    end_time_hour: end_time_hour,
+                    MacNum: MacNum,
+                },
+                async: false,
+                success: function (response) {
+                    // 清空原有的下拉框数据
+                    $('#PLNum').empty();
+                    $('#JobNum').empty();
+                    // 遍历获取的数据并添加到下拉框下方
+
+                    $('#JobNum').append('<option >' + "" + '</option>')
+                    $.each(response.data, function (index, item) {
+                        $('#JobNum').append('<option >' + item + '</option>');
+                    });
+                },
+                error: function (xhr, status, error) {
+                    console.error(error);
+                }
+            });
+        }
+
+        function initdate() {
+            $.ajax({
+                url: '/getdate',  // 此处为获取数据的路由
+                type: 'GET',
+                async: false,
+                success: function (response) {
+                    $('#start_time').val(response.data[0]);
+                    $('#end_time').val(response.data[1]);
+                },
+                error: function (xhr, status, error) {
+                    console.error(error);
+                }
+            });
+
+            $.ajax({
+                url: '/getMacineData',  // 此处为获取数据的路由
+                type: 'GET',
+                dataType: 'json',
+                async: false,
+                success: function (response) {
+                    // 清空原有的下拉框数据
+                    $('#MacNum').empty();
+                    // 遍历获取的数据并添加到下拉框下方
+                    $.each(response.data, function (index, item) {
+                        $('#MacNum').append('<option>' + item + '</option>');
+                    });
+                },
+                error: function (xhr, status, error) {
+                    console.error(error);
+                }
+            });
+        }
+
+        $(document).ready(function () {
+            initdate();
+            sendRequest();
+            $('#process').click(function () {
+                var process = $('#process').val();
+                $.ajax({
+                    url: '/UpdateDatabase',
+                    type: 'POST',
+                    data: {
+                        process: process
+                    },
+                });
+            });
+
+            $('#JobNum').click(function () {
+                // 发送 AJAX 请求获取数据
+                var start_time = $('#start_time').val().split('T')[0];
+                var start_time_hour = $('#start_time').val().split('T')[1];
+                var end_time = $('#end_time').val().split('T')[0];
+                var end_time_hour = $('#end_time').val().split('T')[1];
+                var MacNum = $('#MacNum').val();
+                console.log("Selected MacNum:", MacNum);
+                var jobNum = $('#JobNum').val();
+                $.ajax({
+                    url: '/LiaohuaErrRate',
+                    type: 'POST',
+                    data: {
+                        start_time: start_time,
+                        end_time: end_time,
+                        start_time_hour: start_time_hour,
+                        end_time_hour: end_time_hour,
+                        MacNum: MacNum,
+                        jobNum: jobNum,
+                    },
+                    success: function (response) {
+                        var Data = JSON.parse(response);
+                        var errJobtypedata = [];
+                        var errJobNumData = [];
+                        var errJobRateData = [];
+                        var errAllNumData = [];
+                        var errPlnoNameData = [];
+                        for (var i = 0; i < Data.length; i++) {
+                            errJobtypedata.push(Data[i].errtype);
+                            errJobNumData.push(Data[i].JobTypeNum);
+                            errJobRateData.push(Data[i].JobTypeRate);
+                            errAllNumData.push(Data[i].errAllNum);
+                            errPlnoNameData.push((Data[i].jobname));
+                        }
+                        generateJobErr(errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0])
+                        $('#jobname').html('料号缺陷占比数量: ' + errPlnoNameData[0]);
+                    },
+                    error: function (xhr, status, error) {
+                        console.error(error);
+                    }
+                });
+                $.ajax({
+                    url: '/selectPlno',
+                    type: 'POST',
+                    data: {
+                        start_time: start_time,
+                        end_time: end_time,
+                        start_time_hour: start_time_hour,
+                        end_time_hour: end_time_hour,
+                        MacNum: MacNum,
+                        jobNum: jobNum,
+                    },
+                    success: function (response) {
+                        // 清空原有的下拉框数据
+                        $('#PLNum').empty();
+                        // 遍历获取的数据并添加到下拉框下方
+                        $('#PLNum').append('<option >' + "" + '</option>')
+                        $.each(response.data, function (index, item) {
+                            $('#PLNum').append('<option >' + item + '</option>');
+                        });
+                    },
+                    error: function (xhr, status, error) {
+                        console.error(error);
+                    }
+                });
+            });
+
+            $('#PLNum').click(function () {
+                // 发送 AJAX 请求获取数据
+                var start_time = $('#start_time').val().split('T')[0];
+                var start_time_hour = $('#start_time').val().split('T')[1];
+                var end_time = $('#end_time').val().split('T')[0];
+                var end_time_hour = $('#end_time').val().split('T')[1];
+                var MacNum = $('#MacNum').val();
+                console.log("Selected MacNum:", MacNum);
+                var jobNum = $('#JobNum').val();
+                var PLNum = $('#PLNum').val();
+                $.ajax({
+                    url: '/PlnoErrRate',
+                    type: 'POST',
+                    data: {
+                        start_time: start_time,
+                        end_time: end_time,
+                        start_time_hour: start_time_hour,
+                        end_time_hour: end_time_hour,
+                        MacNum: MacNum,
+                        jobNum: jobNum,
+                        PLNum: PLNum,
+                    },
+                    success: function (response) {
+                        var Data = JSON.parse(response);
+                        var errPlnotypedata = [];
+                        var errPlnoNumData = [];
+                        var errPlnoRateData = [];
+                        var errPlnoAllNumData = [];
+                        var errPlnoNameData = [];
+                        for (var i = 0; i < Data.length; i++) {
+                            errPlnotypedata.push(Data[i].plnoerrtype);
+                            errPlnoNumData.push(Data[i].plnoTypeNum);
+                            errPlnoRateData.push(Data[i].plnoTypeRate);
+                            errPlnoAllNumData.push(Data[i].plnoErrAllNum);
+                            errPlnoNameData.push(Data[i].plnoname);
+                        }
+                        generatePlnoErr(errPlnotypedata, errPlnoNumData, errPlnoRateData, errPlnoAllNumData[0], errPlnoNameData[0])
+                        $('#plnoname').html('批量号缺陷占比数量: ' + errPlnoNameData[0]);
+                    },
+                    error: function (xhr, status, error) {
+                        console.error(error);
+                    }
+                });
+            });
+
+            $('#queryButton').click(function () {
+                sendRequest();
+                var container = document.getElementById('container7');
+                var myChart = echarts.init(container);
+                myChart.clear();
+                var container = document.getElementById('container8');
+                var myChart = echarts.init(container);
+                myChart.clear();
+            });
+
+            $("#exportExcel").click(function(){
+                var start_time = $('#start_time').val().split('T')[0];
+                var start_time_hour = $('#start_time').val().split('T')[1];
+                var end_time = $('#end_time').val().split('T')[0];
+                var end_time_hour = $('#end_time').val().split('T')[1];
+                var MacNum = $('#MacNum').val();
+                console.log("Selected MacNum:", MacNum);
+                $.ajax({
+                    url: '/ExportSql',
+                    type: 'POST',
+                    data: {
+                        start_time: start_time,
+                        end_time: end_time,
+                        start_time_hour: start_time_hour,
+                        end_time_hour: end_time_hour,
+                        MacNum: MacNum,
+                    },
+                    success: function (response) {
+                        // 显示成功对话框
+                        $("<div>导出成功！</div>").dialog({
+                            title: "提示",
+                            buttons: {
+                                "确定": function() {
+                                    $(this).dialog("close");
+                                }
+                            }
+                        });
+                    },
+                    error:function(){
+                        // 显示错误对话框
+                        $("<div>导出失败，请重试。</div>").dialog({
+                            title: "错误",
+                            buttons: {
+                                "确定": function() {
+                                    $(this).dialog("close");
+                                }
+                            }
+                        });
+                    }
+                })
+                });
+
+                $("#exportJobExcel").click(function(){
+                    var start_time = $('#start_time').val().split('T')[0];
+                    var start_time_hour = $('#start_time').val().split('T')[1];
+                    var end_time = $('#end_time').val().split('T')[0];
+                    var end_time_hour = $('#end_time').val().split('T')[1];
+                    var MacNum = $('#MacNum').val();
+                    console.log("Selected MacNum:", MacNum);
+                    $.ajax({
+                        url: '/ExportLiaoSql',
+                        type: 'POST',
+                        data: {
+                            start_time: start_time,
+                            end_time: end_time,
+                            start_time_hour: start_time_hour,
+                            end_time_hour: end_time_hour,
+                            MacNum: MacNum,
+                        },
+                        success: function (response) {
+                            $("<div>导出成功！</div>").dialog({
+                                title: "提示",
+                                buttons: {
+                                    "确定": function() {
+                                        $(this).dialog("close");
+                                    }
+                                }
+                            });
+                        },
+                        error:function(){}
+                    })
+                    });
+
+        });
+
+    </script>
+</head>
+
+<!--<body>-->
+<!--<div id="dialog" title="数据导出 ">-->
+<!--    &lt;!&ndash; 在这里添加对话框的内容 &ndash;&gt;-->
+<!--    <button id="liaoex">按料号导出</button>-->
+<!--    <br>-->
+
+<!--    <button id="layerex">按层名导出</button>-->
+<!--    <br>-->
+
+<!--    <button id="plnoex">按批量号导出</button>-->
+<!--    <br>-->
+<!--</div>-->
+
+<main class="main">
+    <!--头部-->
+    <header class="heared " style="width: 100%">
+        <span class="head-logo" style="width: 100%">
+            <ul class="layui-nav" lay-filter="" style="width: 100%;">
+                    <li class="layui-nav-item"><a href="index">首页</a></li>
+                    <li class="layui-nav-item"><a href="mes">生产统计信息</a></li>
+                    <li class="layui-nav-item"><a href="static">AI统计信息</a></li>
+                </ul></span>
+        <div class="head-right"><span id="time"></span></div>
+    </header>
+    <!--身体-->
+    <section class="section">
+        <div class="news_check">
+            <div class="check_left l_left">
+                <label>工序：</label>
+                <select class="find_input" type="date" id="process">
+                    <option>AI-AOI</option>
+                    <option>AI-AVI</option>
+                </select>
+                <label>时间段：</label>
+                <input class="d-val" type="datetime-local" id="start_time">
+                <input class="d-val" type="datetime-local" id="end_time">
+                <label>机台号：</label>
+                <select id="MacNum" name="MacNum" class="find_input" style="margin-right: 10px; overflow-y: auto;width: 200px;" multiple="multiple">
+                </select>
+                <label>料号：</label>
+                <select class="find_input" id="JobNum" style="margin-right: 10px; overflow-y: auto;">
+                </select>
+                <label>批量号：</label>
+                <select class="find_input" id="PLNum" style="margin-right: 10px">
+                </select>
+                <label>膜面：</label>
+                <select class="find_input" id="Surface" style="margin-right: 10px">
+                </select>
+                <button type="button" class="layui-btn layui-bg-blue" id="queryButton">查询</button>
+            </div>
+            <div class="check_right r_right">
+                <a class="btn btn-default" id="exportExcel"></span>导出</a>
+                <a class="btn btn-default" id="exportJobExcel"></span>料号导出</a>
+            </div>
+            <div class="clear"></div>
+        </div>
+        <div style="padding: 0 10px 0 10px ;border: 1px #ccc solid;background-color: #fff;">
+
+            <div class="e_chart">
+                <div class="charts l_left">
+                    <p class="charts_p">假点过滤率</p>
+                    <div id="container1" style="height:300px;width: 100%"></div>
+                </div>
+                <div class="charts l_left last_charts">
+                    <p class="charts_p">总过滤率</p>
+                    <div id="container2" style="height:300px;width: 100%"></div>
+                </div>
+                <div class="clear"></div>
+            </div>
+
+            <div class="e_chart">
+                <div class="charts l_left">
+                    <p class="charts_p">一次pass率</p>
+                    <div id="container3" style="height:300px;width: 100%;"></div>
+                    <div style="width: 100%;margin-top: 0px">
+                    </div>
+                </div>
+                <div class="charts l_left last_charts">
+                    <p class="charts_p">AI前后缺陷平均点数对比</p>
+                    <div id="container4" style="height:300px;width: 100%;"></div>
+                </div>
+            </div>
+            <div class="clear"></div>
+        </div>
+
+        <div class="e_chart">
+            <div class="charts l_left">
+                <p class="charts_p">料号AI前后平均点数对比</p>
+                <div id="container5" style="height:500px;width: 100%;"></div>
+                <div style="width: 100%;margin-top: 0px">
+                </div>
+            </div>
+            <div class="charts l_left last_charts">
+                <p class="charts_p">料号过滤率</p>
+                <div id="container6" style="height:500px;width: 100%;"></div>
+                <div style="width: 100%;margin-top: 0px">
+
+                </div>
+            </div>
+            <div class="clear"></div>
+        </div>
+
+        <div class="e_chart">
+            <div class="charts l_left">
+                <p class="charts_p" id="jobname">料号缺陷占比数量</p>
+                <div id="container7" style="height:300px;width: 100%;"></div>
+                <button id="exportButton" style="margin-top: 10px;">导出</button>
+                <div style="width: 100%;margin-top: 0px">
+                    <table class="annyTable" border="1">
+                    </table>
+                </div>
+            </div>
+            <div class="charts l_left last_charts">
+                <p class="charts_p" id="plnoname">批量号缺陷占比数量</p>
+                <div id="container8" style="height:300px;"></div>
+                <div style="width: 100%;margin-top: 0px">
+                    <table class="annyTable" border="1">
+                    </table>
+                </div>
+            </div>
+            <div class="clear"></div>
+        </div>
+
+        </div>
+
+    </section>
+
+</main>
+    <script>
+        $(function () {
+            $(".head-ul li a").click(function () {
+                $(this).addClass("active-a").parents("li").siblings().find("a").removeClass("active-a");
+                $(this).parents('li').find("ul").show();
+                $(this).parents("li").sibling().find("ul").hide();
+
+            })
+            getTime();
+        })
+
+        //    格式化时间
+        function getTime() {
+            var day = new Date();
+            var year = day.getFullYear();
+            var moutth = day.getMonth() + 1;
+            var date = day.getDate();
+            var hour = day.getHours();
+            var min = day.getMinutes();
+            var sec = day.getSeconds();
+            var str = year + '-' + moutth + '-' + date + ' ' + hour + ":" + min + ':' + sec;
+            $("#time").text(str);
+        }
+    </script>
+    <script>
+        $(document).ready(function() {
+            $('#MacNum').select2({
+                placeholder: "请选择选项",  // 设置占位符
+                allowClear: false,         // 允许清除选项
+                width: 'resolve'          // 自动调整宽度以适应内容
+            });
+        });
+    </script>
+<!--ajax 查询请求-->
+</body>
+</html>

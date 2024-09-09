@@ -1,0 +1,30 @@
+ #dialog {
+            display: flex;
+
+        }
+
+button{
+    line-height:28px;
+    padding:3px 4px;
+    height: 28px;
+    border: none;
+    margin-left: 6px;
+    border-radius: 4px;
+    background-color: #1e9fff !important;
+    color:#fff;
+}
+  button, label {
+            margin-bottom: 10px; /* 控件之间的下边距 */
+        }
+
+.layui-icon-set-fill {
+    font-size: 24px; /* 设置图标的字体大小 */
+    transition: color 0.3s ease; /* 添加颜色过渡效果 */
+    cursor: pointer; /* 将鼠标样式设置为手型，表示可点击 */
+}
+
+.layui-icon-set-fill:hover {
+    color: #1E9FFF; /* 鼠标悬停时图标的颜色 */
+}
+
+.r_right{float: right}

@@ -1,0 +1,328 @@
+﻿<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>index</title>
+    <style>
+        .container {
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        .section {
+            flex: 1;
+            /* 让每个部分根据比例占据可用空间 */
+            border: none;
+            overflow-y: hidden;
+            overflow-x: hidden;
+            /* 用于边框显示，可以根据需要调整 */
+        }
+
+        .first {
+            flex: 0.1;
+            /* 上半部分占比30% */
+            width: 210vh;
+        }
+
+        .second {
+            flex: 0.3;
+            /* 上半部分占比30% */
+            width: 210vh;
+            left: 5vh;
+        }
+
+        .third {
+            flex: 0.3;
+            /* 中间占比50% */
+            width: 210vh;
+            left: 10px;
+        }
+
+        .fourth {
+            flex: 0.3;
+            /* 下半部分占比20% */
+            width: 210vh;
+            left: 10px;
+        }
+
+        #clock {
+            font-family: 'Share Tech Mono', monospace;
+            color: #ffffff;
+            text-align: center;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            color: #daf6ff;
+            text-shadow: 0 0 20px rgba(10, 175, 230, 1), 0 0 20px rgba(10, 175, 230, 0);
+        }
+
+        #date {
+            letter-spacing: 0.1em;
+            font-size: 24px;
+        }
+
+        #time {
+            letter-spacing: 0.05em;
+            font-size: 80px;
+            padding: 5px 0;
+        }
+
+        .text {
+            letter-spacing: 0.1em;
+            font-size: 12px;
+            padding: 20px 0 0;
+        }
+    </style>
+    <script type="text/javascript" src="../static/js/jquery.js"></script>
+    <script type="text/javascript" src="../static/js/echarts.js"></script>
+    <script type="text/javascript" src="../static/js/js.js"></script>
+    <link rel="stylesheet" href="../static/css/style.css">
+    <link rel="stylesheet" href="../static/css/layui.css">
+    <script>
+        function sendRequest() {
+            $.ajax({
+                url: '/MacAi', // 替换为实际的服务器端点
+                type: 'GET', // 可能需要根据你的需求更改请求类型
+                async: false,
+                success: function (response) {
+                    // 在成功回调函数中处理返回的数据
+                    var Data = JSON.parse(response);
+                    var macnameData = [];
+                    var macAiData = [];
+                    var macfMeanData = [];
+                    var macfMeanAiData = [];
+                    for (var i = 0; i < Data.length; i++) {
+                        macnameData.push(Data[i].machinecode);
+                        macAiData.push(Data[i].fAi);
+                        macfMeanData.push(Data[i].fMeaAll);
+                        macfMeanAiData.push(Data[i].fMeaAi);
+                    }
+                    MacAiPass(macnameData, macAiData)
+                    MacMeanAi(macnameData, macfMeanData, macfMeanAiData)
+                },
+                error: function (xhr, status, error) {
+                    // 处理请求错误
+                    console.error('Request error:', error);
+                }
+            });
+        }
+        function MacErrRate() {
+            $.ajax({
+                url: '/MacErrRate', // 替换为实际的服务器端点
+                type: 'GET', // 可能需要根据你的需求更改请求类型
+                async: false,
+                success: function (response) {
+                    // 在成功回调函数中处理返回的数据
+                    var Data = JSON.parse(response);
+                    var stdata = [];
+                    for (var i = 0; i < Data.length; i++) {
+                        stdata.push({"value": Data[i].aierrTypeCount,"name":Data[i].aierrType });
+                    }
+                    ShowErrRate(stdata)
+                    ShowErrNum(stdata)
+                },
+                error: function (xhr, status, error) {
+                    // 处理请求错误
+                    console.error('Request error:', error);
+                }
+            });
+        }
+
+
+      $(document).ready(function () {
+           sendRequest();
+           MacErrRate();
+
+      });
+
+        // 使用setInterval函数每隔五分钟调用sendRequest函数
+        setInterval(sendRequest, 5 * 60 * 1000); // 5分钟 = 5 * 60秒 * 1000毫秒
+        setInterval(MacErrRate, 5 * 60 * 1000);
+    </script>
+
+
+</head>
+
+<body style="padding: 0 0">
+    <div class="clearfix nav1">
+
+        <div class="container">
+
+            <div class="section first">
+                <div class="head clearfix">
+                    <ul class="layui-nav" lay-filter="" style="width: 100%;">
+                        <li class="layui-nav-item"><a href="index">首页</a></li>
+                        <li class="layui-nav-item"><a href="mes">生产统计信息</a></li>
+                        <li class="layui-nav-item"><a href="static">AI统计信息</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="section second">
+                <div class="box" style="overflow: hidden;width: 30%; height: 280px;">
+                    <div class="tit layui-font-blue layui-font-18">今日总览</div>
+                    <div class="boxnav">
+                        <div class="yqlist">
+                            <ul>
+                                <li id="AVI">
+                                    <span class="layui-font-blue layui-font-18" style="font-weight: bold">AVI产板数量</span>
+                                    <div class="yq">
+                                        9121
+                                    </div>
+                                </li>
+                                <li id="AOI">
+                                    <span class="layui-font-blue layui-font-18" style="font-weight: bold">AOI产板数量</span>
+                                    <div class="yq">
+                                        9800
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="box" style="overflow: hidden;width: 30%; height: 280px;">
+                    <div class="tit layui-font-blue layui-font-18">生产信息</div>
+                    <div class="layer-row" style="padding: 8px;height: 210px;position: relative;">
+                        <div class="layui-col-md5"
+                             style="padding: 0px;height: 100%;display: grid; place-items: center;">
+                            <div style="padding: 0px;height: 100px;width: 100%; top: 0">
+                                <div style="text-align: center;">
+                                    <div style="display: inline-block;">
+                                        <p>
+                                                <span
+                                                        style="font-family: Arial, sans-serif; font-size: 36px; color: #01aaed; font-weight: bold;">8</span>
+                                            <span
+                                                    style="font-family: Arial, sans-serif; font-size: 12px; color: #01aaed; font-weight: bold;">
+                                                    台</span>
+                                        </p>
+                                        <span
+                                                style="font-family: Arial, sans-serif; font-size: 10px; color: #01aaed;">AVI机台</span>
+                                        <br>
+                                    </div>
+                                    <hr class="layui-border-orange">
+                                    <div style="display: inline-block;">
+                                        <p>
+                                                <span
+                                                        style="font-family: Arial, sans-serif; font-size: 36px; color: #01aaed; font-weight: bold;">9</span>
+                                            <span
+                                                    style="font-family: Arial, sans-serif; font-size: 12px; color: #01aaed; font-weight: bold;">
+                                                    台</span>
+                                        </p>
+                                        <span
+                                                style="font-family: Arial, sans-serif; font-size: 10px; color: #01aaed;">AOI机台</span>
+                                        <br>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="layui-col-md7" style="padding: 0px;height: 100%;display: grid;place-items: center;">
+                            <!-- <div class="progress" style="--progress: 80%; --last: 20%;position: relative"
+                                data-progress="80%" data-description="一次OK率"></div> -->
+                            <div class="boxnav" style="height: 210px;width: 100%;" id="echart9"></div>
+                        </div>
+
+                        {#
+                        <div class="boxnav"
+                             style="display: inline-block;position: absolute;right: 0;;height: 158px;">#}
+                            {# <img src="../static/img/logo.png" alt="YMZ">#}
+                            {#
+                        </div>
+                        #}
+                    </div>
+                </div>
+
+                <div class="box" style="overflow: hidden;width: 30%; height: 280px;">
+                    <div id="clock">
+                        <p id="date">date</p>
+                        <p id="time">time</p>
+                        <p class="text">宜美智科技 </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section third">
+                <div class="box" style="overflow: hidden;width: 45%; height: 300px;">
+                    <div class="tit layui-font-blue layui-font-18">产能图</div>
+                    <div class="boxnav" style="height: 300px;overflow: hidden" id="echart3">
+                    </div>
+                </div>
+
+                <div class="box" style=" overflow: hidden;width: 46%; height: 300px;right: 10px">
+                    <div class="tit layui-font-blue layui-font-18">缺陷类型</div>
+                    <div class="boxnav" style="display: inline-block;width:48%; height: 280px" id="echart4">
+                    </div>
+                    <div class="boxnav" style="display: inline-block; width:48%; height: 280px;" id="echart8">
+                    </div>
+                </div>
+            </div>
+
+            <div class="section fourth">
+                <div class="box" style="width: 30%; height: 280px;">
+                    <div class="tit layui-font-blue layui-font-18">机台稼动率</div>
+                    <div class="boxnav" style="height: 240px" id="echart5"></div>
+                </div>
+
+                <div class="box" style="width: 30%; height: 280px;">
+<!--                    <div class="tit layui-font-blue layui-font-18">Ai机台前后平均报点数</div>-->
+                    <div class="tit layui-font-blue layui-font-18">Ai机台平均报点比例</div>
+                    <div class="boxnav" style="height: 240px" id="echart6">
+                    </div>
+                </div>
+
+                <div class="box" style="width: 30%; height: 280px;">
+                    <div class="tit layui-font-blue layui-font-18">Ai机台假点去除率</div>
+                    <div class="boxnav" style="height: 240px" id="echart7">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        var t = null;
+        t = setTimeout(time, 1000);//開始运行
+        function time() {
+            clearTimeout(t);//清除定时器
+            dt = new Date();
+            var y = dt.getFullYear();
+            var mt = dt.getMonth() + 1;
+            var day = dt.getDate();
+            var h = dt.getHours();//获取时
+            var m = dt.getMinutes();//获取分
+            var s = dt.getSeconds();//获取秒
+            document.getElementById("date").innerHTML = y + "/" + mt + "/" + day;
+            document.getElementById("time").innerHTML = h + ":" + m + ":" + s + "";
+            t = setTimeout(time, 1000); //设定定时器，循环运行
+        }
+
+        function User() {
+            this.username;
+            this.password;
+            this.constructor = function () {
+                this.username = 5;
+            }
+        }
+
+        layui.use('element', function () {
+            var element = layui.element;
+        });
+
+        // 获取 avi 元素
+        var AviElement = document.getElementById('AVI');
+        // 添加点击事件监听器
+        AviElement.addEventListener('click', function () {
+            alert('Avi Clicked!');
+        });
+        // 获取 aoi 元素
+        var AoiElement = document.getElementById('AOI');
+        // 添加点击事件监听器
+        AoiElement.addEventListener('click', function () {
+            alert('Aoi Clicked!');
+        });
+    </script>
+</body>
+
+</html>

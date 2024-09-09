@@ -1,0 +1,11 @@
+body {
+    margin: 0;
+    background: #333;
+}
+
+/* 样式定义 */
+.custom-div {
+    width: 600px; /* 设置宽度 */
+    height: 400px; /* 设置高度 */
+    /* 盒模型，包含边框和内边距在内的总宽度为设置的宽度 */
+}

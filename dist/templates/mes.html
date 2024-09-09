@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>MES分析</title>
+    <link rel="stylesheet" href="../static/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../static/css/base.css">
+    <link rel="stylesheet" href="../static/css/static.css">
+    <link rel="stylesheet" href="../static/css/layui.css">
+    <script>
+        
+    </script>
+</head>
+
+<body>
+    <main class="main">
+        <!--头部-->
+        <header class="heared " style="width: 100%">
+            <span class="head-logo" style="width: 100%">
+                <ul class="layui-nav" lay-filter="" style="width: 100%;">
+                    <li class="layui-nav-item"><a href="index">首页</a></li>
+                    <li class="layui-nav-item"><a href="mes">生产统计信息</a></li>
+                    <li class="layui-nav-item"><a href="static">AI统计信息</a></li>
+                </ul>
+            </span>
+            <div class="head-right"><span id="time"></span></div>
+        </header>
+        <!--身体-->
+        <section class="section">
+
+            <div class="news_check">
+                <div class="check_left l_left">
+                    <label>时间段：</label>
+                    <input id="startDate" type="date">
+                    <input id="endDate" type="date">
+                    <label>类型：</label>
+                    <select class="find_input" id="type" style="margin-right: 10px">
+                        <option>AVI</option>
+                        <option>AOI</option>
+                    </select>
+                    <button id="updateEcharts" onclick="getDates()">查询</button>
+                </div>
+                <div class="check_right r_right">
+                    <!--                <a class="btn btn-default"><span class=" glyphicon glyphicon-circle-arrow-down l_left"></span>打印</a>-->
+                    <!--                <a class="btn btn-default"><span class=" glyphicon glyphicon-download-alt l_left"></span>导出</a>-->
+                    <a class="btn btn-default"></span>导出</a>
+                </div>
+                <div class="clear"></div>
+            </div>
+
+            <div style="padding: 0 10px 0 10px ;border: 1px #ccc solid;background-color: #fff;">
+
+                <div class="e_chart">
+                    <div class="charts l_left">
+                        <p class="charts_p">批量不良率</p>
+                        <div id="containerBar" style="height:400px;width: 100%"></div>
+                        <!--                        <div style="width: 100%;margin-top: 30px">-->
+                        <!--                            <table class="annyTable" border="1" id="barTable">-->
+                        <!--                                <tr id="barTable_row1">-->
+                        <!--                                    <td class="first_td">批量号</td>-->
+                        <!--                                </tr>-->
+                        <!--                                <tr id="barTable_row2">-->
+                        <!--                                    <td class="first_td">不良率(%)</td>-->
+                        <!--                                </tr>-->
+                        <!--                            </table>-->
+                        <!--                        </div>-->
+                    </div>
+                    <div class="charts l_left last_charts">
+                        <p class="charts_p">Lot假点率</p>
+                        <div id="containerLine" style="height:400px;width: 100%"></div>
+                        <!--                        <div style="width: 100%;margin-top: 30px">-->
+                        <!--                            <table class="annyTable" border="1">-->
+                        <!--                                <tr id="LineFalseVOTable_row1">-->
+                        <!--                                    <td class="first_td">批量号</td>-->
+                        <!--                                </tr>-->
+                        <!--                                <tr id="LineFalseVOTable_row2">-->
+                        <!--                                    <td class="first_td">假点率(%)</td>-->
+                        <!--                                </tr>-->
+                        <!--                            </table>-->
+                        <!--                        </div>-->
+                    </div>
+                    <div class="clear"></div>
+                </div>
+
+                <div class="e_chart">
+                    <div class="charts l_left">
+                        <p class="charts_p">整体一次/二次良率</p>
+                        <div id="containerLineFalse" style="height:400px;width: 100%"></div>
+                        <!--                        <div style="width: 100%;margin-top: 30px">-->
+                        <!--                            <table class="annyTable" border="1">-->
+                        <!--                                <tr>-->
+                        <!--                                    <td class="first_td">日期</td>-->
+                        <!--                                </tr>-->
+                        <!--                                <tr>-->
+                        <!--                                    <td class="first_td">一次良率</td>-->
+                        <!--                                </tr>-->
+                        <!--                                <tr>-->
+                        <!--                                    <td class="first_td">二次良率</td>-->
+                        <!--                                </tr>-->
+
+                        <!--                            </table>-->
+                        <!--                        </div>-->
+                    </div>
+                    <div class="charts l_left last_charts">
+                        <p class="charts_p">时间段内整体缺陷种类</p>
+                        <div id="containerParetoErrType" style="height:400px;width: 100%"></div>
+                        <!--                        <div style="width: 100%;margin-top: 30px">-->
+                        <!--                            <table class="annyTable" border="1">-->
+                        <!--                                <tr>-->
+                        <!--                                    <td class="first_td">缺陷类型</td>-->
+                        <!--                                </tr>-->
+                        <!--                                <tr>-->
+                        <!--                                    <td class="first_td">数量</td>-->
+                        <!--                                </tr>-->
+                        <!--                                <tr>-->
+                        <!--                                    <td class="first_td">占比</td>-->
+                        <!--                                </tr>-->
+
+                        <!--                            </table>-->
+                        <!--                        </div>-->
+                    </div>
+                    <div class="clear"></div>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+    <script src="../static/js/jquery.js"></script>
+    <script src="../static/js/echarts-all.js"></script>
+    <script src="../static/js/mes.js"></script>
+    <script src="../static/js/echarts.js"></script>
+    <script>
+        $(function () {
+            $(".head-ul li a").click(function () {
+                $(this).addClass("active-a").parents("li").siblings().find("a").removeClass("active-a");
+                $(this).parents('li').find("ul").show(); -
+                    $(this).parents("li").sibling().find("ul").hide();
+
+            })
+            getTime();
+        })
+        //    格式化时间
+        function getTime() {
+            var day = new Date();
+            var year = day.getFullYear();
+            var month = day.getMonth() + 1;
+            var date = day.getDate();
+            var hour = day.getHours();
+            var min = day.getMinutes();
+            var sec = day.getSeconds();
+            var str = year + '-' + month + '-' + date + ' ' + hour + ":" + min + ':' + sec;
+            $("#time").text(str);
+        }
+        function getDates() {
+            var startDate = document.getElementById("startDate").value;
+            var endDate = document.getElementById("endDate").value;
+
+            console.log("Start Date: " + startDate);
+            console.log("End Date: " + endDate);
+
+            // 在这里可以对获取到的日期值进行进一步处理或使用
+        }
+
+
+    </script>
+
+</body>
+
+</html>
