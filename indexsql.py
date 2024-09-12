@@ -1075,7 +1075,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
     df['AI跑板数'] = df['AI跑板数'].astype(float)
     df['AI真点总数'] = df['AI真点总数'].astype(float)
     df['AVI缺陷总数'] = df['AVI缺陷总数'].astype(float)
-    df['AI漏失总数'] = df['AVI缺陷总数'].astype(float)
+    df['AI漏失总数'] = df['AI漏失总数'].astype(float)
 
     resAR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / df['AVI缺陷总数'].sum())
     resFR = float(resAR / (1.0-t_ratio))
@@ -1258,7 +1258,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
     df['AI跑板数'] = df['AI跑板数'].astype(float)
     df['AI真点总数'] = df['AI真点总数'].astype(float)
     df['AVI缺陷总数'] = df['AVI缺陷总数'].astype(float)
-    df['AI漏失总数'] = df['AVI缺陷总数'].astype(float)
+    df['AI漏失总数'] = df['AI漏失总数'].astype(float)
 
     resAR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / df['AVI缺陷总数'].sum())
     resFR = resAR / (1.0-t_ratio)
