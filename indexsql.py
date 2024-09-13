@@ -446,7 +446,7 @@ def getRateFilterTotal(start_date, end_date, machinecode):
 
             if nALLNum != 0:
                 fAllAi = (nALLNum-nAiNum) / nALLNum
-                fAi = (nALLNum - nAiNum) / ( nALLNum- (nALLNum * t_ratio))
+                fAi = (nALLNum - nAiNum) / ( nALLNum- (nALLNum * (1.0- t_ratio)))
             else:
                 fAllAi =0.0
                 fAi =0.0
@@ -1027,7 +1027,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
         nAiFalseRatio = float(i[14])
 
         if nALLNum != 0:
-            fAi = (nALLNum - nAiNum) / (nALLNum - (nALLNum * t_ratio))
+            fAi = (nALLNum - nAiNum) / (nALLNum - (nALLNum * (1.0 - t_ratio)))
             fAll = (nALLNum - nAiNum) / nALLNum
             fAiFalseRatio = nAiFalseRatio / nALLNum
 
@@ -1210,7 +1210,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
         nAiFalseRatio = float(i[13])
 
         if nALLNum != 0:
-            fAi = (nALLNum - nAiNum) / (nALLNum - (nALLNum * t_ratio))
+            fAi = (nALLNum - nAiNum) / (nALLNum - (nALLNum * (1.0 - t_ratio)))
             fAll = (nALLNum - nAiNum) / nALLNum
             fAiFalseRatio =  nAiFalseRatio / nALLNum
 
