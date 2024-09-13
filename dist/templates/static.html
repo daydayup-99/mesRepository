@@ -581,6 +581,35 @@
             });
         });
     </script>
+   <script>
+        // 从后端传递的导出时间
+        var exportTime = "{{ export_time }}";  // Flask 后端传递的时间变量，如 "14:00"
+        var isExport = {{ is_export|tojson }};
+        console.log(exportTime);
+        console.log(isExport);
+        if(isExport){
+            function checkTimeAndExport() {
+                console.log("start export");
+                // 获取当前时间
+                var now = new Date();
+                var currentHour = now.getHours();
+                var currentMinute = now.getMinutes();
+
+                // 分析导出时间
+                var timeParts = exportTime.split(":");
+                var targetHour = parseInt(timeParts[0]);
+                var targetMinute = parseInt(timeParts[1]);
+
+                // 检查当前时间是否与导出时间匹配
+                if (currentHour === targetHour && currentMinute === targetMinute) {
+                    // 自动点击导出按钮
+                    document.getElementById('exportExcel').click();
+                }
+            }
+            // 每分钟检查一次时间
+            setInterval(checkTimeAndExport, 60000);  // 60000 毫秒 = 1 分钟
+        }
+    </script>
 <!--ajax 查询请求-->
 </body>
 </html>

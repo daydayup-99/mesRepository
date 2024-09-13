@@ -577,6 +577,7 @@ function generateJobAi(jobnameData,fJobAiData){
 }
 
  function generateJobErr(errJobtypedata, errJobNumData, errJobRateData,errAllNum) {
+    console.log(errAllNum);
     var myChart = echarts.init($("#container7")[0]);
     var option = {
         tooltip: {
@@ -681,7 +682,7 @@ function generateJobAi(jobnameData,fJobAiData){
     });
 }
 // 导出为 CSV 的函数
-function exportToCSV(types, numbers, rates) {
+function exportToCSV(types, numbers, rates, errAllNum) {
     var csvContent = "\uFEFF";
     csvContent += "缺陷名,数量,占比\n"; // CSV header
 
