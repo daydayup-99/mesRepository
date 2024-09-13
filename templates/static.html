@@ -69,7 +69,7 @@
                             errAllNumData.push(Data[i].errAllNum);
                             errPlnoNameData.push((Data[i].jobname));
                         }
-                        generateJobErr(errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0])
+                        generateJobErr(errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0])
                         $('#jobname').html('料号缺陷占比数量: ' + errPlnoNameData[0]);
                 },
                 error: function (xhr, status, error) {

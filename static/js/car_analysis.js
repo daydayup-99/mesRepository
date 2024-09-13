@@ -576,7 +576,7 @@ function generateJobAi(jobnameData,fJobAiData){
     });
 }
 
- function generateJobErr(errJobtypedata, errJobNumData, errJobRateData,errAllNum) {
+ function generateJobErr(errJobtypedata, errJobNumData, errJobRateData, errAllNum, errPlnoNameData) {
     console.log(errAllNum);
     var myChart = echarts.init($("#container7")[0]);
     var option = {
@@ -678,11 +678,11 @@ function generateJobAi(jobnameData,fJobAiData){
 
         // 添加导出按钮点击事件
     $('#exportButton').off('click').click(function() {
-        exportToCSV(errJobtypedata, errJobNumData, errJobRateData, errAllNum);
+        exportToCSV(errJobtypedata, errJobNumData, errJobRateData, errPlnoNameData);
     });
 }
 // 导出为 CSV 的函数
-function exportToCSV(types, numbers, rates, errAllNum) {
+function exportToCSV(types, numbers, rates, errPlnoNameData) {
     var csvContent = "\uFEFF";
     csvContent += "缺陷名,数量,占比\n"; // CSV header
 
@@ -694,7 +694,7 @@ function exportToCSV(types, numbers, rates, errAllNum) {
     var encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvContent);
     var link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", errAllNum + "ErrTypeData.csv");
+    link.setAttribute("download", errPlnoNameData + "_" + "ErrTypeData.csv");
     document.body.appendChild(link); // 需要将链接加入到 DOM 中才能点击
 
     link.click();
