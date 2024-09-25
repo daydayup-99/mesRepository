@@ -49,7 +49,7 @@ def main():
                   'AIErrDataDll.dll', 'AIStatistic.exe', f'AISystem-YMZ-Entire-v{version}-rc.exe', 'AIVerify.dll', 'AllPostSettingWin.dll',
                   'Config.dll', 'DDADDetector.dll', 'BaseTool.dll', 'DCodeManagerModule.dll', 'DrawGerber-2024-latest.dll', 'ImageLib.dll',
                   'libcrypto-1_1-x64.dll', 'libmysql.dll', 'libssl-1_1-x64.dll', 'libEGL.dll', 'libEGLd.dll', 'libGLESV2.dll', 'libiomp5md.dll',
-                  'libiompstubs5md.dll']
+                  'libiompstubs5md.dll', 'AIMes.dll']
     # file_names = [f'AISystem-YMZ-Entire-v{version}-rc.exe', 'libssl-1_1-x64.dll']
     # 查找指定文件
     file_paths = find_files_in_directory(folder_path, file_names)
