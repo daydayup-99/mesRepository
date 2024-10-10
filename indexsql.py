@@ -158,7 +158,7 @@ def SelectAiPass():
                 fCheckTrueRate = 0
 
             if nALLNum!=0:
-                fAi = float(nALLNum - nAiNum) / (float (nALLNum - nALLNum* Decimal(0.2)) -float(nCheckTrueNum))
+                fAi = float(nALLNum - nAiNum) / (float (nALLNum - nALLNum* (1.0 - t_ratio)))
             else:
                 fAi=0.0
 
