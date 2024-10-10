@@ -156,14 +156,15 @@ def SelectAiPass():
                 fCheckTrueRate = round(nCheckTrueNum / nCheckAllNum, 2)
             else:
                 fCheckTrueRate = 0
-
+            nALLNum = float(nALLNum)
+            nAiNum = float(nAiNum)
             if nALLNum!=0:
-                fAi = float(nALLNum - nAiNum) / (float (nALLNum - nALLNum* (1.0 - t_ratio)))
+                fAi = (nALLNum - nAiNum) / ((nALLNum - nALLNum* (1.0 - t_ratio)))
             else:
                 fAi=0.0
 
             if nAllBoard[0] !=0:
-                fMeaAll = float(nALLNum) / float (nAllBoard[0])
+                fMeaAll = float(nALLNum) / float(nAllBoard[0])
                 fMeaAi = float (nAiNum) / float(nAllBoard[0])
             else:
                 fMeaAll = 0.0
