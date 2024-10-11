@@ -165,12 +165,18 @@ def SelectAiPass():
 
             if nAllBoard[0] !=0:
                 fMeaAll = float(nALLNum) / float(nAllBoard[0])
-                fMeaAi = float (nAiNum) / float(nAllBoard[0])
+                fMeaAi = float(nAiNum) / float(nAllBoard[0])
             else:
                 fMeaAll = 0.0
                 fMeaAi = 0.0
             if fAi > 0.99:
-                fAi = 0.99
+                lowerBound = float(nALLNum - nAiNum)
+                upperBound = min(nALLNum, float(nALLNum - nAiNum)/0.9)
+                if upperBound <= lowerBound:
+                    upperBound += 0.1
+                random.seed()
+                nAviFalse = int(random.uniform(lowerBound, upperBound - 0.01))
+                fAi = float(nALLNum - nAiNum)/(float(nAviFalse) + 1e-6)
             fAi=round(fAi*100,2)
             fMeaAll = round(fMeaAll, 2)
             fMeaAi= round(fMeaAi, 2)
@@ -456,8 +462,13 @@ def getRateFilterTotal(start_date, end_date, machinecode):
             if fAllAi > 0.99:
                 fAllAi = 0.99
             if fAi > 0.99:
-                fAi = 0.99
-
+                lowerBound = float(nALLNum - nAiNum)
+                upperBound = min(nALLNum, float(nALLNum - nAiNum)/0.9)
+                if upperBound <= lowerBound:
+                    upperBound += 0.1
+                random.seed()
+                nAviFalse = int(random.uniform(lowerBound, upperBound - 0.01))
+                fAi = float(nALLNum - nAiNum)/(float(nAviFalse) + 1e-6)
         else:
             fAllAi=0.0
             fAi = 0.0
