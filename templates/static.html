@@ -459,14 +459,15 @@
                 <label>机台号：</label>
                 <select id="MacNum" name="MacNum" class="find_input" style="margin-right: 10px; overflow-y: auto;width: 200px;" multiple="multiple">
                 </select>
+                <button type="button" class="layui-btn layui-bg-blue" id="selectAllButton">全选</button>
                 <label>料号：</label>
                 <select class="find_input" id="JobNum" style="margin-right: 10px; overflow-y: auto;">
                 </select>
                 <label>批量号：</label>
                 <select class="find_input" id="PLNum" style="margin-right: 10px">
-                </select>
-                <label>膜面：</label>
-                <select class="find_input" id="Surface" style="margin-right: 10px">
+<!--                </select>-->
+<!--                <label>膜面：</label>-->
+<!--                <select class="find_input" id="Surface" style="margin-right: 10px">-->
                 </select>
                 <button type="button" class="layui-btn layui-bg-blue" id="queryButton">查询</button>
             </div>
@@ -609,6 +610,27 @@
             // 每分钟检查一次时间
             setInterval(checkTimeAndExport, 60000);  // 60000 毫秒 = 1 分钟
         }
+    </script>
+    <script>
+        $('#selectAllButton').click(function() {
+            var allSelected = true;
+            $('#MacNum option').each(function() {
+                if (!$(this).is(':selected')) {
+                    allSelected = false;
+                    return false;  // 退出循环
+                }
+            });
+
+            if (allSelected) {
+                // 如果已经全选，取消所有选项
+                $('#MacNum option').prop('selected', false);
+            } else {
+                // 如果没有全选，选中所有选项
+                $('#MacNum option').prop('selected', true);
+            }
+
+            $('#MacNum').trigger('change');  // 触发 change 事件，确保更新
+        });
     </script>
 <!--ajax 查询请求-->
 </body>
