@@ -239,8 +239,8 @@ def getErrRate():
     data_points = []
     ai_err_type_counts = {}
     yesterday = curent_date - timedelta(days=3)
-    # table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
-    table_name = f"tab_err_{yesterday.strftime('%Y%m%d')[0:]}"
+    table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
+    # table_name = f"tab_err_{yesterday.strftime('%Y%m%d')[0:]}"
     inspector = inspect(engine)
     # 获取数据库中所有的表名
     table_names = inspector.get_table_names()
@@ -273,8 +273,8 @@ def getErrJob():
     session = Session()
     ai_err_type_counts = {}
     yesterday = curent_date - timedelta(days=3)
-    # table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
-    table_name = f"tab_err_{yesterday.strftime('%Y%m%d')[0:]}"
+    table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
+    # table_name = f"tab_err_{yesterday.strftime('%Y%m%d')[0:]}"
 
     inspector = inspect(engine)
     # 获取数据库中所有的表名
