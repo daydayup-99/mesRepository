@@ -6,7 +6,7 @@ import sys
 from flask import Flask, render_template, Response, request, jsonify
 from indexsql import selectJob, selectMachine, getRateFilterTotal, ReadJobSql, getJobErrRate, selectPlno, \
     getPlnoErrRate, SelectAiPass, getErrRate, update_db_connection, getLayersql, selectMacRate, \
-    exportcsvbyjob, exportallcsv, getAllErrRateSql
+    exportcsvbyjob, exportallcsv, getAllErrRateSql, getErrJob
 from datetime import datetime, timedelta, time
 
 app = Flask(__name__)
@@ -41,7 +41,12 @@ def  selectMacAi():
 @app.route('/MacErrRate')
 def  selectMacErr():
     json_data = getErrRate()
-    return  json_data
+    return json_data
+
+@app.route('/MacErrJob')
+def  selectMacErrJob():
+    json_data = getErrJob()
+    return json_data
 
 @app.route('/UpdateDatabase',methods=['POST'])
 def updateData():

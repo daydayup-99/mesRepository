@@ -663,10 +663,30 @@ function ShowErrRate(stdata) {
 }
 
 function ShowErrNum(stdata){
-     var myChart = echarts.init(document.getElementById('echart4'));
+    const chartDom = document.getElementById('echart4')
+    var myChart = echarts.init(chartDom);
     var defectData = stdata
 
+    //
+//    chartDom.style.position = "relative"
+//        const div = document.createElement("div")
+//        div.style.width = "100%"
+//        div.style.height = "100%"
+//        div.style.backgroundColor = "#ccc"
+//        div.style.position = "absolute"
+//        div.style.top = 0
+//        div.style.left = "100%"
+//        div.style.zIndex = 999
+//        div.style.display = "none"
+//        div.onclick = ()=>{
+//            div.style.display = "none"
+//        }
+//        chartDom.appendChild(div)
+
     option = {
+//         tooltip: {
+//            trigger: 'axis'
+//        },
         grid: {
             left: '0',
             top: '0',
@@ -727,12 +747,51 @@ function ShowErrNum(stdata){
         myChart.resize();
     });
 
+    myChart.on('click', function (params) {
+//        console.log("res:"+stdata);
+
+//        div.style.display = "block"
+//        var chart = echarts.init(div);
+//        chart.setOption(option)
+        // 弹框显示点击的柱状图对应的数据
+        const errName = params.name;
+        MacErrJob(errName, function(stdata) {
+            // 弹框显示点击的柱状图对应的数据
+            alert("缺陷名: " + errName + "\n料号: " + stdata);
+        });
+        // 你也可以在这里显示自定义弹框，或者使用模态框等其他形式
+    });
 }
 
 
-
-
-
+function MacErrJob(errName,callback) {
+    console.log("ErrName: " + errName)
+    $.ajax({
+        url: '/MacErrJob',
+        type: 'GET',
+        async: false,
+        success: function (response) {
+            var Data = JSON.parse(response);
+            var result = []
+            for (var i = 0; i < Data.length; i++)
+            {
+                for (var j = 0; j < Data[i].length; j++)
+                {
+                    var item = Data[i][j]
+                    if (item.hasOwnProperty(errName))
+                    {
+                        result.push(item[errName])
+                    }
+                }
+            }
+            callback(result);
+        },
+        error: function (xhr, status, error) {
+            // 处理请求错误
+            console.error('Request error:', error);
+        }
+    });
+}
 
 
 

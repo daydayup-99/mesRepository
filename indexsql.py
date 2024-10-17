@@ -238,8 +238,9 @@ def getErrRate():
     session = Session()
     data_points = []
     ai_err_type_counts = {}
-    # yesterday = curent_date - timedelta(days=6)
-    table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
+    yesterday = curent_date - timedelta(days=3)
+    # table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
+    table_name = f"tab_err_{yesterday.strftime('%Y%m%d')[0:]}"
     inspector = inspect(engine)
     # 获取数据库中所有的表名
     table_names = inspector.get_table_names()
@@ -268,7 +269,49 @@ def getErrRate():
     json_data = json.dumps(data_points, ensure_ascii=False)
     session.close()
     return json_data
+def getErrJob():
+    session = Session()
+    ai_err_type_counts = {}
+    yesterday = curent_date - timedelta(days=3)
+    # table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
+    table_name = f"tab_err_{yesterday.strftime('%Y%m%d')[0:]}"
 
+    inspector = inspect(engine)
+    # 获取数据库中所有的表名
+    table_names = inspector.get_table_names()
+    if table_name in table_names:
+        sql_query = text(f"""
+                        select ai_err_type, COUNT(ai_err_type)
+                        from {table_name}
+                        WHERE ai_err_type <> ''
+                        GROUP BY ai_err_type
+                        ORDER BY COUNT(ai_err_type) DESC
+                        LIMIT 10
+                    """)
+        resulttmp = session.execute(sql_query).fetchall()
+        for row in resulttmp:
+            errType, errTypeCount = row
+            ai_err_type_counts[errType] = errTypeCount
+    lstJob = []
+    for key in ai_err_type_counts.keys():
+        sql_query = text(f"""
+                        WITH a AS(
+                            SELECT SUBSTRING_INDEX(err_key,'#', 1) AS 'Job'
+                            FROM {table_name}
+                            WHERE ai_err_type = '{key}'
+                        )
+                        SELECT Job
+                        FROM a
+                        GROUP BY Job
+                        ORDER BY COUNT(Job) DESC
+                        LIMIT 5
+                    """)
+        resulttmp = session.execute(sql_query).fetchall()
+        jobs = [{key: row[0]} for row in resulttmp]
+        lstJob.append(jobs)
+    json_data = json.dumps(lstJob, ensure_ascii=False)
+    session.close()
+    return json_data
 def getAllErrRateSql(start_date, end_date, machinecode):
     session = Session()
     current_date = start_date
