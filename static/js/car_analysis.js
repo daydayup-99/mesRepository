@@ -680,6 +680,13 @@ function generateJobAi(jobnameData,fJobAiData){
     $('#exportButton').off('click').click(function() {
         exportToCSV(errJobtypedata, errJobNumData, errJobRateData, errPlnoNameData);
     });
+//    myChart.off('click');
+//    myChart.on('click', function (params) {
+//    if (params.seriesType === 'line') {
+//        // 弹框显示点击的柱状图对应的数据
+//        alert("缺陷名: " + params.name + "\n数量: " + params.value);
+//    }
+});
 }
 // 导出为 CSV 的函数
 function exportToCSV(types, numbers, rates, errPlnoNameData) {

@@ -746,7 +746,7 @@ function ShowErrNum(stdata){
     window.addEventListener("resize", function () {
         myChart.resize();
     });
-
+    myChart.off('click');
     myChart.on('click', function (params) {
 //        console.log("res:"+stdata);
 
@@ -757,7 +757,17 @@ function ShowErrNum(stdata){
         const errName = params.name;
         MacErrJob(errName, function(stdata) {
             // 弹框显示点击的柱状图对应的数据
-            alert("缺陷名: " + errName + "\n料号: " + stdata);
+            var resultText = "缺陷名: " + errName + "\n";
+
+            // 遍历 stdata 数组，提取 Job 和 MachineID
+            for (var i = 0; i < stdata.length; i++) {
+                var item = stdata[i];
+                resultText += "料号: " + item['Job'] + "\n机台号: " + item['MachineID'] + "\n";
+            }
+
+            // 弹出包含所有信息的提示框
+            alert(resultText);
+
         });
         // 你也可以在这里显示自定义弹框，或者使用模态框等其他形式
     });
@@ -772,7 +782,9 @@ function MacErrJob(errName,callback) {
         async: false,
         success: function (response) {
             var Data = JSON.parse(response);
-            var result = []
+            var resK = []
+            var resV = []
+            var res = []
             for (var i = 0; i < Data.length; i++)
             {
                 for (var j = 0; j < Data[i].length; j++)
@@ -780,11 +792,15 @@ function MacErrJob(errName,callback) {
                     var item = Data[i][j]
                     if (item.hasOwnProperty(errName))
                     {
-                        result.push(item[errName])
+                        var errData = item[errName];
+                        res.push({
+                            Job: errData['Job'],         // 假设 'Job' 是对应的字段
+                            MachineID: errData['MachineID']  // 假设 'MachineID' 是对应的字段
+                        });
                     }
                 }
             }
-            callback(result);
+            callback(res);
         },
         error: function (xhr, status, error) {
             // 处理请求错误

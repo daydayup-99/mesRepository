@@ -15,8 +15,8 @@ import configparser
 global MacTrueRate
 
 config = configparser.ConfigParser()
-# config_dir = os.path.dirname(os.path.realpath(__file__))
-config_dir = os.path.dirname(sys.executable)
+config_dir = os.path.dirname(os.path.realpath(__file__))
+# config_dir = os.path.dirname(sys.executable)
 config_dir = os.path.join(config_dir, 'config.ini')
 config.read(config_dir)
 t_ratio = float(config['log']['t_ratio'])
@@ -239,8 +239,8 @@ def getErrRate():
     data_points = []
     ai_err_type_counts = {}
     yesterday = curent_date - timedelta(days=3)
-    table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
-    # table_name = f"tab_err_{yesterday.strftime('%Y%m%d')[0:]}"
+    # table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
+    table_name = f"tab_err_{yesterday.strftime('%Y%m%d')[0:]}"
     inspector = inspect(engine)
     # 获取数据库中所有的表名
     table_names = inspector.get_table_names()
@@ -273,8 +273,8 @@ def getErrJob():
     session = Session()
     ai_err_type_counts = {}
     yesterday = curent_date - timedelta(days=3)
-    table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
-    # table_name = f"tab_err_{yesterday.strftime('%Y%m%d')[0:]}"
+    # table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
+    table_name = f"tab_err_{yesterday.strftime('%Y%m%d')[0:]}"
 
     inspector = inspect(engine)
     # 获取数据库中所有的表名
@@ -296,18 +296,18 @@ def getErrJob():
     for key in ai_err_type_counts.keys():
         sql_query = text(f"""
                         WITH a AS(
-                            SELECT SUBSTRING_INDEX(err_key,'#', 1) AS 'Job'
+                            SELECT SUBSTRING_INDEX(err_key,'#', 1) AS 'Job', SUBSTRING_INDEX(err_key,'#', -1) as 'MachineID'
                             FROM {table_name}
                             WHERE ai_err_type = '{key}'
                         )
-                        SELECT Job
+                        SELECT *
                         FROM a
-                        GROUP BY Job
+                        GROUP BY Job, MachineID
                         ORDER BY COUNT(Job) DESC
                         LIMIT 5
                     """)
         resulttmp = session.execute(sql_query).fetchall()
-        jobs = [{key: row[0]} for row in resulttmp]
+        jobs = [{key: dict(row._asdict())} for row in resulttmp]
         lstJob.append(jobs)
     json_data = json.dumps(lstJob, ensure_ascii=False)
     session.close()
@@ -986,8 +986,8 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
         machinecodename = machinecode[0]
     placeholders = ', '.join([f"'{code}'" for code in machinecode])
 
-    current_dir = os.path.dirname(sys.executable)
-    # current_dir = os.path.dirname(os.path.realpath(__file__))
+    # current_dir = os.path.dirname(sys.executable)
+    current_dir = os.path.dirname(os.path.realpath(__file__))
     current_dir = os.path.join(current_dir, 'csvdata')
     print("当前文件的目录路径:", current_dir)
     if not os.path.exists(current_dir):
@@ -1170,8 +1170,8 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
         machinecodename = machinecode[0]
     placeholders = ', '.join([f"'{code}'" for code in machinecode])
 
-    current_dir = os.path.dirname(sys.executable)
-    # current_dir = os.path.dirname(os.path.realpath(__file__))
+    # current_dir = os.path.dirname(sys.executable)
+    current_dir = os.path.dirname(os.path.realpath(__file__))
     current_dir = os.path.join(current_dir, 'csvdata')
     print("当前文件的目录路径:", current_dir)
     if not os.path.exists(current_dir):
