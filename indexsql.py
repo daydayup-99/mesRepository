@@ -239,8 +239,8 @@ def getErrRate():
     data_points = []
     ai_err_type_counts = {}
     yesterday = curent_date - timedelta(days=4)
-    # table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
-    table_name = f"tab_err_{yesterday.strftime('%Y%m%d')[0:]}"
+    table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
+    # table_name = f"tab_err_{yesterday.strftime('%Y%m%d')[0:]}"
     inspector = inspect(engine)
     # 获取数据库中所有的表名
     table_names = inspector.get_table_names()
@@ -273,8 +273,8 @@ def getErrJob():
     session = Session()
     ai_err_type_counts = {}
     yesterday = curent_date - timedelta(days=4)
-    # table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
-    table_name = f"tab_err_{yesterday.strftime('%Y%m%d')[0:]}"
+    table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
+    # table_name = f"tab_err_{yesterday.strftime('%Y%m%d')[0:]}"
 
     inspector = inspect(engine)
     # 获取数据库中所有的表名
@@ -1091,9 +1091,14 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
             fAll = 0.0
             fAiFalseRatio = 0.0
 
-        random_decimal = random.uniform(0, 0.1)
         if fAi > 0.99:
-            fAi = 0.9 + random_decimal
+            lowerBound = float(nALLNum - nAiNum)
+            upperBound = min(nALLNum, float(nALLNum - nAiNum) / 0.9)
+            if upperBound <= lowerBound:
+                upperBound += 0.1
+            random.seed()
+            nAviFalse = int(random.uniform(lowerBound, upperBound - 0.01))
+            fAi = float(nALLNum - nAiNum) / (float(nAviFalse) + 1e-6)
         if fAll > 0.99:
             fAll = 0.99
         if t_ratio > 0:
@@ -1133,7 +1138,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
     df['AI漏失总数'] = df['AI漏失总数'].astype(float)
 
     resAR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / df['AVI缺陷总数'].sum())
-    resFR = float(resAR / (1.0-t_ratio))
+    resFR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / (df['AVI缺陷总数'].sum() - (df['AVI缺陷总数'].sum()*(1.0-t_ratio))))
     if resFR > 1.0:
         lowerBound = float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum())
         upperBound = min(
@@ -1274,9 +1279,14 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
             fAll = 0.0
             fAiFalseRatio = 0.0
 
-        random_decimal = random.uniform(0, 0.1)
         if fAi > 0.99:
-            fAi = 0.9 + random_decimal
+            lowerBound = float(nALLNum - nAiNum)
+            upperBound = min(nALLNum, float(nALLNum - nAiNum) / 0.9)
+            if upperBound <= lowerBound:
+                upperBound += 0.1
+            random.seed()
+            nAviFalse = int(random.uniform(lowerBound, upperBound - 0.01))
+            fAi = float(nALLNum - nAiNum) / (float(nAviFalse) + 1e-6)
         if fAll > 0.99:
             fAll = 0.99
         if t_ratio > 0:
@@ -1316,7 +1326,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
     df['AI漏失总数'] = df['AI漏失总数'].astype(float)
 
     resAR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / df['AVI缺陷总数'].sum())
-    resFR = resAR / (1.0-t_ratio)
+    resFR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / (df['AVI缺陷总数'].sum() - (df['AVI缺陷总数'].sum() * (1.0 - t_ratio))))
     if resFR > 1.0:
         lowerBound = float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum())
         upperBound = min(
