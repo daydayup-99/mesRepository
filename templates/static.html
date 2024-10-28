@@ -19,13 +19,110 @@
     <script src="../static/js/select2.min.js"></script>
 
     <script>
+        let allJobNumbers = []; // 储存所有料号
+        let isSuggestionClicked = false;
+        function showSuggestions() {
+            const suggestionsBox = document.getElementById("suggestions");
+            suggestionsBox.style.display = "block"; // 显示下拉框
+            fetchJobNumbers(); // 显示所有料号
+        }
+
+        function fetchJobNumbers() {
+            var start_time = $('#start_time').val().split('T')[0];
+            var start_time_hour = $('#start_time').val().split('T')[1];
+            var end_time = $('#end_time').val().split('T')[0];
+            var end_time_hour = $('#end_time').val().split('T')[1];
+            var MacNum = $('#MacNum').val();
+
+            $.ajax({
+                url: '/selectJob',
+                type: 'POST',
+                data: {
+                    start_time: start_time,
+                    end_time: end_time,
+                    start_time_hour: start_time_hour,
+                    end_time_hour: end_time_hour,
+                    MacNum: MacNum,
+                },
+                success: function (response) {
+                    if (response.data) {
+                        allJobNumbers = response.data; // 更新料号数组
+                        console.log("allJob：", allJobNumbers);
+                        filterFunction(); // 过滤显示最新的料号
+                    } else {
+                        console.error("没有获取到料号数据");
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error(error);
+                }
+            });
+        }
+
+        function filterFunction() {
+            const input = document.getElementById("jobInput").value.toLowerCase();
+            const suggestionsBox = document.getElementById("suggestions");
+            suggestionsBox.innerHTML = ""; // 清空当前建议
+
+            // 根据输入过滤料号
+            const filteredJobNumbers = allJobNumbers.filter(job => job.toLowerCase().includes(input));
+
+            // 如果输入框为空，显示所有料号
+            if (input === "") {
+                allJobNumbers.forEach(job => {
+                    createSuggestionItem(job);
+                });
+            } else {
+                filteredJobNumbers.forEach(job => {
+                    createSuggestionItem(job);
+                });
+            }
+
+            // 如果没有建议，隐藏下拉框
+            if (suggestionsBox.childElementCount === 0) {
+                suggestionsBox.style.display = "none";
+            }
+
+        else {
+                suggestionsBox.style.display = "block"; // 确保下拉框显示
+            }
+        }
+
+        function createSuggestionItem(job) {
+            const suggestionsBox = document.getElementById("suggestions");
+            const option = document.createElement("div");
+            option.textContent = job;
+            option.style.padding = "5px";
+            option.style.cursor = "pointer";
+
+            option.onmouseover = function() {
+                this.style.backgroundColor = "#f0f0f0"; // 鼠标悬停效果
+            };
+            option.onmouseout = function() {
+                this.style.backgroundColor = ""; // 撤销悬停效果
+            };
+            option.onclick = function() {
+                document.getElementById("jobInput").value = job; // 点击后填充输入框
+                suggestionsBox.style.display = "none"; // 隐藏下拉框
+            };
+
+            suggestionsBox.appendChild(option); // 添加到下拉框中
+        }
+
+        // 点击输入框外部时隐藏建议框
+        document.addEventListener("click", function(event) {
+            if (!event.target.closest("#jobInput") && !event.target.closest("#suggestions")) {
+                document.getElementById("suggestions").style.display = "none";
+            }
+        });
+
         function sendRequest() {
             var start_time = $('#start_time').val().split('T')[0];
             var start_time_hour = $('#start_time').val().split('T')[1];
             var end_time = $('#end_time').val().split('T')[0];
             var end_time_hour = $('#end_time').val().split('T')[1];
             var MacNum = $('#MacNum').val();
-            console.log("Selected MacNum:", MacNum);
+            console.log("Selected MacNum1:", MacNum);
             $.ajax({
                 url: '/getTrueRate',
                 type: 'POST',
@@ -56,21 +153,23 @@
                     MacNum: MacNum,
                 },
                 success: function (response) {
-                        var Data = JSON.parse(response);
-                        var errJobtypedata = [];
-                        var errJobNumData = [];
-                        var errJobRateData = [];
-                        var errAllNumData = [];
-                        var errPlnoNameData = [];
-                        for (var i = 0; i < Data.length; i++) {
-                            errJobtypedata.push(Data[i].errtype);
-                            errJobNumData.push(Data[i].JobTypeNum);
-                            errJobRateData.push(Data[i].JobTypeRate);
-                            errAllNumData.push(Data[i].errAllNum);
-                            errPlnoNameData.push((Data[i].jobname));
-                        }
-                        generateJobErr(errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0])
-                        $('#jobname').html('料号缺陷占比数量: ' + errPlnoNameData[0]);
+                    $('#PLNum').empty();
+                    document.getElementById("jobInput").value = "";
+                    var Data = JSON.parse(response);
+                    var errJobtypedata = [];
+                    var errJobNumData = [];
+                    var errJobRateData = [];
+                    var errAllNumData = [];
+                    var errPlnoNameData = [];
+                    for (var i = 0; i < Data.length; i++) {
+                        errJobtypedata.push(Data[i].errtype);
+                        errJobNumData.push(Data[i].JobTypeNum);
+                        errJobRateData.push(Data[i].JobTypeRate);
+                        errAllNumData.push(Data[i].errAllNum);
+                        errPlnoNameData.push((Data[i].jobname));
+                    }
+                    generateJobErr(errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0])
+                    $('#jobname').html('料号缺陷占比数量: ' + errPlnoNameData[0]);
                 },
                 error: function (xhr, status, error) {
                     console.error(error);
@@ -145,32 +244,32 @@
                     console.error(error);
                 }
             });
-            $.ajax({
-                url: '/selectJob',  // 此处为获取数据的路由
-                type: 'POST',
-                data: {
-                    start_time: start_time,
-                    end_time: end_time,
-                    start_time_hour: start_time_hour,
-                    end_time_hour: end_time_hour,
-                    MacNum: MacNum,
-                },
-                async: false,
-                success: function (response) {
-                    // 清空原有的下拉框数据
-                    $('#PLNum').empty();
-                    $('#JobNum').empty();
-                    // 遍历获取的数据并添加到下拉框下方
+<!--            $.ajax({-->
+<!--                url: '/selectJob',  // 此处为获取数据的路由-->
+<!--                type: 'POST',-->
+<!--                data: {-->
+<!--                    start_time: start_time,-->
+<!--                    end_time: end_time,-->
+<!--                    start_time_hour: start_time_hour,-->
+<!--                    end_time_hour: end_time_hour,-->
+<!--                    MacNum: MacNum,-->
+<!--                },-->
+<!--                async: false,-->
+<!--                success: function (response) {-->
+<!--                    // 清空原有的下拉框数据-->
+<!--                    $('#PLNum').empty();-->
+<!--                    $('#JobNum').empty();-->
+<!--                    // 遍历获取的数据并添加到下拉框下方-->
 
-                    $('#JobNum').append('<option >' + "" + '</option>')
-                    $.each(response.data, function (index, item) {
-                        $('#JobNum').append('<option >' + item + '</option>');
-                    });
-                },
-                error: function (xhr, status, error) {
-                    console.error(error);
-                }
-            });
+<!--                    $('#JobNum').append('<option >' + "" + '</option>')-->
+<!--                    $.each(response.data, function (index, item) {-->
+<!--                        $('#JobNum').append('<option >' + item + '</option>');-->
+<!--                    });-->
+<!--                },-->
+<!--                error: function (xhr, status, error) {-->
+<!--                    console.error(error);-->
+<!--                }-->
+<!--            });-->
         }
 
         function initdate() {
@@ -220,15 +319,16 @@
                 });
             });
 
-            $('#JobNum').click(function () {
+            $('#suggestions').click(function () {
                 // 发送 AJAX 请求获取数据
                 var start_time = $('#start_time').val().split('T')[0];
                 var start_time_hour = $('#start_time').val().split('T')[1];
                 var end_time = $('#end_time').val().split('T')[0];
                 var end_time_hour = $('#end_time').val().split('T')[1];
                 var MacNum = $('#MacNum').val();
-                console.log("Selected MacNum:", MacNum);
-                var jobNum = $('#JobNum').val();
+                console.log("Selected MacNum2:", MacNum);
+                var jobNum = $('#jobInput').val();
+                console.log("Job1:", jobNum);
                 $.ajax({
                     url: '/LiaohuaErrRate',
                     type: 'POST',
@@ -294,8 +394,7 @@
                 var end_time = $('#end_time').val().split('T')[0];
                 var end_time_hour = $('#end_time').val().split('T')[1];
                 var MacNum = $('#MacNum').val();
-                console.log("Selected MacNum:", MacNum);
-                var jobNum = $('#JobNum').val();
+                var jobNum = $('#jobInput').val();
                 var PLNum = $('#PLNum').val();
                 $.ajax({
                     url: '/PlnoErrRate',
@@ -348,7 +447,7 @@
                 var end_time = $('#end_time').val().split('T')[0];
                 var end_time_hour = $('#end_time').val().split('T')[1];
                 var MacNum = $('#MacNum').val();
-                console.log("Selected MacNum:", MacNum);
+                console.log("Selected MacNum4:", MacNum);
                 $.ajax({
                     url: '/ExportSql',
                     type: 'POST',
@@ -390,7 +489,6 @@
                     var end_time = $('#end_time').val().split('T')[0];
                     var end_time_hour = $('#end_time').val().split('T')[1];
                     var MacNum = $('#MacNum').val();
-                    console.log("Selected MacNum:", MacNum);
                     $.ajax({
                         url: '/ExportLiaoSql',
                         type: 'POST',
@@ -448,11 +546,11 @@
     <section class="section">
         <div class="news_check">
             <div class="check_left l_left">
-                <label>工序：</label>
-                <select class="find_input" type="date" id="process">
-                    <option>AI-AOI</option>
-                    <option>AI-AVI</option>
-                </select>
+<!--                <label>工序：</label>-->
+<!--                <select class="find_input" type="date" id="process">-->
+<!--                    <option>AI-AOI</option>-->
+<!--                    <option>AI-AVI</option>-->
+<!--                </select>-->
                 <label>时间段：</label>
                 <input class="d-val" type="datetime-local" id="start_time">
                 <input class="d-val" type="datetime-local" id="end_time">
@@ -461,8 +559,15 @@
                 </select>
                 <button type="button" class="layui-btn layui-bg-blue" id="selectAllButton">全选</button>
                 <label>料号：</label>
-                <select class="find_input" id="JobNum" style="margin-right: 10px; overflow-y: auto;">
-                </select>
+
+                <div style="position: relative; display: inline-block;">
+                    <input type="text" id="jobInput" class="find_input" placeholder="输入料号" onfocus="showSuggestions()" oninput="filterFunction()" style="width: 200px;"/>
+                    <div id="suggestions" style="position: absolute; top: 100%; left: 0; width: 100%; max-height: 150px; overflow-y: auto; display: none; border: 1px solid #ccc; background: white; z-index: 10;">
+                    </div>
+                </div>
+
+<!--                <select class="find_input" id="JobNum" style="margin-right: 10px; overflow-y: auto;">-->
+<!--                </select>-->
                 <label>批量号：</label>
                 <select class="find_input" id="PLNum" style="margin-right: 10px">
 <!--                </select>-->
@@ -632,6 +737,7 @@
             $('#MacNum').trigger('change');  // 触发 change 事件，确保更新
         });
     </script>
+
 <!--ajax 查询请求-->
 </body>
 </html>

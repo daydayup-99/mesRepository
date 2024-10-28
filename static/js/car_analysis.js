@@ -686,7 +686,6 @@ function generateJobAi(jobnameData,fJobAiData){
 //        // 弹框显示点击的柱状图对应的数据
 //        alert("缺陷名: " + params.name + "\n数量: " + params.value);
 //    }
-});
 }
 // 导出为 CSV 的函数
 function exportToCSV(types, numbers, rates, errPlnoNameData) {

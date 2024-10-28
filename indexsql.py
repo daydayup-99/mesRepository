@@ -238,7 +238,7 @@ def getErrRate():
     session = Session()
     data_points = []
     ai_err_type_counts = {}
-    yesterday = curent_date - timedelta(days=3)
+    yesterday = curent_date - timedelta(days=4)
     # table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
     table_name = f"tab_err_{yesterday.strftime('%Y%m%d')[0:]}"
     inspector = inspect(engine)
@@ -272,7 +272,7 @@ def getErrRate():
 def getErrJob():
     session = Session()
     ai_err_type_counts = {}
-    yesterday = curent_date - timedelta(days=3)
+    yesterday = curent_date - timedelta(days=4)
     # table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
     table_name = f"tab_err_{yesterday.strftime('%Y%m%d')[0:]}"
 
