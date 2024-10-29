@@ -57,7 +57,7 @@ def updateData():
 @app.route('/selectJob',methods=['POST'])
 def getJobName():
     start_time, end_time, start_time_hour, end_time_hour, MacNum = getRequestData(request)
-    jobnameData = selectJob(start_time, end_time, MacNum)
+    jobnameData = selectJob(start_time, end_time,start_time_hour,end_time_hour, MacNum)
     response = jsonify(data = jobnameData)
     return  response
 
@@ -67,7 +67,7 @@ def getPlnoName():
     start_time, end_time, start_time_hour, end_time_hour, MacNum = getRequestData(request)
     jobName = request.form['jobNum']
     if jobName != "":
-        jobnameData = selectPlno(start_time,end_time,MacNum,jobName)
+        jobnameData = selectPlno(start_time,end_time,start_time_hour,end_time_hour,MacNum,jobName)
     else:
         jobnameData = []
 
@@ -117,7 +117,7 @@ def handle_ajax_request():
     # PLNum = request.form['PLNum']
     # ai_version = request.form['ai_version']
     # josn_string = getRateFilterTotal(ai_version, start_time, end_time, MacNum, jobName, PLNum)
-    josn_string = getRateFilterTotal(start_time, end_time, MacNum)
+    josn_string = getRateFilterTotal(start_time, end_time,start_time_hour, end_time_hour, MacNum)
     return josn_string
 
 
@@ -125,7 +125,7 @@ def handle_ajax_request():
 def  liaoselectsql():
     # 获取表单数据
     start_time, end_time, start_time_hour, end_time_hour, MacNum = getRequestData(request)
-    josn_string = ReadJobSql(start_time, end_time, MacNum)
+    josn_string = ReadJobSql(start_time, end_time,start_time_hour, end_time_hour, MacNum)
     return josn_string
 
 @app.route('/LiaohuaErrRate', methods=['POST'])
@@ -188,8 +188,8 @@ def getRequestData (request):
     MacNum = request.form.getlist('MacNum[]')
     date_format = '%Y-%m-%d'
     hour_format = '%H:%M'
-    start_time = datetime.strptime(start_time, date_format)
-    end_time = datetime.strptime(end_time, date_format)
+    start_time = datetime.strptime(start_time, date_format).date()
+    end_time = datetime.strptime(end_time, date_format).date()
     start_time_hour = datetime.strptime(start_time_hour, hour_format).time()
     end_time_hour = datetime.strptime(end_time_hour, hour_format).time()
     return start_time,end_time,start_time_hour,end_time_hour,MacNum

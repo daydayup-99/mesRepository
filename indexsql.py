@@ -375,8 +375,10 @@ def getAllErrRateSql(start_date, end_date, machinecode):
     return json_data
 
 #选取所有料号
-def selectJob(start_date,end_date,machinecode):
+def selectJob(start_date,end_date,start_time_hour,end_time_hour,machinecode):
     session = Session()
+    start_datetime_str = f"{start_date} {start_time_hour}"
+    end_datetime_str = f"{end_date} {end_time_hour}"
     jobnameData= set()
     current_date = start_date
     while current_date <= end_date:
@@ -388,7 +390,8 @@ def selectJob(start_date,end_date,machinecode):
             # 如果表存在，则加载它
             table = Table(table_name, Base.metadata, autoload_with=engine)
             result = session.query(table.c.job_name).filter(
-                table.c.test_machine_code.in_(machinecode)).group_by(table.c.job_name).all()
+                table.c.test_machine_code.in_(machinecode),table.c.test_time >= start_datetime_str,
+            table.c.test_time < end_datetime_str ).group_by(table.c.job_name).all()
             for row in result:
                 jobname = row[0]
                 jobnameData.add(jobname)
@@ -397,8 +400,10 @@ def selectJob(start_date,end_date,machinecode):
     return list(jobnameData)
 
 #选取所有批量号
-def selectPlno(start_date,end_date,machinecode,jobname):
+def selectPlno(start_date,end_date,start_time_hour,end_time_hour,machinecode,jobname):
     session = Session()
+    start_datetime_str = f"{start_date} {start_time_hour}"
+    end_datetime_str = f"{end_date} {end_time_hour}"
     plnoData= set()
     current_date = start_date
     while current_date <= end_date:
@@ -410,7 +415,8 @@ def selectPlno(start_date,end_date,machinecode,jobname):
             # 如果表存在，则加载它
             table = Table(table_name, Base.metadata, autoload_with=engine)
             result = session.query(table.c.plno).filter(
-                table.c.test_machine_code.in_(machinecode),table.c.job_name == jobname).group_by(table.c.plno).all()
+                table.c.test_machine_code.in_(machinecode),table.c.job_name == jobname ,table.c.test_time >= start_datetime_str,
+            table.c.test_time < end_datetime_str ).group_by(table.c.plno).all()
             for row in result:
                 plno = row[0]
                 plnoData.add(plno)
@@ -433,9 +439,11 @@ def selectMachine():
 
 #总过滤率(fAllAi) 、假点过滤率(fAi) 、Ai前后平均点数、 Pass率（fPass）
 # def getRateFilterTotal(ai_version, start_date, end_date, machinecode, jobName, PLNum):
-def getRateFilterTotal(start_date, end_date, machinecode):
+def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machinecode):
     global MacTrueRate
     session = Session()
+    start_datetime_str = f"{start_date} {start_time_hour}"
+    end_datetime_str = f"{end_date} {end_time_hour}"
     json_data = []
     current_date = start_date
     while current_date <= end_date:
@@ -446,22 +454,26 @@ def getRateFilterTotal(start_date, end_date, machinecode):
         table_name = f"tab_test_{table_date}"
         if table_name in table_names:
             table = Table(table_name, Base.metadata, autoload_with=engine)
-            result = session.query(func.sum(table.c.errnum), func.sum(table.c.ai_num)).filter(table.c.test_machine_code.in_(machinecode)).all()
+            result = session.query(func.sum(table.c.errnum), func.sum(table.c.ai_num)).filter(table.c.test_machine_code.in_(machinecode),table.c.test_time >= start_datetime_str,
+            table.c.test_time < end_datetime_str).all()
             for row in result:
                 nALLNum,nAiNum = row
             # result = session.query(func.sum(table.c.true_num)).filter(table.c.test_machine_code == machinecode,not_(table.c.true_num.is_(None)))
             # for row in result:
             #     nCheckTrueNum = row[0]
-            inner_query = session.query(func.count()).filter(table.c.test_machine_code.in_(machinecode)).group_by(table.c.job_name, table.c.plno, table.c.pcbno).having(func.sum(func.ifnull(table.c.errnum, -3000)),func.sum(func.ifnull(table.c.errnum, -3000)) >= 0).subquery()
+            inner_query = session.query(func.count()).filter(table.c.test_machine_code.in_(machinecode),table.c.test_time >= start_datetime_str,
+            table.c.test_time < end_datetime_str).group_by(table.c.job_name, table.c.plno, table.c.pcbno).having(func.sum(func.ifnull(table.c.errnum, -3000)),func.sum(func.ifnull(table.c.errnum, -3000)) >= 0).subquery()
             result = session.query(func.count()).select_from(inner_query).all()
             for row in result:
                 nAllBoard = row[0]
-            inquery = session.query(func.count()).filter(table.c.test_machine_code.in_(machinecode)).group_by(table.c.job_name, table.c.plno, table.c.pcbno).having(func.sum(func.ifnull(table.c.errnum, -3000)) == 0).subquery()
+            inquery = session.query(func.count()).filter(table.c.test_machine_code.in_(machinecode),table.c.test_time >= start_datetime_str,
+            table.c.test_time < end_datetime_str).group_by(table.c.job_name, table.c.plno, table.c.pcbno).having(func.sum(func.ifnull(table.c.errnum, -3000)) == 0).subquery()
             result = session.query(func.count()).select_from(inquery).all()
             for row in result:
                 nOkBoard = row[0]
 
-            inner_query = session.query(func.count()).filter(table.c.test_machine_code.in_(machinecode)).group_by(
+            inner_query = session.query(func.count()).filter(table.c.test_machine_code.in_(machinecode),table.c.test_time >= start_datetime_str,
+            table.c.test_time < end_datetime_str).group_by(
                 table.c.job_name, table.c.plno, table.c.pcbno).having(func.sum(func.ifnull(table.c.errnum, -3000))).subquery()
             result = session.query(func.count()).select_from(inner_query).all()
             for row in result:
@@ -528,9 +540,11 @@ def getRateFilterTotal(start_date, end_date, machinecode):
     return json_string
 
 #料号ai前后平均点数、过滤率
-def ReadJobSql(start_date, end_date, machinecode):
+def ReadJobSql(start_date, end_date,start_time_hour,end_time_hour, machinecode):
     global MacTrueRate
     session = Session()
+    start_datetime_str = f"{start_date} {start_time_hour}"
+    end_datetime_str = f"{end_date} {end_time_hour}"
     json_data = []
     # 查询并分组 test_machine_code 字段，动态获取表名
     jobname_results = defaultdict(lambda: {'njoball': 0, 'njoberrnum': 0, 'njobainum': 0,'nJobCheckAllNum':0,'nJobCheckTrueNum':0})
@@ -543,12 +557,15 @@ def ReadJobSql(start_date, end_date, machinecode):
         if table_name in table_names:
             # 如果表存在，则加载它
             table = Table(table_name, Base.metadata, autoload_with=engine)
-            result = session.query(table.c.job_name,func.sum(table.c.errnum),func.sum(table.c.ai_num)).filter(table.c.test_machine_code.in_(machinecode)).group_by(table.c.job_name).all()
+            result = session.query(table.c.job_name,func.sum(table.c.errnum),func.sum(table.c.ai_num)).filter(table.c.test_machine_code.in_(machinecode),table.c.test_time >= start_datetime_str,
+            table.c.test_time < end_datetime_str).group_by(table.c.job_name).all()
             for row in result:
                 jobname=row[0]
-                inner_query= session.query(func.count()).filter(table.c.test_machine_code.in_(machinecode),table.c.job_name == jobname).group_by(table.c.plno,table.c.pcbno).having(func.sum(func.ifnull(table.c.errnum, -3000)) >= 0).subquery()
+                inner_query= session.query(func.count()).filter(table.c.test_machine_code.in_(machinecode),table.c.job_name == jobname,table.c.test_time >= start_datetime_str,
+            table.c.test_time < end_datetime_str).group_by(table.c.plno,table.c.pcbno).having(func.sum(func.ifnull(table.c.errnum, -3000)) >= 0).subquery()
                 res = session.query(func.count()).select_from(inner_query).all()
-                TrueRes = session.query(func.sum(table.c.errnum),func.sum(table.c.true_num)).filter(not_(table.c.true_num.is_(None)),table.c.test_machine_code.in_(machinecode),table.c.job_name == jobname).all()
+                TrueRes = session.query(func.sum(table.c.errnum),func.sum(table.c.true_num)).filter(not_(table.c.true_num.is_(None)),table.c.test_machine_code.in_(machinecode),table.c.job_name == jobname,table.c.test_time >= start_datetime_str,
+            table.c.test_time < end_datetime_str).all()
                 nJobCheckAllNum = TrueRes[0][0]
                 nJobCheckTrueNum= TrueRes[0][1]
                 njoball=res[0][0]
@@ -977,6 +994,8 @@ def getLayersql(start_date,end_date,machinecode,jobname):
 
 def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
     statisticdata = []
+    start_datetime_str = f"{start_date} {start_time_hour}"
+    end_datetime_str = f"{end_date} {end_time_hour}"
     fieldnames = ['日期', '料号', '批量号', '假点过滤率', '总点过滤率','AI漏失总数','漏失率',
                   '总板数', 'AI跑板数', 'AVI缺陷总数', 'AVI真点总数', 'AI真点总数', '平均报点','平均报点T', '平均报点B',
                   '平均AI报点', '平均AI报点T', '平均AI报点B', 'OK板总数', 'AI_OK板总数', 'OK板比例', 'AI_OK板比例', '膜面', '机台号']
@@ -999,8 +1018,6 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
     session = Session()
     current_date = start_date
     result = []
-    start_time = start_time_hour
-    end_time = end_time_hour
     while current_date <= end_date:
         inspector = inspect(engine)
         # 获取数据库中所有的表名
@@ -1021,7 +1038,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                            SUM(ai_missing_num) AS ai_missing_num_sum,
                            MAX(CASE WHEN ai_true_num >= 0 THEN 1 ELSE 0 END) AS has_ai
                     FROM {table_name}
-                    WHERE TIME(test_time) BETWEEN '{start_time}' AND '{end_time}'
+                    WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
                     AND test_machine_code in ({placeholders})
                     GROUP BY default_1, job_name, plno, pcbno, surface
                 ), main_result AS (
@@ -1168,6 +1185,8 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
 
 def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode):
     statisticdata = []
+    start_datetime_str = f"{start_date} {start_time_hour}"
+    end_datetime_str = f"{end_date} {end_time_hour}"
     fieldnames = ['日期', '料号', '假点过滤率', '总点过滤率','AI漏失总数','漏失率',
                   '总板数', 'AI跑板数', 'AVI缺陷总数', 'AVI真点总数', 'AI真点总数', '平均报点', '平均报点T', '平均报点B',
                   '平均AI报点', '平均AI报点T', '平均AI报点B', 'OK板总数', 'AI_OK板总数', 'OK板比例', 'AI_OK板比例', '膜面', '机台号']
@@ -1190,8 +1209,6 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
     session = Session()
     current_date = start_date
     result = []
-    start_time = start_time_hour
-    end_time = end_time_hour
     while current_date <= end_date:
         inspector = inspect(engine)
         # 获取数据库中所有的表名
@@ -1212,7 +1229,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                            SUM(ai_missing_num) AS ai_missing_num_sum,
                            MAX(CASE WHEN ai_true_num >= 0 THEN 1 ELSE 0 END) AS has_ai
                     FROM {table_name}
-                    WHERE TIME(test_time) BETWEEN '{start_time}' AND '{end_time}'
+                    WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
                     AND test_machine_code in ({placeholders})
                     GROUP BY default_1, job_name,plno,pcbno, surface
                 ), main_result AS (
