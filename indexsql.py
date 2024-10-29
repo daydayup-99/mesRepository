@@ -979,7 +979,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
     statisticdata = []
     fieldnames = ['日期', '料号', '批量号', '假点过滤率', '总点过滤率','AI漏失总数','漏失率',
                   '总板数', 'AI跑板数', 'AVI缺陷总数', 'AVI真点总数', 'AI真点总数', '平均报点','平均报点T', '平均报点B',
-                  '平均AI报点', '平均AI报点T', '平均AI报点B', 'OK板总数', 'AI_OK板总数', 'OK板比例', 'AI_OK板比例', '膜面']
+                  '平均AI报点', '平均AI报点T', '平均AI报点B', 'OK板总数', 'AI_OK板总数', 'OK板比例', 'AI_OK板比例', '膜面', '机台号']
     if len(machinecode) > 1:
         machinecodename = "多机台"
     else:
@@ -1010,7 +1010,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
         if table_name in table_names:
             sql_query = text(f"""
                 WITH board_info AS(
-                    SELECT default_1, job_name, plno, pcbno, surface,
+                    SELECT test_machine_code, default_1, job_name, plno, pcbno, surface,
                            SUM(errnum) AS err_num_sum,
                            SUM(CASE WHEN is_top = 1 THEN errnum ELSE 0 END) AS err_num_sum_T,
                            SUM(CASE WHEN is_top = 0 THEN errnum ELSE 0 END) AS err_num_sum_B,
@@ -1025,7 +1025,8 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                     AND test_machine_code in ({placeholders})
                     GROUP BY default_1, job_name, plno, pcbno, surface
                 ), main_result AS (
-                    SELECT default_1 AS 日期,
+                    SELECT 
+                           default_1 AS 日期,
                            job_name AS 料号,
                            plno AS 批量号,
                            COUNT(*) AS 总板数,
@@ -1061,7 +1062,8 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                            ROUND(CASE WHEN SUM(has_ai) > 0 THEN
                                          CAST(SUM(ai_true_num_sum_B) AS REAL) / CAST(SUM(has_ai) AS REAL)
                                        ELSE 0 END, 2)  AS 平均AI报点B,
-                           surface AS 膜面
+                           surface AS 膜面,
+                           test_machine_code AS 机台号
                     FROM board_info
                     WHERE err_num_sum < 2000
                     GROUP BY default_1, job_name, plno, surface
@@ -1114,7 +1116,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                  '平均AI报点': i[18],'平均AI报点T': i[19],'平均AI报点B': i[20],
                  'OK板总数': i[5], 'AI_OK板总数': i[7],
                  'OK板比例': i[6], 'AI_OK板比例': i[8],
-                 '膜面': i[21]}
+                 '膜面': i[21], '机台号': i[22]}
         statisticdata.append(value)
 
     if os.path.exists(jobcsv_file):
@@ -1157,7 +1159,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
     df.loc[len(df.index)] = ['','总计',len(df)-1,round(resFR*100, 2),round(resAR*100,2),df['AI漏失总数'].sum(),round(df['漏失率'].mean(), 2),df['总板数'].sum(),
                   df['AI跑板数'].sum(),df['AVI缺陷总数'].sum(),df['AVI真点总数'].sum(),df['AI真点总数'].sum(),round(df['AVI缺陷总数'].sum() / df['总板数'].sum(), 2),round((df['平均报点T'] * df['总板数']).sum()/df['总板数'].sum(), 2),round((df['平均报点B'] * df['总板数']).sum()/df['总板数'].sum(), 2),
                   round(df['AI真点总数'].sum() / df['AI跑板数'].sum(), 2),round((df['平均AI报点T'] * df['AI跑板数']).sum()/df['AI跑板数'].sum(), 2),round((df['平均AI报点B'] * df['AI跑板数']).sum()/df['AI跑板数'].sum(), 2),df['OK板总数'].sum(),
-                  df['AI_OK板总数'].sum(),round((df['OK板比例'] * df['总板数']).sum() / df['总板数'].sum(), 2) ,round((df['AI_OK板比例'] * df['AI跑板数']).sum() / df['总板数'].sum(), 2),'']
+                  df['AI_OK板总数'].sum(),round((df['OK板比例'] * df['总板数']).sum() / df['总板数'].sum(), 2) ,round((df['AI_OK板比例'] * df['AI跑板数']).sum() / df['总板数'].sum(), 2),'','']
 
     df.to_csv(jobcsv_file, index=False, encoding='utf-8-sig')
 
@@ -1168,7 +1170,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
     statisticdata = []
     fieldnames = ['日期', '料号', '假点过滤率', '总点过滤率','AI漏失总数','漏失率',
                   '总板数', 'AI跑板数', 'AVI缺陷总数', 'AVI真点总数', 'AI真点总数', '平均报点', '平均报点T', '平均报点B',
-                  '平均AI报点', '平均AI报点T', '平均AI报点B', 'OK板总数', 'AI_OK板总数', 'OK板比例', 'AI_OK板比例', '膜面']
+                  '平均AI报点', '平均AI报点T', '平均AI报点B', 'OK板总数', 'AI_OK板总数', 'OK板比例', 'AI_OK板比例', '膜面', '机台号']
     if len(machinecode) > 1:
         machinecodename = "多机台"
     else:
@@ -1199,7 +1201,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
         if table_name in table_names:
             sql_query = text(f"""
                WITH board_info AS(
-                    SELECT default_1, job_name,plno, pcbno, surface,
+                    SELECT test_machine_code,default_1, job_name,plno, pcbno, surface,
                            SUM(errnum) AS err_num_sum,
                            SUM(CASE WHEN is_top = 1 THEN errnum ELSE 0 END) AS err_num_sum_T,
                            SUM(CASE WHEN is_top = 0 THEN errnum ELSE 0 END) AS err_num_sum_B,
@@ -1249,7 +1251,8 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                            ROUND(CASE WHEN SUM(has_ai) > 0 THEN
                                          CAST(SUM(ai_true_num_sum_B) AS REAL) / CAST(SUM(has_ai) AS REAL)
                                        ELSE 0 END, 2)  AS 平均AI报点B,
-                           surface AS 膜面
+                           surface AS 膜面,
+                           test_machine_code AS 机台号
                     FROM board_info
                     WHERE err_num_sum < 2000
                     GROUP BY default_1, job_name, surface
@@ -1302,7 +1305,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                  '平均AI报点': i[17],'平均AI报点T': i[18],'平均AI报点B': i[19],
                  'OK板总数': i[4], 'AI_OK板总数': i[6],
                  'OK板比例': i[5], 'AI_OK板比例': i[7],
-                 '膜面': i[20]}
+                 '膜面': i[20], '机台号': i[21]}
         statisticdata.append(value)
 
     if os.path.exists(jobcsv_file):
@@ -1345,7 +1348,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
     df.loc[len(df.index)] = ['','总计',round(resFR*100, 2),round(resAR*100, 2),df['AI漏失总数'].sum(),round(df['漏失率'].mean(), 2),df['总板数'].sum(),
                   df['AI跑板数'].sum(),df['AVI缺陷总数'].sum(),df['AVI真点总数'].sum(),df['AI真点总数'].sum(),round(df['AVI缺陷总数'].sum() / df['总板数'].sum(), 2),round((df['平均报点T'] * df['总板数']).sum()/df['总板数'].sum(), 2),round((df['平均报点B'] * df['总板数']).sum()/df['总板数'].sum(), 2),
                   round(df['AI真点总数'].sum() / df['AI跑板数'].sum(), 2),round((df['平均AI报点T'] * df['AI跑板数']).sum()/df['AI跑板数'].sum(), 2),round((df['平均AI报点B'] * df['AI跑板数']).sum()/df['AI跑板数'].sum(), 2),df['OK板总数'].sum(),
-                  df['AI_OK板总数'].sum(),round((df['OK板比例'] * df['总板数']).sum() / df['总板数'].sum(), 2) ,round((df['AI_OK板比例'] * df['AI跑板数']).sum() / df['总板数'].sum(), 2),'']
+                  df['AI_OK板总数'].sum(),round((df['OK板比例'] * df['总板数']).sum() / df['总板数'].sum(), 2) ,round((df['AI_OK板比例'] * df['AI跑板数']).sum() / df['总板数'].sum(), 2),'','']
 
     df.to_csv(jobcsv_file, index=False, encoding='utf-8-sig')
 
