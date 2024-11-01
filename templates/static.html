@@ -83,9 +83,9 @@
                 suggestionsBox.style.display = "none";
             }
 
-        else {
-                suggestionsBox.style.display = "block"; // 确保下拉框显示
-            }
+            else {
+                    suggestionsBox.style.display = "block"; // 确保下拉框显示
+                }
         }
 
         function createSuggestionItem(job) {
@@ -123,24 +123,24 @@
             var end_time_hour = $('#end_time').val().split('T')[1];
             var MacNum = $('#MacNum').val();
             console.log("Selected MacNum1:", MacNum);
-            $.ajax({
-                url: '/getTrueRate',
-                type: 'POST',
-                data: {
-                    start_time: start_time,
-                    end_time: end_time,
-                    start_time_hour: start_time_hour,
-                    end_time_hour: end_time_hour,
-                    MacNum: MacNum,
-<!--                    MaxNum: maxnum,-->
-                },
-                async: false,
-                success: function (response) {
-                },
-                error: function (xhr, status, error) {
-                    console.error(error);
-                }
-            });
+<!--            $.ajax({-->
+<!--                url: '/getTrueRate',-->
+<!--                type: 'POST',-->
+<!--                data: {-->
+<!--                    start_time: start_time,-->
+<!--                    end_time: end_time,-->
+<!--                    start_time_hour: start_time_hour,-->
+<!--                    end_time_hour: end_time_hour,-->
+<!--                    MacNum: MacNum,-->
+<!--&lt;!&ndash;                    MaxNum: maxnum,&ndash;&gt;-->
+<!--                },-->
+<!--                async: false,-->
+<!--                success: function (response) {-->
+<!--                },-->
+<!--                error: function (xhr, status, error) {-->
+<!--                    console.error(error);-->
+<!--                }-->
+<!--            });-->
 
             $.ajax({
                 url: '/AllErrRate',
@@ -211,6 +211,7 @@
                 },
                 error: function (xhr, status, error) {
                     console.error(error);
+                    console.log("Response:", xhr.responseText);
                 }
             });
 
@@ -383,6 +384,7 @@
                     },
                     error: function (xhr, status, error) {
                         console.error(error);
+                        console.log("Response:", xhr.responseText);
                     }
                 });
             });
@@ -481,38 +483,37 @@
                         });
                     }
                 })
-                });
+            });
 
-                $("#exportJobExcel").click(function(){
-                    var start_time = $('#start_time').val().split('T')[0];
-                    var start_time_hour = $('#start_time').val().split('T')[1];
-                    var end_time = $('#end_time').val().split('T')[0];
-                    var end_time_hour = $('#end_time').val().split('T')[1];
-                    var MacNum = $('#MacNum').val();
-                    $.ajax({
-                        url: '/ExportLiaoSql',
-                        type: 'POST',
-                        data: {
-                            start_time: start_time,
-                            end_time: end_time,
-                            start_time_hour: start_time_hour,
-                            end_time_hour: end_time_hour,
-                            MacNum: MacNum,
-                        },
-                        success: function (response) {
-                            $("<div>导出成功！</div>").dialog({
-                                title: "提示",
-                                buttons: {
-                                    "确定": function() {
-                                        $(this).dialog("close");
-                                    }
+            $("#exportJobExcel").click(function(){
+                var start_time = $('#start_time').val().split('T')[0];
+                var start_time_hour = $('#start_time').val().split('T')[1];
+                var end_time = $('#end_time').val().split('T')[0];
+                var end_time_hour = $('#end_time').val().split('T')[1];
+                var MacNum = $('#MacNum').val();
+                $.ajax({
+                    url: '/ExportLiaoSql',
+                    type: 'POST',
+                    data: {
+                        start_time: start_time,
+                        end_time: end_time,
+                        start_time_hour: start_time_hour,
+                        end_time_hour: end_time_hour,
+                        MacNum: MacNum,
+                    },
+                    success: function (response) {
+                        $("<div>导出成功！</div>").dialog({
+                            title: "提示",
+                            buttons: {
+                                "确定": function() {
+                                    $(this).dialog("close");
                                 }
-                            });
-                        },
-                        error:function(){}
-                    })
-                    });
-
+                            }
+                        });
+                    },
+                    error:function(){}
+                })
+            });
         });
 
     </script>

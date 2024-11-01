@@ -15,8 +15,8 @@ import configparser
 global MacTrueRate
 
 config = configparser.ConfigParser()
-config_dir = os.path.dirname(os.path.realpath(__file__))
-# config_dir = os.path.dirname(sys.executable)
+# config_dir = os.path.dirname(os.path.realpath(__file__))
+config_dir = os.path.dirname(sys.executable)
 config_dir = os.path.join(config_dir, 'config.ini')
 config.read(config_dir)
 t_ratio = float(config['log']['t_ratio'])
@@ -72,6 +72,7 @@ class TestRecord(Base):
     plno = Column(String(45))
     layer_name = Column(String(45))
     is_top = Column(Integer)
+    test_time = Column(String(30))
 
 class MachineCode(Base):
     __tablename__ = "machine_config"
@@ -159,7 +160,7 @@ def SelectAiPass():
             nALLNum = float(nALLNum)
             nAiNum = float(nAiNum)
             if nALLNum!=0:
-                fAi = (nALLNum - nAiNum) / ((nALLNum - nALLNum* (1.0 - t_ratio)))
+                fAi = (nALLNum - nAiNum) / ((nALLNum - nALLNum * t_ratio))
             else:
                 fAi=0.0
 
@@ -196,7 +197,7 @@ def selectMacRate(machinecode):
     for row in query_result:
         MacTrueRate = float(row[0])
     session.close()
-    return  MacTrueRate
+    return MacTrueRate
 
 #获取所有缺陷类型
 # def getErrRate():
@@ -319,54 +320,55 @@ def getAllErrRateSql(start_date, end_date, machinecode):
     JobTypeCounts = {}
     json_data = []
     like_conditions = ' OR '.join([f"err_key LIKE '%{code}%'" for code in machinecode])
-    while current_date <= end_date:
-        inspector = inspect(engine)
-        # 获取数据库中所有的表名
-        table_names = inspector.get_table_names()
-        table_name = f"tab_err_{current_date.strftime('%Y%m%d')[0:]}"
-        if table_name in table_names:
-            table = Table(table_name, Base.metadata, autoload_with=engine)
-            sql_query = text(f"""
-                                select count(*)
-                                FROM {table_name}
-                                WHERE ({like_conditions});
-                                """)
-            result = session.execute(sql_query).fetchall()
-            for row in result:
-                JobErrNum = row[0]
-                if JobErrNum is None:
-                    JobErrNum = 0
-                JobErrAllNum = JobErrAllNum + int(JobErrNum)
+    if like_conditions != '':
+        while current_date <= end_date:
+            inspector = inspect(engine)
+            # 获取数据库中所有的表名
+            table_names = inspector.get_table_names()
+            table_name = f"tab_err_{current_date.strftime('%Y%m%d')[0:]}"
+            if table_name in table_names:
+                table = Table(table_name, Base.metadata, autoload_with=engine)
+                sql_query = text(f"""
+                                    select count(*)
+                                    FROM {table_name}
+                                    WHERE ({like_conditions});
+                                    """)
+                result = session.execute(sql_query).fetchall()
+                for row in result:
+                    JobErrNum = row[0]
+                    if JobErrNum is None:
+                        JobErrNum = 0
+                    JobErrAllNum = JobErrAllNum + int(JobErrNum)
 
-            sql_query = text(f"""
-                                select ai_err_type, count(*)
-                                FROM {table_name}
-                                WHERE ({like_conditions})
-                                AND ai_err_type <> ''
-                                GROUP BY ai_err_type;
-                                """)
-            result = session.execute(sql_query).fetchall()
-            for row in result:
-                JobErrType, JobTypeNum = row;
-                if JobErrType is None:
-                    JobErrType = ''
-                if JobTypeNum is None:
-                    JobTypeNum = 0
-                if JobErrType in JobTypeCounts:
-                    JobTypeCounts[JobErrType] += JobTypeNum
-                else:
-                    JobTypeCounts[JobErrType] = JobTypeNum
-        current_date += timedelta(days=1)
-    sorted_counts = sorted(JobTypeCounts.items(), key=lambda x: x[1], reverse=True)
-    for JobErrType, JobTypeNum in sorted_counts:
-        if JobErrAllNum != 0:
-            JobTypeRate = round((JobTypeNum / JobErrAllNum) * 100, 2)
-        else:
-            JobTypeRate = 0.0  # 默认值应该是数字，而不是字典
+                sql_query = text(f"""
+                                    select ai_err_type, count(*)
+                                    FROM {table_name}
+                                    WHERE ({like_conditions})
+                                    AND ai_err_type <> ''
+                                    GROUP BY ai_err_type;
+                                    """)
+                result = session.execute(sql_query).fetchall()
+                for row in result:
+                    JobErrType, JobTypeNum = row;
+                    if JobErrType is None:
+                        JobErrType = ''
+                    if JobTypeNum is None:
+                        JobTypeNum = 0
+                    if JobErrType in JobTypeCounts:
+                        JobTypeCounts[JobErrType] += JobTypeNum
+                    else:
+                        JobTypeCounts[JobErrType] = JobTypeNum
+            current_date += timedelta(days=1)
+        sorted_counts = sorted(JobTypeCounts.items(), key=lambda x: x[1], reverse=True)
+        for JobErrType, JobTypeNum in sorted_counts:
+            if JobErrAllNum != 0:
+                JobTypeRate = round((JobTypeNum / JobErrAllNum) * 100, 2)
+            else:
+                JobTypeRate = 0.0  # 默认值应该是数字，而不是字典
 
-        data_point = {'errtype': JobErrType, 'JobTypeNum': JobTypeNum, 'JobTypeRate': JobTypeRate,
-                      'errAllNum': JobErrAllNum, 'jobname': "All"}
-        json_data.append(data_point)
+            data_point = {'errtype': JobErrType, 'JobTypeNum': JobTypeNum, 'JobTypeRate': JobTypeRate,
+                          'errAllNum': JobErrAllNum, 'jobname': "All"}
+            json_data.append(data_point)
 
     # 将相对比例的字典转换为 JSON 格式
     json_data = json.dumps(json_data, ensure_ascii=False)
@@ -377,6 +379,7 @@ def getAllErrRateSql(start_date, end_date, machinecode):
 #选取所有料号
 def selectJob(start_date,end_date,start_time_hour,end_time_hour,machinecode):
     session = Session()
+    machineCode = "('" + "', '".join(machinecode) + "')"
     start_datetime_str = f"{start_date} {start_time_hour}"
     end_datetime_str = f"{end_date} {end_time_hour}"
     jobnameData= set()
@@ -388,10 +391,14 @@ def selectJob(start_date,end_date,start_time_hour,end_time_hour,machinecode):
         table_name = f"tab_test_{current_date.strftime('%Y%m%d')[0:]}"
         if table_name in table_names:
             # 如果表存在，则加载它
-            table = Table(table_name, Base.metadata, autoload_with=engine)
-            result = session.query(table.c.job_name).filter(
-                table.c.test_machine_code.in_(machinecode),table.c.test_time >= start_datetime_str,
-            table.c.test_time < end_datetime_str ).group_by(table.c.job_name).all()
+            sql_query = text(f"""
+                                select job_name
+                                FROM {table_name}
+                                WHERE test_machine_code in {machineCode}
+                                AND test_time between '{start_datetime_str}' and '{end_datetime_str}'
+                                GROUP BY job_name;
+                                """)
+            result = session.execute(sql_query).fetchall()
             for row in result:
                 jobname = row[0]
                 jobnameData.add(jobname)
@@ -416,7 +423,7 @@ def selectPlno(start_date,end_date,start_time_hour,end_time_hour,machinecode,job
             table = Table(table_name, Base.metadata, autoload_with=engine)
             result = session.query(table.c.plno).filter(
                 table.c.test_machine_code.in_(machinecode),table.c.job_name == jobname ,table.c.test_time >= start_datetime_str,
-            table.c.test_time < end_datetime_str ).group_by(table.c.plno).all()
+            table.c.test_time <= end_datetime_str ).group_by(table.c.plno).all()
             for row in result:
                 plno = row[0]
                 plnoData.add(plno)
@@ -440,8 +447,9 @@ def selectMachine():
 #总过滤率(fAllAi) 、假点过滤率(fAi) 、Ai前后平均点数、 Pass率（fPass）
 # def getRateFilterTotal(ai_version, start_date, end_date, machinecode, jobName, PLNum):
 def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machinecode):
-    global MacTrueRate
+    # global MacTrueRate
     session = Session()
+    machineCode = "('" + "', '".join(machinecode) + "')"
     start_datetime_str = f"{start_date} {start_time_hour}"
     end_datetime_str = f"{end_date} {end_time_hour}"
     json_data = []
@@ -453,27 +461,34 @@ def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machi
         table_date = current_date.strftime('%Y%m%d')[0:]
         table_name = f"tab_test_{table_date}"
         if table_name in table_names:
+            sql_query = text(f"""
+                                select sum(errnum), sum(ai_num)
+                                FROM {table_name}
+                                WHERE test_machine_code in {machineCode}
+                                AND test_time between '{start_datetime_str}' and '{end_datetime_str}';
+                                """)
+            result = session.execute(sql_query).fetchall()
             table = Table(table_name, Base.metadata, autoload_with=engine)
-            result = session.query(func.sum(table.c.errnum), func.sum(table.c.ai_num)).filter(table.c.test_machine_code.in_(machinecode),table.c.test_time >= start_datetime_str,
-            table.c.test_time < end_datetime_str).all()
+            # result = session.query(func.sum(table.c.errnum), func.sum(table.c.ai_num)).filter(table.c.test_machine_code.in_(machinecode),table.c.test_time >= start_datetime_str,
+            # table.c.test_time < end_datetime_str).all()
             for row in result:
                 nALLNum,nAiNum = row
             # result = session.query(func.sum(table.c.true_num)).filter(table.c.test_machine_code == machinecode,not_(table.c.true_num.is_(None)))
             # for row in result:
             #     nCheckTrueNum = row[0]
             inner_query = session.query(func.count()).filter(table.c.test_machine_code.in_(machinecode),table.c.test_time >= start_datetime_str,
-            table.c.test_time < end_datetime_str).group_by(table.c.job_name, table.c.plno, table.c.pcbno).having(func.sum(func.ifnull(table.c.errnum, -3000)),func.sum(func.ifnull(table.c.errnum, -3000)) >= 0).subquery()
+            table.c.test_time <= end_datetime_str).group_by(table.c.job_name, table.c.plno, table.c.pcbno).having(func.sum(func.ifnull(table.c.errnum, -3000)),func.sum(func.ifnull(table.c.errnum, -3000)) >= 0).subquery()
             result = session.query(func.count()).select_from(inner_query).all()
             for row in result:
                 nAllBoard = row[0]
             inquery = session.query(func.count()).filter(table.c.test_machine_code.in_(machinecode),table.c.test_time >= start_datetime_str,
-            table.c.test_time < end_datetime_str).group_by(table.c.job_name, table.c.plno, table.c.pcbno).having(func.sum(func.ifnull(table.c.errnum, -3000)) == 0).subquery()
+            table.c.test_time <= end_datetime_str).group_by(table.c.job_name, table.c.plno, table.c.pcbno).having(func.sum(func.ifnull(table.c.errnum, -3000)) == 0).subquery()
             result = session.query(func.count()).select_from(inquery).all()
             for row in result:
                 nOkBoard = row[0]
 
             inner_query = session.query(func.count()).filter(table.c.test_machine_code.in_(machinecode),table.c.test_time >= start_datetime_str,
-            table.c.test_time < end_datetime_str).group_by(
+            table.c.test_time <= end_datetime_str).group_by(
                 table.c.job_name, table.c.plno, table.c.pcbno).having(func.sum(func.ifnull(table.c.errnum, -3000))).subquery()
             result = session.query(func.count()).select_from(inner_query).all()
             for row in result:
@@ -508,7 +523,7 @@ def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machi
 
             if nALLNum != 0:
                 fAllAi = (nALLNum-nAiNum) / nALLNum
-                fAi = (nALLNum - nAiNum) / ( nALLNum- (nALLNum * (1.0- t_ratio)))
+                fAi = (nALLNum - nAiNum) / ( nALLNum- (nALLNum * t_ratio))
             else:
                 fAllAi =0.0
                 fAi =0.0
@@ -541,7 +556,7 @@ def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machi
 
 #料号ai前后平均点数、过滤率
 def ReadJobSql(start_date, end_date,start_time_hour,end_time_hour, machinecode):
-    global MacTrueRate
+    # global MacTrueRate
     session = Session()
     start_datetime_str = f"{start_date} {start_time_hour}"
     end_datetime_str = f"{end_date} {end_time_hour}"
@@ -558,14 +573,14 @@ def ReadJobSql(start_date, end_date,start_time_hour,end_time_hour, machinecode):
             # 如果表存在，则加载它
             table = Table(table_name, Base.metadata, autoload_with=engine)
             result = session.query(table.c.job_name,func.sum(table.c.errnum),func.sum(table.c.ai_num)).filter(table.c.test_machine_code.in_(machinecode),table.c.test_time >= start_datetime_str,
-            table.c.test_time < end_datetime_str).group_by(table.c.job_name).all()
+            table.c.test_time <= end_datetime_str).group_by(table.c.job_name).all()
             for row in result:
                 jobname=row[0]
                 inner_query= session.query(func.count()).filter(table.c.test_machine_code.in_(machinecode),table.c.job_name == jobname,table.c.test_time >= start_datetime_str,
-            table.c.test_time < end_datetime_str).group_by(table.c.plno,table.c.pcbno).having(func.sum(func.ifnull(table.c.errnum, -3000)) >= 0).subquery()
+            table.c.test_time <= end_datetime_str).group_by(table.c.plno,table.c.pcbno).having(func.sum(func.ifnull(table.c.errnum, -3000)) >= 0).subquery()
                 res = session.query(func.count()).select_from(inner_query).all()
                 TrueRes = session.query(func.sum(table.c.errnum),func.sum(table.c.true_num)).filter(not_(table.c.true_num.is_(None)),table.c.test_machine_code.in_(machinecode),table.c.job_name == jobname,table.c.test_time >= start_datetime_str,
-            table.c.test_time < end_datetime_str).all()
+            table.c.test_time <= end_datetime_str).all()
                 nJobCheckAllNum = TrueRes[0][0]
                 nJobCheckTrueNum= TrueRes[0][1]
                 njoball=res[0][0]
@@ -585,25 +600,25 @@ def ReadJobSql(start_date, end_date,start_time_hour,end_time_hour, machinecode):
                 jobname_results[jobname]['njoball'] += njoball
                 jobname_results[jobname]['njoberrnum'] += njoberrnum
                 jobname_results[jobname]['njobainum'] += njobainum
-                jobname_results[jobname]['nJobCheckAllNum'] +=nJobCheckAllNum
+                jobname_results[jobname]['nJobCheckAllNum'] += nJobCheckAllNum
                 jobname_results[jobname]['nJobCheckTrueNum'] += nJobCheckTrueNum
 
         current_date += timedelta(days=1)
     # 打印查询结果
     for jobname, results in jobname_results.items():
         if results['njoball']!=0:
-            fJobMeanAll = float(results['njoberrnum'])  / float(results['njoball'])
-            fJobMeanAi = float(results['njobainum'])  / float(results['njoball'])
+            fJobMeanAll = float(results['njoberrnum']) / float(results['njoball'])
+            fJobMeanAi = float(results['njobainum']) / float(results['njoball'])
         else:
             fJobMeanAll=0.0
             fJobMeanAi =0.0
 
         if  results['nJobCheckAllNum']!=0:
-            fJobCheckTrueRate = round(float(results['nJobCheckTrueNum'])  / float(results['nJobCheckAllNum']),2)
+            fJobCheckTrueRate = round(float(results['nJobCheckTrueNum']) / float(results['nJobCheckAllNum']),2)
         else:
             fJobCheckTrueRate=0.0
         if results['njoberrnum'] !=0:
-            fJobAiPass=float(results['njoberrnum'] - results['njobainum']) / (float(results['njoberrnum'])*(1.0 - MacTrueRate) - float(results['nJobCheckTrueNum']))
+            fJobAiPass=float(results['njoberrnum'] - results['njobainum']) / (float(results['njoberrnum'])* t_ratio - float(results['nJobCheckTrueNum']))
         else:
             fJobAiPass=0.0
         fJobMeanAll = round(fJobMeanAll, 2)
@@ -1005,8 +1020,8 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
         machinecodename = machinecode[0]
     placeholders = ', '.join([f"'{code}'" for code in machinecode])
 
-    # current_dir = os.path.dirname(sys.executable)
-    current_dir = os.path.dirname(os.path.realpath(__file__))
+    current_dir = os.path.dirname(sys.executable)
+    # current_dir = os.path.dirname(os.path.realpath(__file__))
     current_dir = os.path.join(current_dir, 'csvdata')
     print("当前文件的目录路径:", current_dir)
     if not os.path.exists(current_dir):
@@ -1101,7 +1116,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
         nAiFalseRatio = float(i[14])
 
         if nALLNum != 0:
-            fAi = (nALLNum - nAiNum) / (nALLNum - (nALLNum * (1.0 - t_ratio)))
+            fAi = (nALLNum - nAiNum) / (nALLNum - (nALLNum * t_ratio))
             fAll = (nALLNum - nAiNum) / nALLNum
             fAiFalseRatio = nAiFalseRatio / nALLNum
 
@@ -1121,7 +1136,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
         if fAll > 0.99:
             fAll = 0.99
         if t_ratio > 0:
-            nAviNum = int(nALLNum - (nALLNum * (1.0 - t_ratio)))
+            nAviNum = int(nALLNum * t_ratio)
         else:
             nAviNum = i[12]
         value = {'日期': i[0], '料号': i[1], '批量号': i[2],
@@ -1157,7 +1172,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
     df['AI漏失总数'] = df['AI漏失总数'].astype(float)
 
     resAR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / df['AVI缺陷总数'].sum())
-    resFR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / (df['AVI缺陷总数'].sum() - (df['AVI缺陷总数'].sum()*(1.0-t_ratio))))
+    resFR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / (df['AVI缺陷总数'].sum() - (df['AVI缺陷总数'].sum() * t_ratio)))
     if resFR > 1.0:
         lowerBound = float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum())
         upperBound = min(
@@ -1196,8 +1211,8 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
         machinecodename = machinecode[0]
     placeholders = ', '.join([f"'{code}'" for code in machinecode])
 
-    # current_dir = os.path.dirname(sys.executable)
-    current_dir = os.path.dirname(os.path.realpath(__file__))
+    current_dir = os.path.dirname(sys.executable)
+    # current_dir = os.path.dirname(os.path.realpath(__file__))
     current_dir = os.path.join(current_dir, 'csvdata')
     print("当前文件的目录路径:", current_dir)
     if not os.path.exists(current_dir):
@@ -1290,7 +1305,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
         nAiFalseRatio = float(i[13])
 
         if nALLNum != 0:
-            fAi = (nALLNum - nAiNum) / (nALLNum - (nALLNum * (1.0 - t_ratio)))
+            fAi = (nALLNum - nAiNum) / (nALLNum - (nALLNum * t_ratio))
             fAll = (nALLNum - nAiNum) / nALLNum
             fAiFalseRatio =  nAiFalseRatio / nALLNum
 
@@ -1310,7 +1325,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
         if fAll > 0.99:
             fAll = 0.99
         if t_ratio > 0:
-            nAviNum = int(nALLNum - (nALLNum * (1.0 - t_ratio)))
+            nAviNum = int(nALLNum * t_ratio)
         else:
             nAviNum = i[11]
         value = {'日期': i[0], '料号': i[1],
@@ -1346,7 +1361,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
     df['AI漏失总数'] = df['AI漏失总数'].astype(float)
 
     resAR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / df['AVI缺陷总数'].sum())
-    resFR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / (df['AVI缺陷总数'].sum() - (df['AVI缺陷总数'].sum() * (1.0 - t_ratio))))
+    resFR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / (df['AVI缺陷总数'].sum() - (df['AVI缺陷总数'].sum() * t_ratio)))
     if resFR > 1.0:
         lowerBound = float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum())
         upperBound = min(
