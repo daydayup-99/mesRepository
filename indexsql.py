@@ -297,7 +297,7 @@ def getErrJob():
     for key in ai_err_type_counts.keys():
         sql_query = text(f"""
                         WITH a AS(
-                            SELECT SUBSTRING_INDEX(err_key,'#', 1) AS 'Job', SUBSTRING_INDEX(err_key,'#', -1) as 'MachineID'
+                            SELECT SUBSTRING_INDEX(err_key,'&', 1) AS 'Job', SUBSTRING_INDEX(err_key,'&', -1) as 'MachineID'
                             FROM {table_name}
                             WHERE ai_err_type = '{key}'
                         )
