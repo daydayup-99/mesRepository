@@ -1055,7 +1055,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                     FROM {table_name}
                     WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
                     AND test_machine_code in ({placeholders})
-                    GROUP BY default_1, job_name, plno, pcbno, surface
+                    GROUP BY default_1, job_name, plno, pcbno, surface, test_machine_code
                 ), main_result AS (
                     SELECT 
                            default_1 AS 日期,
@@ -1098,7 +1098,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                            test_machine_code AS 机台号
                     FROM board_info
                     WHERE err_num_sum < 2000
-                    GROUP BY default_1, job_name, plno, surface
+                    GROUP BY default_1, job_name, plno, surface, test_machine_code
                 )
                 SELECT *
                 FROM main_result
@@ -1246,7 +1246,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                     FROM {table_name}
                     WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
                     AND test_machine_code in ({placeholders})
-                    GROUP BY default_1, job_name,plno,pcbno, surface
+                    GROUP BY default_1, job_name,plno,pcbno, surface, test_machine_code
                 ), main_result AS (
                     SELECT default_1 AS 日期,
                            job_name AS 料号,
@@ -1287,7 +1287,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                            test_machine_code AS 机台号
                     FROM board_info
                     WHERE err_num_sum < 2000
-                    GROUP BY default_1, job_name, surface
+                    GROUP BY default_1, job_name, surface, test_machine_code
                 )
                 SELECT *
                 FROM main_result
