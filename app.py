@@ -15,6 +15,7 @@ from tkinter import messagebox
 
 app = Flask(__name__)
 
+# sys_dir = os.path.dirname(os.path.realpath(__file__))
 sys_dir = os.path.dirname(sys.executable)
 back_path = os.path.join(sys_dir, 'background.jpg')
 

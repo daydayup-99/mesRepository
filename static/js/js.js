@@ -762,7 +762,7 @@ function ShowErrNum(stdata){
             // 遍历 stdata 数组，提取 Job 和 MachineID
             for (var i = 0; i < stdata.length; i++) {
                 var item = stdata[i];
-                resultText += "料号: " + item['Job'] + "\n机台号: " + item['MachineID'] + "\n";
+                resultText += "膜面，料号: " + item['Job'] + "\n机台号: " + item['MachineID'] + "\n";
             }
 
             // 弹出包含所有信息的提示框

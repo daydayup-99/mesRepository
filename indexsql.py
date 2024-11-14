@@ -239,9 +239,9 @@ def getErrRate():
     session = Session()
     data_points = []
     ai_err_type_counts = {}
-    yesterday = curent_date - timedelta(days=4)
-    table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
-    # table_name = f"tab_err_{yesterday.strftime('%Y%m%d')[0:]}"
+    yesterday = curent_date - timedelta(days=1)
+    # table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
+    table_name = f"tab_err_{yesterday.strftime('%Y%m%d')[0:]}"
     inspector = inspect(engine)
     # 获取数据库中所有的表名
     table_names = inspector.get_table_names()
@@ -273,9 +273,9 @@ def getErrRate():
 def getErrJob():
     session = Session()
     ai_err_type_counts = {}
-    yesterday = curent_date - timedelta(days=4)
-    table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
-    # table_name = f"tab_err_{yesterday.strftime('%Y%m%d')[0:]}"
+    yesterday = curent_date - timedelta(days=1)
+    # table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
+    table_name = f"tab_err_{yesterday.strftime('%Y%m%d')[0:]}"
 
     inspector = inspect(engine)
     # 获取数据库中所有的表名
@@ -297,14 +297,14 @@ def getErrJob():
     for key in ai_err_type_counts.keys():
         sql_query = text(f"""
                         WITH a AS(
-                            SELECT SUBSTRING_INDEX(err_key,'&', 1) AS 'Job', SUBSTRING_INDEX(err_key,'&', -1) as 'MachineID'
+                            SELECT default_1, SUBSTRING_INDEX(err_key,'&', -1) as 'MachineID',SUBSTRING_INDEX(SUBSTRING_INDEX(err_key,'&', -2),'&',1) as 'Surface'
                             FROM {table_name}
                             WHERE ai_err_type = '{key}'
                         )
-                        SELECT *
+                        SELECT CONCAT(Surface,',',default_1) as Job,MachineID
                         FROM a
-                        GROUP BY Job, MachineID
-                        ORDER BY COUNT(Job) DESC
+                        GROUP BY default_1, MachineID, Surface
+                        ORDER BY COUNT(default_1) DESC
                         LIMIT 5
                     """)
         resulttmp = session.execute(sql_query).fetchall()
