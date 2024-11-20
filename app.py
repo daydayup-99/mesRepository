@@ -91,13 +91,13 @@ def on_closing():
     else:
         window.quit()  # 退出程序
 
+config = configparser.ConfigParser()
+# config_dir = os.path.dirname(os.path.realpath(__file__))
+config_dir = os.path.dirname(sys.executable)
+config_dir = os.path.join(config_dir, 'config.ini')
+config.read(config_dir)
 @app.route('/static')
 def statics():
-    config = configparser.ConfigParser()
-    # config_dir = os.path.dirname(os.path.realpath(__file__))
-    config_dir = os.path.dirname(sys.executable)
-    config_dir = os.path.join(config_dir, 'config.ini')
-    config.read(config_dir)
     export_time = config['log']['autoTime']
     is_export = config.getboolean('log', 'autoStatistic')
     return render_template('static.html', export_time=export_time, is_export=is_export)
@@ -108,7 +108,8 @@ def mes():
 
 @app.route('/index')
 def routs():
-    return render_template('index.html')
+    reflash_time = config['log']['reflashTime']
+    return render_template('index.html', reflash_time=reflash_time)
 
 @app.route('/MacAi', methods=['GET'])
 def  selectMacAi():

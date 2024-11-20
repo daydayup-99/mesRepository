@@ -138,10 +138,11 @@
            MacErrRate();
 
       });
-
-        // 使用setInterval函数每隔五分钟调用sendRequest函数
-        setInterval(sendRequest, 5 * 60 * 1000); // 5分钟 = 5 * 60秒 * 1000毫秒
-        setInterval(MacErrRate, 5 * 60 * 1000);
+      var reFlashTime = parseInt("{{ reflash_time }}", 10);
+      // 使用setInterval函数每隔五分钟调用sendRequest函数
+<!--      console.log("reFlashTime": reFlashTime);-->
+      setInterval(sendRequest, 1 * reFlashTime * 1000); // 5分钟 = 5 * 60秒 * 1000毫秒
+      setInterval(MacErrRate, 1 * reFlashTime * 1000);
     </script>
 
 
