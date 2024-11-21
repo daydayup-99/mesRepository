@@ -130,19 +130,33 @@
                 }
             });
         }
+        function MachineIdSum() {
+            $.ajax({
+                url: '/getAllMachineNum', // 替换为实际的服务器端点
+                type: 'GET', // 可能需要根据你的需求更改请求类型
+                async: false,
+                success: function (data) {
+                    var aviCount = data.avi_count;
+                    $('#AllBoard').text(aviCount);
+                },
+                error: function (xhr, status, error) {
+                    // 处理请求错误
+                    console.error('Request error:', error);
+                }
+            });
+        }
 
 
-
-      $(document).ready(function () {
+       $(document).ready(function () {
            sendRequest();
            MacErrRate();
-
+           MachineIdSum();
       });
       var reFlashTime = parseInt("{{ reflash_time }}", 10);
       // 使用setInterval函数每隔五分钟调用sendRequest函数
-<!--      console.log("reFlashTime": reFlashTime);-->
       setInterval(sendRequest, 1 * reFlashTime * 1000); // 5分钟 = 5 * 60秒 * 1000毫秒
       setInterval(MacErrRate, 1 * reFlashTime * 1000);
+      setInterval(MachineIdSum, 1 * reFlashTime * 1000);
     </script>
 
 
@@ -165,13 +179,14 @@
 
             <div class="section second">
                 <div class="box" style="overflow: hidden;width: 30%; height: 280px;">
-                    <div class="tit layui-font-blue layui-font-18">今日总览</div>
+                    <div class="tit layui-font-blue layui-font-18">今日总览
+                    </div>
                     <div class="boxnav">
                         <div class="yqlist">
                             <ul>
                                 <li id="AVI">
                                     <span class="layui-font-blue layui-font-18" style="font-weight: bold">AVI产板数量</span>
-                                    <div class="yq">
+                                    <div class="yq" id="AllBoard">
                                         9121
                                     </div>
                                 </li>

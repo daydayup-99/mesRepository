@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw, ImageTk
 from flask import Flask, render_template, Response, request, jsonify
 from indexsql import selectJob, selectMachine, getRateFilterTotal, ReadJobSql, getJobErrRate, selectPlno, \
     getPlnoErrRate, SelectAiPass, getErrRate, update_db_connection, getLayersql, selectMacRate, \
-    exportcsvbyjob, exportallcsv, getAllErrRateSql, getErrJob
+    exportcsvbyjob, exportallcsv, getAllErrRateSql, getErrJob, getAllMachineNumSql
 from datetime import datetime, timedelta, time
 import tkinter as tk
 from tkinter import messagebox
@@ -166,6 +166,12 @@ def getdate():
     date_range = [formatted_start_date, formatted_end_date]
     response = jsonify(data=date_range)
     return response
+
+@app.route('/getAllMachineNum')
+def getAllMachineNum():
+    avi_count = getAllMachineNumSql()  # 从数据库或其他地方获取动态数据
+    response = {"avi_count": avi_count}
+    return jsonify(response)
 
 # 初始时获取机台号
 @app.route('/getMacineData')

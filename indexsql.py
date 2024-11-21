@@ -119,6 +119,33 @@ def update_db_connection(new_uri):
                                max_overflow=5)
     Base = declarative_base()
 
+def getAllMachineNumSql():
+    session = Session()
+    # yesterday = curent_date - timedelta(days=1)
+    table_name = f"tab_test_{curent_date.strftime('%Y%m%d')[0:]}"
+    # table_name = f"tab_err_{yesterday.strftime('%Y%m%d')[0:]}"
+    inspector = inspect(engine)
+    # 获取数据库中所有的表名
+    table_names = inspector.get_table_names()
+    if table_name in table_names:
+        sql_query = text(f"""
+                            SELECT SUM(pcbCount) as total_pcb_count
+                            FROM(
+                                SELECT job_name,plno,count(DISTINCT pcbno) AS pcbCount
+                                FROM {table_name}
+                                GROUP BY job_name,plno
+                            )	AS subquery
+                    """)
+        resulttmp = session.execute(sql_query).fetchone()
+        total_pcb_count = resulttmp[0] if resulttmp and resulttmp[0] is not None else 0
+        if isinstance(total_pcb_count, Decimal):  # 转换 Decimal 为 float
+            total_pcb_count = int(total_pcb_count)
+        res = total_pcb_count
+    json_data = json.dumps(res, ensure_ascii=False)
+    session.close()
+    return json_data
+
+
 #机台平均点数 和 过滤率
 def SelectAiPass():
     session = Session()
