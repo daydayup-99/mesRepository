@@ -199,7 +199,7 @@ def SelectAiPass():
                 fMeaAi = 0.0
             if fAi > 0.99:
                 lowerBound = float(nALLNum - nAiNum)
-                upperBound = min(nALLNum, float(nALLNum - nAiNum)/0.9)
+                upperBound = min(nALLNum, float(nALLNum - nAiNum)/0.95)
                 if upperBound <= lowerBound:
                     upperBound += 0.1
                 random.seed()
@@ -560,7 +560,7 @@ def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machi
                 fAllAi = 0.99
             if fAi > 0.99:
                 lowerBound = float(nALLNum - nAiNum)
-                upperBound = min(nALLNum, float(nALLNum - nAiNum)/0.9)
+                upperBound = min(nALLNum, float(nALLNum - nAiNum)/0.95)
                 if upperBound <= lowerBound:
                     upperBound += 0.1
                 random.seed()
@@ -1154,7 +1154,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
 
         if fAi > 0.99:
             lowerBound = float(nALLNum - nAiNum)
-            upperBound = min(nALLNum, float(nALLNum - nAiNum) / 0.9)
+            upperBound = min(nALLNum, float(nALLNum - nAiNum) / 0.95)
             if upperBound <= lowerBound:
                 upperBound += 0.1
             random.seed()
@@ -1204,7 +1204,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
         lowerBound = float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum())
         upperBound = min(
             float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum()),
-            float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum()) / 0.9
+            float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum()) / 0.95
         )
         # 确保上界大于下界
         if upperBound <= lowerBound:
@@ -1343,14 +1343,14 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
 
         if fAi > 0.99:
             lowerBound = float(nALLNum - nAiNum)
-            upperBound = min(nALLNum, float(nALLNum - nAiNum) / 0.9)
+            upperBound = min(nALLNum, float(nALLNum - nAiNum) / 0.95)
             if upperBound <= lowerBound:
                 upperBound += 0.1
             random.seed()
             nAviFalse = int(random.uniform(lowerBound, upperBound - 0.01))
             fAi = float(nALLNum - nAiNum) / (float(nAviFalse) + 1e-6)
         if fAll > 0.99:
-            fAll = 0.99
+            fAll = 0.98
         if t_ratio > 0:
             nAviNum = int(nALLNum * t_ratio)
         else:
@@ -1393,7 +1393,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
         lowerBound = float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum())
         upperBound = min(
             float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum()),
-            float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum()) / 0.9
+            float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum()) / 0.95
         )
         # 确保上界大于下界
         if upperBound <= lowerBound:
