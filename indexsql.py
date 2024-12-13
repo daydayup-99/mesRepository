@@ -27,6 +27,9 @@ port = config['database']['Port']
 dbname = config['database']['DbName']
 charset = config['database']['Charset']
 smallBatch = config['log']['smallBatch']
+maxTrueNum = int(config['log']['maxTrueNum'])
+if maxTrueNum < 0:
+    maxTrueNum = float('inf')
 # start_time = config['log']['start_time']
 # end_time = config['log']['end_time']
 if t_ratio < 0:
@@ -199,7 +202,7 @@ def SelectAiPass():
                 fMeaAi = 0.0
             if fAi > 0.99:
                 lowerBound = float(nALLNum - nAiNum)
-                upperBound = min(nALLNum, float(nALLNum - nAiNum)/0.95)
+                upperBound = min(nALLNum, float(nALLNum - nAiNum)/0.96)
                 if upperBound <= lowerBound:
                     upperBound += 0.1
                 random.seed()
@@ -560,7 +563,7 @@ def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machi
                 fAllAi = 0.99
             if fAi > 0.99:
                 lowerBound = float(nALLNum - nAiNum)
-                upperBound = min(nALLNum, float(nALLNum - nAiNum)/0.95)
+                upperBound = min(nALLNum, float(nALLNum - nAiNum)/0.96)
                 if upperBound <= lowerBound:
                     upperBound += 0.1
                 random.seed()
@@ -1130,6 +1133,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                 SELECT *
                 FROM main_result
                 WHERE 总板数 > {smallBatch}
+                AND AI真点总数 < {maxTrueNum}
                 """)
 
             resulttmp = session.execute(sql_query).fetchall()
@@ -1154,7 +1158,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
 
         if fAi > 0.99:
             lowerBound = float(nALLNum - nAiNum)
-            upperBound = min(nALLNum, float(nALLNum - nAiNum) / 0.95)
+            upperBound = min(nALLNum, float(nALLNum - nAiNum) / 0.96)
             if upperBound <= lowerBound:
                 upperBound += 0.1
             random.seed()
@@ -1204,7 +1208,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
         lowerBound = float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum())
         upperBound = min(
             float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum()),
-            float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum()) / 0.95
+            float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum()) / 0.96
         )
         # 确保上界大于下界
         if upperBound <= lowerBound:
@@ -1319,6 +1323,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                 SELECT *
                 FROM main_result
                 WHERE 总板数 > {smallBatch}
+                AND AI真点总数 < {maxTrueNum}
                 """)
 
             resulttmp = session.execute(sql_query).fetchall()
@@ -1343,7 +1348,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
 
         if fAi > 0.99:
             lowerBound = float(nALLNum - nAiNum)
-            upperBound = min(nALLNum, float(nALLNum - nAiNum) / 0.95)
+            upperBound = min(nALLNum, float(nALLNum - nAiNum) / 0.96)
             if upperBound <= lowerBound:
                 upperBound += 0.1
             random.seed()
@@ -1393,7 +1398,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
         lowerBound = float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum())
         upperBound = min(
             float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum()),
-            float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum()) / 0.95
+            float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum()) / 0.96
         )
         # 确保上界大于下界
         if upperBound <= lowerBound:
