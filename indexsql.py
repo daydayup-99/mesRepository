@@ -1058,7 +1058,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
         # 如果路径不存在，创建文件夹
         os.makedirs(current_dir)
 
-    job_file = os.path.join(current_dir, f"{start_date.strftime('%Y%m%d')[0:]}-{end_date.strftime('%Y%m%d')[0:]}_statistic_{machinecodename}.xlsx")
+    job_file = os.path.join(current_dir, f"{start_date.strftime('%Y%m%d')[0:]}-{end_date.strftime('%Y%m%d')[0:]}_statistic_{machinecodename}({start_time_hour}~{end_time_hour}).xlsx")
     if os.path.exists(job_file):
         if job_file.lower().endswith('.xlsx'):
             os.remove(job_file)
