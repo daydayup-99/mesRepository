@@ -1,4 +1,5 @@
 import configparser
+import logging
 import json
 import os
 import sys
@@ -13,6 +14,21 @@ from datetime import datetime, timedelta, time
 import tkinter as tk
 from tkinter import messagebox
 
+log_dir = os.path.join(os.path.dirname(sys.executable), 'logs')
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+log_file = os.path.join(log_dir, 'app_error.log')
+
+logging.basicConfig(
+    level=logging.DEBUG,  # 日志级别为DEBUG
+    format='%(asctime)s - %(levelname)s - %(message)s',  # 日志格式
+    handlers=[
+        logging.FileHandler(log_file),  # 输出到文件
+        logging.StreamHandler(sys.stdout)  # 控制台输出
+    ]
+)
+
 app = Flask(__name__)
 
 # sys_dir = os.path.dirname(os.path.realpath(__file__))
@@ -22,7 +38,7 @@ back_path = os.path.join(sys_dir, 'background.jpg')
 window = tk.Tk()
 window.title("Mes App")
 window.geometry('400x300')
-background_image = Image.open(back_path)  # 替换为你的图片文件路径
+background_image = Image.open(back_path)
 background_image = background_image.resize((400, 300), Image.Resampling.LANCZOS)  # 调整图片大小
 background_photo = ImageTk.PhotoImage(background_image)
 canvas = tk.Canvas(window, width=400, height=300)
@@ -35,14 +51,6 @@ status_label = tk.Label(window, text="MES 软件正在运行中",
                         bg="white" # 背景颜色
                         )
 canvas.create_window(200, 150, window=status_label)
-# status_label = tk.Label(window,     text="MES 软件正在运行中",
-#     font=("Montserrat", 20, "bold"),  # 更改字体为 Helvetica，大小为16，粗体
-#     fg="black",  # 字体颜色为蓝色
-#     # bg="lightgray",  # 背景颜色为浅灰色
-#     padx=20,  # 水平内边距
-#     pady=20,  # 垂直内边距
-# )
-# status_label.pack(pady=100)
 
 # 托盘图标相关函数
 def create_image():
@@ -56,12 +64,7 @@ def create_image():
         draw.rectangle([16, 16, 48, 48], fill="black")
     return image
 
-# def on_quit(icon, item):
-#     icon.stop()
-#     sys.exit()
-
 def on_show_window(icon, item):
-    # 如果窗口已最小化，则恢复
     window.deiconify()  # 显示窗口
     status_label.config(text="MES 软件正在运行中")
 
@@ -79,17 +82,15 @@ def close_application():
 
 # 启动 Flask 应用并最小化到系统托盘
 def minimize_to_tray():
-    # icon = Icon("test", create_image(), menu=Menu(MenuItem("Quit", on_quit), MenuItem("Show Window", on_show_window)))
     icon = Icon("test", create_image(), menu=Menu(MenuItem("Show Window", on_show_window)))
     icon.run()
 
-# 拦截窗口关闭事件
 def on_closing():
     result = messagebox.askquestion("退出确认", "是否最小化到托盘？", icon='warning')
     if result == 'yes':
-        hide_window()  # 最小化到托盘
+        hide_window()  # 最小化
     else:
-        window.quit()  # 退出程序
+        window.quit()  # 退出
 
 config = configparser.ConfigParser()
 # config_dir = os.path.dirname(os.path.realpath(__file__))
@@ -274,6 +275,11 @@ def getRequestData (request):
     start_time_hour = datetime.strptime(start_time_hour, hour_format).time()
     end_time_hour = datetime.strptime(end_time_hour, hour_format).time()
     return start_time,end_time,start_time_hour,end_time_hour,MacNum
+
+@app.errorhandler(Exception)
+def handle_error(error):
+    logging.error(f"An unexpected error occurred: {str(error)}")
+    return jsonify(message="An unexpected error occurred!"), 500
 
 if __name__ == '__main__':
     # 启动 Flask 后台
