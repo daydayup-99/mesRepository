@@ -14,21 +14,6 @@ from datetime import datetime, timedelta, time
 import tkinter as tk
 from tkinter import messagebox
 
-log_dir = os.path.join(os.path.dirname(sys.executable), 'logs')
-if not os.path.exists(log_dir):
-    os.makedirs(log_dir)
-
-log_file = os.path.join(log_dir, 'app_error.log')
-
-logging.basicConfig(
-    level=logging.DEBUG,  # 日志级别为DEBUG
-    format='%(asctime)s - %(levelname)s - %(message)s',  # 日志格式
-    handlers=[
-        logging.FileHandler(log_file),  # 输出到文件
-        logging.StreamHandler(sys.stdout)  # 控制台输出
-    ]
-)
-
 app = Flask(__name__)
 
 # sys_dir = os.path.dirname(os.path.realpath(__file__))
