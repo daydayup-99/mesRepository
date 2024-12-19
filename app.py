@@ -1,5 +1,4 @@
 import configparser
-import logging
 import json
 import os
 import sys
@@ -260,11 +259,6 @@ def getRequestData (request):
     start_time_hour = datetime.strptime(start_time_hour, hour_format).time()
     end_time_hour = datetime.strptime(end_time_hour, hour_format).time()
     return start_time,end_time,start_time_hour,end_time_hour,MacNum
-
-@app.errorhandler(Exception)
-def handle_error(error):
-    logging.error(f"An unexpected error occurred: {str(error)}")
-    return jsonify(message="An unexpected error occurred!"), 500
 
 if __name__ == '__main__':
     # 启动 Flask 后台
