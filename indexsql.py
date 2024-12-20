@@ -28,6 +28,10 @@ dbname = config['database']['DbName']
 charset = config['database']['Charset']
 smallBatch = config['log']['smallBatch']
 maxTrueNum = int(config['log']['maxTrueNum'])
+allFilterRate = float(config['log']['allFilterRate'])
+
+if allFilterRate < 0:
+    allFilterRate = 0.0
 if maxTrueNum < 0:
     maxTrueNum = 1000000000   #sql识别不了inf
 # start_time = config['log']['start_time']
@@ -1188,7 +1192,8 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                      'OK板总数': i[5], 'AI_OK板总数': i[7],
                      'OK板比例': i[6], 'AI_OK板比例': i[8],
                      '膜面': i[21], '机台号': i[22]}
-            statisticdata.append(value)
+            if value['总点过滤率'] > allFilterRate:
+                statisticdata.append(value)
 
         # 根据机台号分组
         grouped = {}
@@ -1416,7 +1421,8 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                  'OK板总数': i[4], 'AI_OK板总数': i[6],
                  'OK板比例': i[5], 'AI_OK板比例': i[7],
                  '膜面': i[20], '机台号': i[21]}
-        statisticdata.append(value)
+        if value['总点过滤率'] > allFilterRate:
+            statisticdata.append(value)
 
     if os.path.exists(jobcsv_file):
         # 检查文件名是否以 .csv 结尾
