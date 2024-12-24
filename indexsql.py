@@ -375,10 +375,14 @@ def getAllErrRateSql(start_date, end_date, machinecode):
                 #     JobErrAllNum = JobErrAllNum + int(JobErrNum)
 
                 sql_query = text(f"""
-                                    select ai_err_type, count(*)
-                                    FROM {table_name}
-                                    WHERE ({like_conditions})
-                                    AND ai_err_type <> ''
+                                    WITH _a AS (
+                                      SELECT ai_err_type
+                                      FROM {table_name}
+                                      WHERE ({like_conditions})
+                                    )
+                                    SELECT ai_err_type, COUNT(*)
+                                    FROM _a
+                                    WHERE ai_err_type <> ''
                                     GROUP BY ai_err_type;
                                     """)
                 result = session.execute(sql_query).fetchall()
