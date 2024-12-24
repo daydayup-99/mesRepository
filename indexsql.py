@@ -1298,7 +1298,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
         os.makedirs(current_dir)
     start_time_hour = start_time_hour.strftime("%H:%M:%S").replace(":", "_")
     end_time_hour = end_time_hour.strftime("%H:%M:%S").replace(":", "_")
-    job_file = os.path.join(current_dir, f"{start_date.strftime('%Y%m%d')[0:]}-{end_date.strftime('%Y%m%d')[0:]}_statistic_{machinecodename}({start_time_hour}~{end_time_hour}).xlsx")
+    job_file = os.path.join(current_dir, f"{start_date.strftime('%Y%m%d')[0:]}-{end_date.strftime('%Y%m%d')[0:]}_statisticJob_{machinecodename}({start_time_hour}~{end_time_hour}).xlsx")
     if os.path.exists(job_file):
          if job_file.lower().endswith('.csv'):
              os.remove(job_file)
