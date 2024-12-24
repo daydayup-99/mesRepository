@@ -362,17 +362,17 @@ def getAllErrRateSql(start_date, end_date, machinecode):
             table_name = f"tab_err_{current_date.strftime('%Y%m%d')[0:]}"
             if table_name in table_names:
                 table = Table(table_name, Base.metadata, autoload_with=engine)
-                sql_query = text(f"""
-                                    select count(*)
-                                    FROM {table_name}
-                                    WHERE ({like_conditions});
-                                    """)
-                result = session.execute(sql_query).fetchall()
-                for row in result:
-                    JobErrNum = row[0]
-                    if JobErrNum is None:
-                        JobErrNum = 0
-                    JobErrAllNum = JobErrAllNum + int(JobErrNum)
+                # sql_query = text(f"""
+                #                     select count(*)
+                #                     FROM {table_name}
+                #                     WHERE ({like_conditions});
+                #                     """)
+                # result = session.execute(sql_query).fetchall()
+                # for row in result:
+                #     JobErrNum = row[0]
+                #     if JobErrNum is None:
+                #         JobErrNum = 0
+                #     JobErrAllNum = JobErrAllNum + int(JobErrNum)
 
                 sql_query = text(f"""
                                     select ai_err_type, count(*)
@@ -384,10 +384,7 @@ def getAllErrRateSql(start_date, end_date, machinecode):
                 result = session.execute(sql_query).fetchall()
                 for row in result:
                     JobErrType, JobTypeNum = row;
-                    if JobErrType is None:
-                        JobErrType = ''
-                    if JobTypeNum is None:
-                        JobTypeNum = 0
+                    JobErrAllNum = JobErrAllNum + int(JobTypeNum)
                     if JobErrType in JobTypeCounts:
                         JobTypeCounts[JobErrType] += JobTypeNum
                     else:

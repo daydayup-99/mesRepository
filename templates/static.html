@@ -17,6 +17,37 @@
     <script src="../static/js/layui.js"></script>
     <script src="../static/js/echarts.js"></script>
     <script src="../static/js/select2.min.js"></script>
+    <style>
+        /* Loading 层样式 */
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.7); /* 半透明背景 */
+            z-index: 9999; /* 确保 loading 层在最上面 */
+            display: flex; /* 使用 flex 布局 */
+            justify-content: center; /* 水平居中 */
+            align-items: center; /* 垂直居中 */
+        }
+
+        /* 旋转的圆形加载器 */
+        .spinner {
+            border: 8px solid #f3f3f3; /* 背景色 */
+            border-top: 8px solid #3498db; /* 旋转的颜色 */
+            border-radius: 50%; /* 圆形 */
+            width: 50px; /* 宽度 */
+            height: 50px; /* 高度 */
+            animation: spin 1s linear infinite; /* 旋转动画 */
+        }
+
+        /* 旋转动画的关键帧 */
+        @keyframes spin {
+            0% { transform: rotate(0deg); } /* 动画开始时，旋转 0 度 */
+            100% { transform: rotate(360deg); } /* 动画结束时，旋转 360 度 */
+        }
+    </style>
 
     <script>
         let allJobNumbers = []; // 储存所有料号
@@ -116,7 +147,114 @@
             }
         });
 
+        async function sendRequests() {
+            $('#loading').show(); // 显示 loading 动画
+            var start_time = $('#start_time').val().split('T')[0];
+            var start_time_hour = $('#start_time').val().split('T')[1];
+            var end_time = $('#end_time').val().split('T')[0];
+            var end_time_hour = $('#end_time').val().split('T')[1];
+            var MacNum = $('#MacNum').val();
+            console.log("Selected MacNum1:", MacNum);
+
+            // 使用 Promise 包装每个 AJAX 请求，并返回每个请求的 Promise
+            const ajaxRequests = [
+                $.ajax({
+                    url: '/AllErrRate',
+                    type: 'POST',
+                    data: {
+                        start_time: start_time,
+                        end_time: end_time,
+                        start_time_hour: start_time_hour,
+                        end_time_hour: end_time_hour,
+                        MacNum: MacNum,
+                    }
+                }).then(response => {
+                    $('#PLNum').empty();
+                    document.getElementById("jobInput").value = "";
+                    var Data = JSON.parse(response);
+                    var errJobtypedata = [];
+                    var errJobNumData = [];
+                    var errJobRateData = [];
+                    var errAllNumData = [];
+                    var errPlnoNameData = [];
+                    for (var i = 0; i < Data.length; i++) {
+                        errJobtypedata.push(Data[i].errtype);
+                        errJobNumData.push(Data[i].JobTypeNum);
+                        errJobRateData.push(Data[i].JobTypeRate);
+                        errAllNumData.push(Data[i].errAllNum);
+                        errPlnoNameData.push(Data[i].jobname);
+                    }
+                    generateJobErr(errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0]);
+                    $('#jobname').html('料号缺陷占比数量: ' + errPlnoNameData[0]);
+                }),
+
+                $.ajax({
+                    url: '/staticSubmit',
+                    type: 'POST',
+                    data: {
+                        start_time: start_time,
+                        end_time: end_time,
+                        start_time_hour: start_time_hour,
+                        end_time_hour: end_time_hour,
+                        MacNum: MacNum,
+                    }
+                }).then(response => {
+                    var Data = JSON.parse(response);
+                    var dates = [];
+                    var fAllAiData = [];
+                    var fPassData = [];
+                    var fAiData = [];
+                    var fMeaAllData = [];
+                    var fMeaAiData = [];
+                    var nAllBoardData = [];
+                    for (var i = 0; i < Data.length; i++) {
+                        dates.push(Data[i].date);
+                        fAllAiData.push(Data[i].fAllAi);
+                        fPassData.push(Data[i].fPass);
+                        fAiData.push(Data[i].fAi);
+                        fMeaAllData.push(Data[i].fMeaAll);
+                        fMeaAiData.push(Data[i].fMeaAi);
+                        nAllBoardData.push(Data[i].nAllBoard);
+                    }
+                    generateAi(dates, fAiData);
+                    generateAllAi(dates, fAllAiData, fAiData);
+                    generateOKPass(dates, fPassData);
+                    generateMean(dates, fMeaAllData, fMeaAiData);
+                }),
+
+                $.ajax({
+                    url: '/LiaohualvSubmit',
+                    type: 'POST',
+                    data: {
+                        start_time: start_time,
+                        end_time: end_time,
+                        start_time_hour: start_time_hour,
+                        end_time_hour: end_time_hour,
+                        MacNum: MacNum,
+                    }
+                }).then(response => {
+                    var Data = JSON.parse(response);
+                    var jobnamedata = [];
+                    var fJobMeaAllData = [];
+                    var fJobMeaAliData = [];
+                    var fJobAiPassData = [];
+                    for (var i = 0; i < Data.length; i++) {
+                        jobnamedata.push(Data[i].jobname);
+                        fJobMeaAllData.push(Data[i].fJobMeanAll);
+                        fJobMeaAliData.push(Data[i].fJobMeanAi);
+                        fJobAiPassData.push(Data[i].fJobAiPass);
+                    }
+                    generateJobMean(jobnamedata, fJobMeaAllData, fJobMeaAliData);
+                    generateJobAi(jobnamedata, fJobAiPassData);
+                })
+            ];
+            // 等待所有请求完成
+            await Promise.all(ajaxRequests);
+            $('#loading').hide(); // 所有请求完成后隐藏 loading 动画
+        }
+
         function sendRequest() {
+            $('#loading').show();
             var start_time = $('#start_time').val().split('T')[0];
             var start_time_hour = $('#start_time').val().split('T')[1];
             var end_time = $('#end_time').val().split('T')[0];
@@ -245,6 +383,8 @@
                     console.error(error);
                 }
             });
+            $('#loading').hide();
+
 <!--            $.ajax({-->
 <!--                url: '/selectJob',  // 此处为获取数据的路由-->
 <!--                type: 'POST',-->
@@ -434,13 +574,19 @@
             });
 
             $('#queryButton').click(function () {
-                sendRequest();
-                var container = document.getElementById('container7');
-                var myChart = echarts.init(container);
-                myChart.clear();
-                var container = document.getElementById('container8');
-                var myChart = echarts.init(container);
-                myChart.clear();
+                var container7 = document.getElementById('container7');
+                var myChart7 = echarts.init(container7);
+                myChart7.clear();
+                var container8 = document.getElementById('container8');
+                var myChart8 = echarts.init(container8);
+                myChart8.clear();
+                sendRequests()
+                    .then(function() {
+                        console.log('所有请求完成');
+                    })
+                    .catch(function(error) {
+                        console.error('请求出错:', error);
+                    });
             });
 
             $("#exportExcel").click(function(){
@@ -545,6 +691,9 @@
     </header>
     <!--身体-->
     <section class="section">
+        <div id="loading" style="display: none;">
+            <div class="spinner"></div>
+        </div>
         <div class="news_check">
             <div class="check_left l_left">
 <!--                <label>工序：</label>-->
@@ -688,7 +837,7 @@
             });
         });
     </script>
-   <script>
+    <script>
         // 从后端传递的导出时间
         var exportTime = "{{ export_time }}";  // Flask 后端传递的时间变量，如 "14:00"
         var isExport = {{ is_export|tojson }};
