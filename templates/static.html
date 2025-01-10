@@ -148,7 +148,6 @@
         });
 
         async function sendRequests() {
-            $('#loading').show(); // 显示 loading 动画
             var start_time = $('#start_time').val().split('T')[0];
             var start_time_hour = $('#start_time').val().split('T')[1];
             var end_time = $('#end_time').val().split('T')[0];
@@ -250,7 +249,7 @@
             ];
             // 等待所有请求完成
             await Promise.all(ajaxRequests);
-            $('#loading').hide(); // 所有请求完成后隐藏 loading 动画
+
         }
 
         function sendRequest() {
@@ -580,12 +579,15 @@
                 var container8 = document.getElementById('container8');
                 var myChart8 = echarts.init(container8);
                 myChart8.clear();
+                $('#loading').show(); // 显示 loading 动画
                 sendRequests()
                     .then(function() {
                         console.log('所有请求完成');
+                        $('#loading').hide(); // 所有请求完成后隐藏 loading 动画
                     })
                     .catch(function(error) {
                         console.error('请求出错:', error);
+                        $('#loading').hide(); // 所有请求完成后隐藏 loading 动画
                     });
             });
 
