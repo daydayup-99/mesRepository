@@ -14,9 +14,16 @@ from collections import defaultdict
 import configparser
 global MacTrueRate
 
+surface_dict = {'1': '金',
+                '2': '铜',
+                '3': 'OSP',
+                '4': '化银',
+                '5': '沉锡',
+                '6': '喷锡'}
+
 config = configparser.ConfigParser()
-# config_dir = os.path.dirname(os.path.realpath(__file__))
-config_dir = os.path.dirname(sys.executable)
+config_dir = os.path.dirname(os.path.realpath(__file__))
+# config_dir = os.path.dirname(sys.executable)
 config_dir = os.path.join(config_dir, 'config.ini')
 config.read(config_dir)
 t_ratio = float(config['log']['t_ratio'])
@@ -1055,8 +1062,8 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
         machinecodename = machinecode[0]
     placeholders = ', '.join([f"'{code}'" for code in machinecode])
 
-    current_dir = os.path.dirname(sys.executable)
-    # current_dir = os.path.dirname(os.path.realpath(__file__))
+    # current_dir = os.path.dirname(sys.executable)
+    current_dir = os.path.dirname(os.path.realpath(__file__))
     current_dir = os.path.join(current_dir, 'csvdata')
     print("当前文件的目录路径:", current_dir)
     if not os.path.exists(current_dir):
@@ -1192,7 +1199,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                      '平均AI报点': i[18],'平均AI报点T': i[19],'平均AI报点B': i[20],
                      'OK板总数': i[5], 'AI_OK板总数': i[7],
                      'OK板比例': i[6], 'AI_OK板比例': i[8],
-                     '膜面': i[21], '机台号': i[22]}
+                     '膜面': surface_dict[str(i[21])], '机台号': i[22]}
             if value['总点过滤率'] > allFilterRate:
                 statisticdata.append(value)
 
@@ -1291,8 +1298,8 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
         machinecodename = machinecode[0]
     placeholders = ', '.join([f"'{code}'" for code in machinecode])
 
-    current_dir = os.path.dirname(sys.executable)
-    # current_dir = os.path.dirname(os.path.realpath(__file__))
+    # current_dir = os.path.dirname(sys.executable)
+    current_dir = os.path.dirname(os.path.realpath(__file__))
     current_dir = os.path.join(current_dir, 'csvdata')
     print("当前文件的目录路径:", current_dir)
     if not os.path.exists(current_dir):
@@ -1424,7 +1431,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                      '平均AI报点': i[17],'平均AI报点T': i[18],'平均AI报点B': i[19],
                      'OK板总数': i[4], 'AI_OK板总数': i[6],
                      'OK板比例': i[5], 'AI_OK板比例': i[7],
-                     '膜面': i[20], '机台号': i[21]}
+                     '膜面': surface_dict[str(i[21])], '机台号': i[21]}
             if value['总点过滤率'] > allFilterRate:
                 statisticdata.append(value)
             # 根据机台号分组
