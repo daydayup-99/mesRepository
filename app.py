@@ -15,8 +15,8 @@ from tkinter import messagebox
 
 app = Flask(__name__)
 
-sys_dir = os.path.dirname(os.path.realpath(__file__))
-# sys_dir = os.path.dirname(sys.executable)
+# sys_dir = os.path.dirname(os.path.realpath(__file__))
+sys_dir = os.path.dirname(sys.executable)
 back_path = os.path.join(sys_dir, 'background.jpg')
 
 window = tk.Tk()
@@ -77,8 +77,8 @@ def on_closing():
         window.quit()  # 退出
 
 config = configparser.ConfigParser()
-config_dir = os.path.dirname(os.path.realpath(__file__))
-# config_dir = os.path.dirname(sys.executable)
+# config_dir = os.path.dirname(os.path.realpath(__file__))
+config_dir = os.path.dirname(sys.executable)
 config_dir = os.path.join(config_dir, 'config.ini')
 config.read(config_dir)
 @app.route('/static')

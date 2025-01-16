@@ -22,8 +22,8 @@ surface_dict = {'1': '金',
                 '6': '喷锡'}
 
 config = configparser.ConfigParser()
-config_dir = os.path.dirname(os.path.realpath(__file__))
-# config_dir = os.path.dirname(sys.executable)
+# config_dir = os.path.dirname(os.path.realpath(__file__))
+config_dir = os.path.dirname(sys.executable)
 config_dir = os.path.join(config_dir, 'config.ini')
 config.read(config_dir)
 t_ratio = float(config['log']['t_ratio'])
@@ -338,7 +338,7 @@ def getErrJob():
     for key in ai_err_type_counts.keys():
         sql_query = text(f"""
                         WITH a AS(
-                            SELECT default_1, SUBSTRING_INDEX(err_key,'&', -1) as 'MachineID',SUBSTRING_INDEX(SUBSTRING_INDEX(err_key,'&', -2),'&',1) as 'Surface'
+                            SELECT default_1, default_4 as 'MachineID',SUBSTRING_INDEX(SUBSTRING_INDEX(err_key,'&', -2),'&',1) as 'Surface'
                             FROM {table_name}
                             WHERE ai_err_type = '{key}'
                         )
@@ -360,7 +360,7 @@ def getAllErrRateSql(start_date, end_date, machinecode):
     JobErrAllNum = 0
     JobTypeCounts = {}
     json_data = []
-    like_conditions = ' OR '.join([f"err_key LIKE '%{code}%'" for code in machinecode])
+    like_conditions = ' OR '.join([f"default_4 = '{code}'" for code in machinecode])
     if like_conditions != '':
         while current_date <= end_date:
             inspector = inspect(engine)
@@ -496,6 +496,8 @@ def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machi
     end_datetime_str = f"{end_date} {end_time_hour}"
     json_data = []
     current_date = start_date
+    # nTotalErrNum = 0.0
+    # nTotalAiNum = 0.0
     while current_date <= end_date:
         inspector = inspect(engine)
         # 获取数据库中所有的表名
@@ -551,6 +553,8 @@ def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machi
 
             nALLNum = float(nALLNum)
             nAiNum = float(nAiNum)
+            # nTotalErrNum += nALLNum
+            # nTotalAiNum += nAiNum
             # nCheckTrueNum = float(nCheckTrueNum)
             nAllBoard = float(nAllBoard)
             nOkBoard = float(nOkBoard)
@@ -565,7 +569,7 @@ def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machi
 
             if nALLNum != 0:
                 fAllAi = (nALLNum-nAiNum) / nALLNum
-                fAi = (nALLNum - nAiNum) / ( nALLNum- (nALLNum * t_ratio))
+                fAi = (nALLNum - nAiNum) / (nALLNum - (nALLNum * t_ratio))
             else:
                 fAllAi =0.0
                 fAi =0.0
@@ -592,6 +596,18 @@ def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machi
         data_point = {'date': table_date,'fAllAi': round(fAllAi*100, 2),'fPass':round(fPass*100,2),'fAi': round(fAi*100, 2),'fMeaAll': round(fMeaAll, 2),'fMeaAi': round(fMeaAi, 2),'nAllBoard': nTolBoard}
         json_data.append(data_point)
         current_date += timedelta(days=1)
+    # fTotalAllAi = (nTotalErrNum - nTotalAiNum) / nTotalErrNum
+    # fTotalAi = (nTotalErrNum - nTotalAiNum) / (nTotalErrNum- (nTotalErrNum * t_ratio))
+    # if fTotalAllAi > 0.99:
+    #     fTotalAllAi = 0.99
+    # if fTotalAi > 0.99:
+    #     lowerBound = float(nTotalErrNum - nTotalAiNum)
+    #     upperBound = min(nTotalErrNum, float(nTotalErrNum - nTotalAiNum) / 0.96)
+    #     if upperBound <= lowerBound:
+    #         upperBound += 0.1
+    #     random.seed()
+    #     nAviFalse = int(random.uniform(lowerBound, upperBound - 0.01))
+    #     fTotalAi = float(nTotalErrNum - nTotalAiNum) / (float(nAviFalse) + 1e-6)
     json_string = json.dumps(json_data)
     session.close()
     return json_string
@@ -733,7 +749,7 @@ def getJobErrRate(start_date,end_date,machinecode,jobname):
     JobErrAllNum = 0
     JobTypeCounts = {}
     json_data=[]
-    like_conditions = ' OR '.join([f"err_key LIKE '%{code}%'" for code in machinecode])
+    like_conditions = ' OR '.join([f"default_4 = '{code}'" for code in machinecode])
     while current_date <= end_date:
         inspector = inspect(engine)
         # 获取数据库中所有的表名
@@ -744,7 +760,7 @@ def getJobErrRate(start_date,end_date,machinecode,jobname):
             sql_query = text(f"""
                             select count(*)
                             FROM {table_name}
-                            WHERE err_key like '%{jobname}%' 
+                            WHERE default_1 = '{jobname}' 
                             AND ({like_conditions});
                             """)
             result = session.execute(sql_query).fetchall()
@@ -757,7 +773,7 @@ def getJobErrRate(start_date,end_date,machinecode,jobname):
             sql_query = text(f"""
                             select ai_err_type, count(*)
                             FROM {table_name}
-                            WHERE err_key like '%{jobname}%' 
+                            WHERE default_1 = '{jobname}' 
                             AND ({like_conditions})
                             AND ai_err_type <> ''
                             GROUP BY ai_err_type;
@@ -841,7 +857,7 @@ def getPlnoErrRate(start_date,end_date,machinecode,jobname,plno):
     current_date = start_date
     PlnoErrAllNum = 0
     PlnoTypeCounts = {}
-    like_conditions = ' OR '.join([f"err_key LIKE '%{code}%'" for code in machinecode])
+    like_conditions = ' OR '.join([f"default_4 = '{code}'" for code in machinecode])
     while current_date <= end_date:
         inspector = inspect(engine)
         # 获取数据库中所有的表名
@@ -852,9 +868,9 @@ def getPlnoErrRate(start_date,end_date,machinecode,jobname,plno):
             sql_query = text(f"""
                                 select count(*)
                                 FROM {table_name}
-                                WHERE err_key like '%{jobname}%' 
+                                WHERE default_1 = '{jobname}' 
                                 AND ({like_conditions})
-                                AND err_key like '%{plno}%'
+                                AND default_2 = '{plno}'
                                 """)
             result = session.execute(sql_query).fetchall()
             for row in result:
@@ -866,9 +882,9 @@ def getPlnoErrRate(start_date,end_date,machinecode,jobname,plno):
             sql_query = text(f"""
                             select ai_err_type, count(*)
                             FROM {table_name}
-                            WHERE err_key like '%{jobname}%' 
+                            WHERE default_1 = '{jobname}' 
                             AND ({like_conditions})
-                            AND err_key like '%{plno}%'
+                            AND default_2 = '{plno}'
                             AND ai_err_type <> ''
                             GROUP BY ai_err_type;
                                 """)
@@ -1062,8 +1078,8 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
         machinecodename = machinecode[0]
     placeholders = ', '.join([f"'{code}'" for code in machinecode])
 
-    # current_dir = os.path.dirname(sys.executable)
-    current_dir = os.path.dirname(os.path.realpath(__file__))
+    current_dir = os.path.dirname(sys.executable)
+    # current_dir = os.path.dirname(os.path.realpath(__file__))
     current_dir = os.path.join(current_dir, 'csvdata')
     print("当前文件的目录路径:", current_dir)
     if not os.path.exists(current_dir):
@@ -1298,8 +1314,8 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
         machinecodename = machinecode[0]
     placeholders = ', '.join([f"'{code}'" for code in machinecode])
 
-    # current_dir = os.path.dirname(sys.executable)
-    current_dir = os.path.dirname(os.path.realpath(__file__))
+    current_dir = os.path.dirname(sys.executable)
+    # current_dir = os.path.dirname(os.path.realpath(__file__))
     current_dir = os.path.join(current_dir, 'csvdata')
     print("当前文件的目录路径:", current_dir)
     if not os.path.exists(current_dir):
