@@ -496,8 +496,8 @@ def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machi
     end_datetime_str = f"{end_date} {end_time_hour}"
     json_data = []
     current_date = start_date
-    # nTotalErrNum = 0.0
-    # nTotalAiNum = 0.0
+    nTotalErrNum = 0.0
+    nTotalAiNum = 0.0
     while current_date <= end_date:
         inspector = inspect(engine)
         # 获取数据库中所有的表名
@@ -553,8 +553,8 @@ def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machi
 
             nALLNum = float(nALLNum)
             nAiNum = float(nAiNum)
-            # nTotalErrNum += nALLNum
-            # nTotalAiNum += nAiNum
+            nTotalErrNum += nALLNum
+            nTotalAiNum += nAiNum
             # nCheckTrueNum = float(nCheckTrueNum)
             nAllBoard = float(nAllBoard)
             nOkBoard = float(nOkBoard)
@@ -596,18 +596,19 @@ def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machi
         data_point = {'date': table_date,'fAllAi': round(fAllAi*100, 2),'fPass':round(fPass*100,2),'fAi': round(fAi*100, 2),'fMeaAll': round(fMeaAll, 2),'fMeaAi': round(fMeaAi, 2),'nAllBoard': nTolBoard}
         json_data.append(data_point)
         current_date += timedelta(days=1)
-    # fTotalAllAi = (nTotalErrNum - nTotalAiNum) / nTotalErrNum
-    # fTotalAi = (nTotalErrNum - nTotalAiNum) / (nTotalErrNum- (nTotalErrNum * t_ratio))
-    # if fTotalAllAi > 0.99:
-    #     fTotalAllAi = 0.99
-    # if fTotalAi > 0.99:
-    #     lowerBound = float(nTotalErrNum - nTotalAiNum)
-    #     upperBound = min(nTotalErrNum, float(nTotalErrNum - nTotalAiNum) / 0.96)
-    #     if upperBound <= lowerBound:
-    #         upperBound += 0.1
-    #     random.seed()
-    #     nAviFalse = int(random.uniform(lowerBound, upperBound - 0.01))
-    #     fTotalAi = float(nTotalErrNum - nTotalAiNum) / (float(nAviFalse) + 1e-6)
+    if nTotalErrNum != 0:
+        fTotalAllAi = (nTotalErrNum - nTotalAiNum) / nTotalErrNum
+        fTotalAi = (nTotalErrNum - nTotalAiNum) / (nTotalErrNum- (nTotalErrNum * t_ratio))
+        if fTotalAllAi > 0.99:
+            fTotalAllAi = 0.99
+        if fTotalAi > 0.99:
+            lowerBound = float(nTotalErrNum - nTotalAiNum)
+            upperBound = min(nTotalErrNum, float(nTotalErrNum - nTotalAiNum) / 0.96)
+            if upperBound <= lowerBound:
+                upperBound += 0.1
+            random.seed()
+            nAviFalse = int(random.uniform(lowerBound, upperBound - 0.01))
+            fTotalAi = float(nTotalErrNum - nTotalAiNum) / (float(nAviFalse) + 1e-6)
     json_string = json.dumps(json_data)
     session.close()
     return json_string
@@ -1417,7 +1418,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
             if nALLNum != 0:
                 fAi = (nALLNum - nAiNum) / (nALLNum - (nALLNum * t_ratio))
                 fAll = (nALLNum - nAiNum) / nALLNum
-                fAiFalseRatio =  nAiFalseRatio / nALLNum
+                fAiFalseRatio = nAiFalseRatio / nALLNum
 
             else:
                 fAi = 0.0
@@ -1447,7 +1448,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                      '平均AI报点': i[17],'平均AI报点T': i[18],'平均AI报点B': i[19],
                      'OK板总数': i[4], 'AI_OK板总数': i[6],
                      'OK板比例': i[5], 'AI_OK板比例': i[7],
-                     '膜面': surface_dict[str(i[21])], '机台号': i[21]}
+                     '膜面': surface_dict[str(i[20])], '机台号': i[21]}
             if value['总点过滤率'] > allFilterRate:
                 statisticdata.append(value)
             # 根据机台号分组
@@ -1486,7 +1487,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
 
         df.to_excel(w, sheet_name="All", index=False)
         for machine_code, data in grouped.items():
-            df = pd.DataFrame(statisticdata, columns=fieldnames)
+            df = pd.DataFrame(data, columns=fieldnames)
             df['平均AI报点T'] = df['平均AI报点T'].astype(float)
             df['AI跑板数'] = df['AI跑板数'].astype(float)
             df['AI真点总数'] = df['AI真点总数'].astype(float)
