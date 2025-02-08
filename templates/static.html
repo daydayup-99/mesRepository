@@ -206,19 +206,21 @@
                     var fMeaAllData = [];
                     var fMeaAiData = [];
                     var nAllBoardData = [];
-                    for (var i = 0; i < Data.length; i++) {
-                        dates.push(Data[i].date);
-                        fAllAiData.push(Data[i].fAllAi);
-                        fPassData.push(Data[i].fPass);
-                        fAiData.push(Data[i].fAi);
-                        fMeaAllData.push(Data[i].fMeaAll);
-                        fMeaAiData.push(Data[i].fMeaAi);
-                        nAllBoardData.push(Data[i].nAllBoard);
+                    for (var i = 0; i < Data.data.length; i++) {
+                        dates.push(Data.data[i].date);
+                        fAllAiData.push(Data.data[i].fAllAi);
+                        fPassData.push(Data.data[i].fPass);
+                        fAiData.push(Data.data[i].fAi);
+                        fMeaAllData.push(Data.data[i].fMeaAll);
+                        fMeaAiData.push(Data.data[i].fMeaAi);
+                        nAllBoardData.push(Data.data[i].nAllBoard);
                     }
                     generateAi(dates, fAiData);
                     generateAllAi(dates, fAllAiData, fAiData);
                     generateOKPass(dates, fPassData);
                     generateMean(dates, fMeaAllData, fMeaAiData);
+                    $('#fTotalAi').html('假点过滤率: ' + Data.fTotalAi);
+                    $('#fTotalAllAi').html('总过滤率: ' + Data.fTotalAllAi);
                 }),
 
                 $.ajax({
@@ -332,19 +334,21 @@
                     var fMeaAllData = [];
                     var fMeaAiData = [];
                     var nAllBoardData = []
-                    for (var i = 0; i < Data.length; i++) {
-                        dates.push(Data[i].date);
-                        fAllAiData.push(Data[i].fAllAi);
-                        fPassData.push(Data[i].fPass);
-                        fAiData.push(Data[i].fAi);
-                        fMeaAllData.push(Data[i].fMeaAll)
-                        fMeaAiData.push(Data[i].fMeaAi)
-                        nAllBoardData.push(Data[i].nAllBoard)
+                    for (var i = 0; i < Data.data.length; i++) {
+                        dates.push(Data.data[i].date);
+                        fAllAiData.push(Data.data[i].fAllAi);
+                        fPassData.push(Data.data[i].fPass);
+                        fAiData.push(Data.data[i].fAi);
+                        fMeaAllData.push(Data.data[i].fMeaAll)
+                        fMeaAiData.push(Data.data[i].fMeaAi)
+                        nAllBoardData.push(Data.data[i].nAllBoard)
                     }
                     generateAi(dates, fAiData)
                     generateAllAi(dates, fAllAiData,fAiData)
                     generateOKPass(dates, fPassData)
                     generateMean(dates, fMeaAllData, fMeaAiData)
+                    $('#fTotalAi').html('假点过滤率: ' + Data.fTotalAi);
+                    $('#fTotalAllAi').html('总过滤率: ' + Data.fTotalAllAi);
                 },
                 error: function (xhr, status, error) {
                     console.error(error);
@@ -738,11 +742,11 @@
 
             <div class="e_chart">
                 <div class="charts l_left">
-                    <p class="charts_p">假点过滤率</p>
+                    <p class="charts_p" id="fTotalAi">假点过滤率</p>
                     <div id="container1" style="height:300px;width: 100%"></div>
                 </div>
                 <div class="charts l_left last_charts">
-                    <p class="charts_p">总过滤率</p>
+                    <p class="charts_p" id="fTotalAllAi">总过滤率</p>
                     <div id="container2" style="height:300px;width: 100%"></div>
                 </div>
                 <div class="clear"></div>

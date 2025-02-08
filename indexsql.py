@@ -609,7 +609,12 @@ def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machi
             random.seed()
             nAviFalse = int(random.uniform(lowerBound, upperBound - 0.01))
             fTotalAi = float(nTotalErrNum - nTotalAiNum) / (float(nAviFalse) + 1e-6)
-    json_string = json.dumps(json_data)
+    result = {
+        'data': json_data,
+        'fTotalAllAi': round(fTotalAllAi * 100, 2)if nTotalErrNum != 0 else 0.0,
+        'fTotalAi': round(fTotalAi * 100, 2) if nTotalErrNum != 0 else 0.0
+    }
+    json_string = json.dumps(result, ensure_ascii=False)
     session.close()
     return json_string
 
@@ -640,8 +645,12 @@ def ReadJobSql(start_date, end_date,start_time_hour,end_time_hour, machinecode):
                 res = session.query(func.count()).select_from(inner_query).all()
                 TrueRes = session.query(func.sum(table.c.errnum),func.sum(table.c.true_num)).filter(not_(table.c.true_num.is_(None)),table.c.test_machine_code.in_(machinecode),table.c.job_name == jobname,table.c.test_time >= start_datetime_str,
             table.c.test_time <= end_datetime_str).all()
-                nJobCheckAllNum = TrueRes[0][0]
-                nJobCheckTrueNum= TrueRes[0][1]
+                if TrueRes:
+                    nJobCheckAllNum = TrueRes[0][0] if TrueRes[0][0] is not None else 0.0
+                    nJobCheckTrueNum = TrueRes[0][1] if TrueRes[0][1] is not None else 0.0
+                else:
+                    nJobCheckAllNum = 0.0
+                    nJobCheckTrueNum = 0.0
                 njoball=res[0][0]
                 njoberrnum=row[1]
                 njobainum=row[2]
