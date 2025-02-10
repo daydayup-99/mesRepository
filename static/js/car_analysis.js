@@ -11,7 +11,7 @@ function generateAi(dates,fAiData) {
             }
         },
         legend: {
-            data: ['假点去除率'],
+            data: ['假点过滤率'],
             textStyle: {
                 color: '#333'
             }
@@ -37,7 +37,7 @@ function generateAi(dates,fAiData) {
         yAxis: [
             {
                 type: 'value',
-                name: '假点去除率',
+                name: '假点过滤率',
                 max: 100,  // 设置最大值为 100
                 interval: 10,
                 axisLabel: {
@@ -60,7 +60,7 @@ function generateAi(dates,fAiData) {
         ],
         series: [
             {
-                name: '假点去除率',
+                name: '假点过滤率',
                 type: 'line',
                 max: 100,
                 data: fAiData,
@@ -518,7 +518,7 @@ function generateJobAi(jobnameData,fJobAiData){
         yAxis: [
             {
                 type: 'value',
-                name: '假点过滤率',
+                name: '料号过滤率',
                 max: 100,  // 设置最大值为 100
                 interval: 10,
                 axisLabel: {
@@ -541,7 +541,7 @@ function generateJobAi(jobnameData,fJobAiData){
         ],
         series: [
             {
-                name: '假点过滤率',
+                name: '料号过滤率',
                 type: 'line',
                 max: 100,
                 data: fJobAiData,
