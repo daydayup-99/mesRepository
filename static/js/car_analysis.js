@@ -491,7 +491,7 @@ function generateJobAi(jobnameData,fJobAiData){
             }
         },
         legend: {
-            data: ['假点过滤率'],
+            data: ['料号过滤率'],
             textStyle: {
                 color: '#333'
             }
