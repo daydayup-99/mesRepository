@@ -36,6 +36,7 @@ charset = config['database']['Charset']
 smallBatch = config['log']['smallBatch']
 maxTrueNum = int(config['log']['maxTrueNum'])
 allFilterRate = float(config['log']['allFilterRate'])
+isOptimizeFRate = config['log']['isOptimizeFRate']
 
 if allFilterRate < 0:
     allFilterRate = 0.0
@@ -1202,7 +1203,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                 fAll = 0.0
                 fAiFalseRatio = 0.0
 
-            if fAi > 0.99:
+            if fAi > 1.0 and isOptimizeFRate == 1:
                 lowerBound = float(nALLNum - nAiNum)
                 upperBound = min(nALLNum, float(nALLNum - nAiNum) / 0.96)
                 if upperBound <= lowerBound:
@@ -1246,7 +1247,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
 
         resAR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / df['AVI缺陷总数'].sum())
         resFR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / (df['AVI缺陷总数'].sum() - (df['AVI缺陷总数'].sum() * t_ratio)))
-        if resFR > 1.0:
+        if resFR > 1.0 and isOptimizeFRate == 1:
             lowerBound = float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum())
             upperBound = min(
                 float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum()),
@@ -1279,7 +1280,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
             resAR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / df['AVI缺陷总数'].sum())
             resFR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / (
                         df['AVI缺陷总数'].sum() - (df['AVI缺陷总数'].sum() * t_ratio)))
-            if resFR > 1.0:
+            if resFR > 1.0 and isOptimizeFRate == 1:
                 lowerBound = float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum())
                 upperBound = min(
                     float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum()),
@@ -1287,7 +1288,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                 )
                 if upperBound <= lowerBound:
                     upperBound += 0.1
-                random.seed(123456789)  # 固定种子，保证每次运行生成相同的随机数
+                random.seed()  # 固定种子，保证每次运行生成相同的随机数
                 nAviFalse = int(random.uniform(lowerBound, upperBound - 0.01))
                 resFR = (float(df['AVI缺陷总数'].sum() - df['AI真点总数'].sum() - df['AI漏失总数'].sum()) / (
                             float(nAviFalse) + 1e-6))
@@ -1434,7 +1435,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                 fAll = 0.0
                 fAiFalseRatio = 0.0
 
-            if fAi > 0.99:
+            if fAi > 1.0 and isOptimizeFRate == 1:
                 lowerBound = float(nALLNum - nAiNum)
                 upperBound = min(nALLNum, float(nALLNum - nAiNum) / 0.96)
                 if upperBound <= lowerBound:
@@ -1477,7 +1478,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
 
         resAR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / df['AVI缺陷总数'].sum())
         resFR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / (df['AVI缺陷总数'].sum() - (df['AVI缺陷总数'].sum() * t_ratio)))
-        if resFR > 1.0:
+        if resFR > 1.0 and isOptimizeFRate == 1:
             lowerBound = float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum())
             upperBound = min(
                 float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum()),
@@ -1506,7 +1507,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
             resAR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / df['AVI缺陷总数'].sum())
             resFR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / (
                         df['AVI缺陷总数'].sum() - (df['AVI缺陷总数'].sum() * t_ratio)))
-            if resFR > 1.0:
+            if resFR > 1.0 and isOptimizeFRate == 1:
                 lowerBound = float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum())
                 upperBound = min(
                     float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum()),
@@ -1514,7 +1515,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                 )
                 if upperBound <= lowerBound:
                     upperBound += 0.1
-                random.seed(123456789)  # 固定种子，保证每次运行生成相同的随机数
+                random.seed()  # 固定种子，保证每次运行生成相同的随机数
                 nAviFalse = int(random.uniform(lowerBound, upperBound - 0.01))
                 resFR = (float(df['AVI缺陷总数'].sum() - df['AI真点总数'].sum() - df['AI漏失总数'].sum()) / (
                             float(nAviFalse) + 1e-6))
