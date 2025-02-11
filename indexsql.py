@@ -36,7 +36,7 @@ charset = config['database']['Charset']
 smallBatch = config['log']['smallBatch']
 maxTrueNum = int(config['log']['maxTrueNum'])
 allFilterRate = float(config['log']['allFilterRate'])
-isOptimizeFRate = config['log']['isOptimizeFRate']
+isOptimizeFRate = int(config['log']['isOptimizeFRate'])
 
 if allFilterRate < 0:
     allFilterRate = 0.0
