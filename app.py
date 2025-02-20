@@ -12,11 +12,37 @@ from indexsql import selectJob, selectMachine, getRateFilterTotal, ReadJobSql, g
 from datetime import datetime, timedelta, time
 import tkinter as tk
 from tkinter import messagebox
-
-app = Flask(__name__)
+import win32file
+import win32con
 
 # sys_dir = os.path.dirname(os.path.realpath(__file__))
 sys_dir = os.path.dirname(sys.executable)
+lock_file_path = os.path.join(sys_dir, 'my_app.lock')
+def check_if_running():
+    global lock_file_handle
+    # 尝试打开锁文件
+    try:
+        lock_file_handle = win32file.CreateFile(
+            lock_file_path,
+            win32con.GENERIC_READ | win32con.GENERIC_WRITE,
+            0,  # 不共享
+            None,
+            win32con.CREATE_ALWAYS,  # 如果文件不存在则创建
+            win32con.FILE_ATTRIBUTE_NORMAL,
+            None
+        )
+        # 尝试对文件加锁
+        win32file.LockFile(lock_file_handle, 0, 0, win32con.MAXDWORD, win32con.MAXDWORD)
+    except Exception as e:
+        print("程序已经在运行。", e)
+        sys.exit(1)
+def release_lock():
+    if lock_file_handle:
+        win32file.UnlockFile(lock_file_handle, 0, 0, win32con.MAXDWORD, win32con.MAXDWORD)
+        win32file.CloseHandle(lock_file_handle)
+
+app = Flask(__name__)
+
 back_path = os.path.join(sys_dir, 'background.jpg')
 
 window = tk.Tk()
@@ -58,23 +84,25 @@ def start_flask_app():
 def hide_window():
     window.withdraw()  # 最小化窗口
 
-def close_application():
-    global icon
-    if icon:
-        icon.stop()  # 停止托盘图标
-    sys.exit()  # 退出程序
+icon_instance = None
+def close_application(icon, item):
+    global icon_instance
+    if icon_instance:
+        icon_instance.stop()
+    window.quit()
 
 # 启动 Flask 应用并最小化到系统托盘
 def minimize_to_tray():
-    icon = Icon("test", create_image(), menu=Menu(MenuItem("Show Window", on_show_window)))
-    icon.run()
+    global icon_instance
+    icon_instance = Icon("test", create_image(), menu=Menu(MenuItem("Show Window", on_show_window), MenuItem("Exit", on_closing)))
+    icon_instance.run()
 
 def on_closing():
-    result = messagebox.askquestion("退出确认", "是否最小化到托盘？", icon='warning')
+    result = messagebox.askquestion("退出确认", "是否退出？", icon='warning')
     if result == 'yes':
-        hide_window()  # 最小化
+        close_application(None, None)
     else:
-        window.quit()  # 退出
+        hide_window()  # 最小化
 
 config = configparser.ConfigParser()
 # config_dir = os.path.dirname(os.path.realpath(__file__))
@@ -261,18 +289,21 @@ def getRequestData (request):
     return start_time,end_time,start_time_hour,end_time_hour,MacNum
 
 if __name__ == '__main__':
-    # 启动 Flask 后台
-    threading.Thread(target=start_flask_app, daemon=True).start()
+    check_if_running()
+    try:
+        # 启动 Flask 后台
+        threading.Thread(target=start_flask_app, daemon=True).start()
 
-    # 启动托盘图标
-    threading.Thread(target=minimize_to_tray, daemon=True).start()
+        # 启动托盘图标
+        threading.Thread(target=minimize_to_tray, daemon=True).start()
 
-    # 在关闭窗口时调用 on_closing
-    window.protocol("WM_DELETE_WINDOW", on_closing)
+        # 在关闭窗口时调用 on_closing
+        window.protocol("WM_DELETE_WINDOW", on_closing)
 
-    # 隐藏 Tkinter 窗口
-    hide_window()
+        # 隐藏 Tkinter 窗口
+        hide_window()
 
-    # 启动 Tkinter 窗口的事件循环
-    window.mainloop()
-    # app.run()
+        # 启动 Tkinter 窗口的事件循环
+        window.mainloop()
+    finally:
+        release_lock()
