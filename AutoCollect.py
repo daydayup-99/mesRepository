@@ -45,11 +45,21 @@ def main():
     folder_path = os.path.dirname(sys.executable)
     print("当前路径：" + folder_path)
     version = input("请输入版本号：")
+
+    file_path = os.path.join(folder_path, 'Daemon.txt')
+    write_file = f'AISystem-YMZ-Entire-v{version}-rc.exe'
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        print(f"文件已删除: {file_path}")
+    with open(file_path, 'w') as f:
+        f.write(write_file)
+    print(f"文件已创建: {file_path}")
+
     file_names = ['Interface.dll', 'EtData.dll', 'Daemon.exe', 'DetectDll.dll', 'AIBaseTool.dll', 'AIBaseUI.dll', 'AIDataManage.exe',
                   'AIErrDataDll.dll', 'AIStatistic.exe', f'AISystem-YMZ-Entire-v{version}-rc.exe', 'AIVerify.dll', 'AllPostSettingWin.dll',
                   'Config.dll', 'DDADDetector.dll', 'BaseTool.dll', 'DCodeManagerModule.dll', 'DrawGerber-2024-latest.dll', 'ImageLib.dll',
                   'libcrypto-1_1-x64.dll', 'libmysql.dll', 'libssl-1_1-x64.dll', 'libEGL.dll', 'libEGLd.dll', 'libGLESV2.dll', 'libiomp5md.dll',
-                  'libiompstubs5md.dll', 'AIMes.dll', 'opencv_world460.dll']
+                  'libiompstubs5md.dll', 'AIMes.dll', 'opencv_world460.dll', 'Daemon.txt']
     # file_names = [f'AISystem-YMZ-Entire-v{version}-rc.exe', 'libssl-1_1-x64.dll']
     # 查找指定文件
     file_paths = find_files_in_directory(folder_path, file_names)
