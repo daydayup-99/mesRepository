@@ -291,7 +291,7 @@ def getErrRate():
         sql_query = text(f"""
                         select ai_err_type, COUNT(ai_err_type)
                         from {table_name}
-                        WHERE ai_err_type <> ''
+                        WHERE is_ai = 1
                         GROUP BY ai_err_type
                         ORDER BY COUNT(ai_err_type) DESC
                         LIMIT 10
@@ -326,7 +326,7 @@ def getErrJob():
         sql_query = text(f"""
                         select ai_err_type, COUNT(ai_err_type)
                         from {table_name}
-                        WHERE ai_err_type <> ''
+                        WHERE is_ai = 1
                         GROUP BY ai_err_type
                         ORDER BY COUNT(ai_err_type) DESC
                         LIMIT 10
@@ -390,7 +390,7 @@ def getAllErrRateSql(start_date, end_date, machinecode):
                                     )
                                     SELECT ai_err_type, COUNT(*)
                                     FROM _a
-                                    WHERE ai_err_type <> ''
+                                    WHERE is_ai = 1
                                     GROUP BY ai_err_type;
                                     """)
                 result = session.execute(sql_query).fetchall()
@@ -786,7 +786,7 @@ def getJobErrRate(start_date,end_date,machinecode,jobname):
                             FROM {table_name}
                             WHERE default_1 = '{jobname}' 
                             AND ({like_conditions})
-                            AND ai_err_type <> ''
+                            AND is_ai = 1
                             GROUP BY ai_err_type;
                             """)
             result = session.execute(sql_query).fetchall()
@@ -896,7 +896,7 @@ def getPlnoErrRate(start_date,end_date,machinecode,jobname,plno):
                             WHERE default_1 = '{jobname}' 
                             AND ({like_conditions})
                             AND default_2 = '{plno}'
-                            AND ai_err_type <> ''
+                            AND is_ai = 1
                             GROUP BY ai_err_type;
                                 """)
             result = session.execute(sql_query).fetchall()
