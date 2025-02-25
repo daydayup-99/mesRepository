@@ -104,14 +104,6 @@ class ErrRecord(Base):
 
 def update_db_connection(new_uri):
     # 创建新的数据库引擎
-    # global engine, Base
-    # engine.dispose()  # 关闭之前的连接
-    # if new_uri == 'AI-AOI':
-    #     engine = create_engine('mysql+pymysql://root:ymz123@127.0.0.1/avi?charset=utf8')
-    # if new_uri == 'AI-AVI':
-    #     engine = create_engine('mysql+pymysql://root:ymz123@127.0.0.1/avi?charset=utf8')
-    # Base = declarative_base()
-    # 创建新的数据库引擎
     global engine, Base
     engine.dispose()  # 关闭之前的连接
     if new_uri == 'AI-AOI':
@@ -138,7 +130,7 @@ def getAllMachineNumSql():
     session = Session()
     # yesterday = curent_date - timedelta(days=1)
     table_name = f"tab_test_{curent_date.strftime('%Y%m%d')[0:]}"
-    # table_name = f"tab_err_{yesterday.strftime('%Y%m%d')[0:]}"
+    # table_name = f"tab_test_{yesterday.strftime('%Y%m%d')[0:]}"
     inspector = inspect(engine)
     # 获取数据库中所有的表名
     table_names = inspector.get_table_names()
@@ -242,41 +234,6 @@ def selectMacRate(machinecode):
     return MacTrueRate
 
 #获取所有缺陷类型
-# def getErrRate():
-#     session = Session()
-#     data_points = []
-#     ai_err_type_counts = {}
-#     table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
-#     inspector = inspect(engine)
-#     # 获取数据库中所有的表名
-#     table_names = inspector.get_table_names()
-#     if table_name in table_names:
-#         sql_query = text(f"""
-#                         select ai_err_type, COUNT(ai_err_type)
-#                         from {table_name}
-#                         WHERE ai_err_type <> ''
-#                         GROUP BY ai_err_type
-#                         ORDER BY COUNT(ai_err_type) DESC
-#                         LIMIT 10
-#                     """)
-#
-#         # query_result = session.query(ErrRecord.ai_err_type,func.count()).filter(ErrRecord.ai_err_type != '').group_by(ErrRecord.ai_err_type).all()
-#         # for row in query_result:
-#         #     errType,errTypeCount = row
-#         #     ai_err_type_counts[errType] = errTypeCount
-#
-#         # 对字典按值进行排序（按数量从大到小）
-#         sorted_ai_err_type_counts = sorted(ai_err_type_counts.items(), key=lambda x: x[1], reverse=True)
-#         # 将排序后的结果转换为 JSON 格式
-#         sorted_ai_err_type_counts = sorted_ai_err_type_counts[:10]
-#         for item in sorted_ai_err_type_counts:
-#             # 每个数据点是一个包含错误类型和计数的元组，例如('error_type', count)
-#             aierrtype, aierrTypeCount = item
-#             data_point = {"aierrType": aierrtype, "aierrTypeCount": aierrTypeCount}
-#             data_points.append(data_point)
-#     json_data = json.dumps(data_points, ensure_ascii=False)
-#     session.close()
-#     return  json_data
 def getErrRate():
     session = Session()
     data_points = []
@@ -384,7 +341,7 @@ def getAllErrRateSql(start_date, end_date, machinecode):
 
                 sql_query = text(f"""
                                     WITH _a AS (
-                                      SELECT ai_err_type
+                                      SELECT ai_err_type, is_ai
                                       FROM {table_name}
                                       WHERE ({like_conditions})
                                     )
@@ -488,7 +445,6 @@ def selectMachine():
 
 
 #总过滤率(fAllAi) 、假点过滤率(fAi) 、Ai前后平均点数、 Pass率（fPass）
-# def getRateFilterTotal(ai_version, start_date, end_date, machinecode, jobName, PLNum):
 def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machinecode):
     # global MacTrueRate
     session = Session()
@@ -514,13 +470,8 @@ def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machi
                                 """)
             result = session.execute(sql_query).fetchall()
             table = Table(table_name, Base.metadata, autoload_with=engine)
-            # result = session.query(func.sum(table.c.errnum), func.sum(table.c.ai_num)).filter(table.c.test_machine_code.in_(machinecode),table.c.test_time >= start_datetime_str,
-            # table.c.test_time < end_datetime_str).all()
             for row in result:
                 nALLNum,nAiNum = row
-            # result = session.query(func.sum(table.c.true_num)).filter(table.c.test_machine_code == machinecode,not_(table.c.true_num.is_(None)))
-            # for row in result:
-            #     nCheckTrueNum = row[0]
             inner_query = session.query(func.count()).filter(table.c.test_machine_code.in_(machinecode),table.c.test_time >= start_datetime_str,
             table.c.test_time <= end_datetime_str).group_by(table.c.job_name, table.c.plno, table.c.pcbno).having(func.sum(func.ifnull(table.c.errnum, -3000)),func.sum(func.ifnull(table.c.errnum, -3000)) >= 0).subquery()
             result = session.query(func.count()).select_from(inner_query).all()
@@ -623,6 +574,7 @@ def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machi
 def ReadJobSql(start_date, end_date,start_time_hour,end_time_hour, machinecode):
     # global MacTrueRate
     session = Session()
+    machineCode = "('" + "', '".join(machinecode) + "')"
     start_datetime_str = f"{start_date} {start_time_hour}"
     end_datetime_str = f"{end_date} {end_time_hour}"
     json_data = []
@@ -637,15 +589,35 @@ def ReadJobSql(start_date, end_date,start_time_hour,end_time_hour, machinecode):
         if table_name in table_names:
             # 如果表存在，则加载它
             table = Table(table_name, Base.metadata, autoload_with=engine)
-            result = session.query(table.c.job_name,func.sum(table.c.errnum),func.sum(table.c.ai_num)).filter(table.c.test_machine_code.in_(machinecode),table.c.test_time >= start_datetime_str,
-            table.c.test_time <= end_datetime_str).group_by(table.c.job_name).all()
+            sql_query = text(f"""
+                            select job_name, sum(errnum), sum(ai_num)
+                            FROM {table_name}
+                            WHERE test_machine_code in {machineCode}
+                            AND test_time between '{start_datetime_str}' and '{end_datetime_str}'
+                            GROUP BY job_name;
+                            """)
+            result = session.execute(sql_query).fetchall()
             for row in result:
                 jobname=row[0]
-                inner_query= session.query(func.count()).filter(table.c.test_machine_code.in_(machinecode),table.c.job_name == jobname,table.c.test_time >= start_datetime_str,
-            table.c.test_time <= end_datetime_str).group_by(table.c.plno,table.c.pcbno).having(func.sum(func.ifnull(table.c.errnum, -3000)) >= 0).subquery()
-                res = session.query(func.count()).select_from(inner_query).all()
-                TrueRes = session.query(func.sum(table.c.errnum),func.sum(table.c.true_num)).filter(not_(table.c.true_num.is_(None)),table.c.test_machine_code.in_(machinecode),table.c.job_name == jobname,table.c.test_time >= start_datetime_str,
-            table.c.test_time <= end_datetime_str).all()
+                sql_query = text(f"""
+                                SELECT COUNT(*)
+                                FROM {table_name}
+                                WHERE test_machine_code in {machineCode}
+                                AND job_name = '{jobname}'
+                                AND test_time between '{start_datetime_str}' and '{end_datetime_str}'
+                                GROUP BY plno, pcbno;
+                                """)
+                res = session.execute(sql_query).fetchall()
+                sql_query = text(f"""
+                                SELECT SUM(errnum), SUM(true_num) 
+                                FROM {table_name}
+                                WHERE true_num IS NOT NULL
+                                AND test_machine_code in {machineCode}
+                                AND job_name = '{jobname}'
+                                AND test_time between '{start_datetime_str}' and '{end_datetime_str}'
+                                GROUP BY plno, pcbno;
+                                """)
+                TrueRes = session.execute(sql_query).fetchall()
                 if TrueRes:
                     nJobCheckAllNum = TrueRes[0][0] if TrueRes[0][0] is not None else 0.0
                     nJobCheckTrueNum = TrueRes[0][1] if TrueRes[0][1] is not None else 0.0
@@ -675,19 +647,19 @@ def ReadJobSql(start_date, end_date,start_time_hour,end_time_hour, machinecode):
         current_date += timedelta(days=1)
     # 打印查询结果
     for jobname, results in jobname_results.items():
-        if results['njoball']!=0:
+        if results['njoball'] != 0:
             fJobMeanAll = float(results['njoberrnum']) / float(results['njoball'])
             fJobMeanAi = float(results['njobainum']) / float(results['njoball'])
         else:
             fJobMeanAll=0.0
             fJobMeanAi =0.0
 
-        if  results['nJobCheckAllNum']!=0:
+        if results['nJobCheckAllNum'] != 0:
             fJobCheckTrueRate = round(float(results['nJobCheckTrueNum']) / float(results['nJobCheckAllNum']),2)
         else:
             fJobCheckTrueRate=0.0
-        if results['njoberrnum'] !=0:
-            fJobAiPass=float(results['njoberrnum'] - results['njobainum']) / (float(results['njoberrnum'])* t_ratio - float(results['nJobCheckTrueNum']))
+        if results['njoberrnum'] != 0:
+            fJobAiPass=float(results['njoberrnum'] - results['njobainum']) / (float(results['njoberrnum']) - float(results['njoberrnum'])* t_ratio)
         else:
             fJobAiPass=0.0
         fJobMeanAll = round(fJobMeanAll, 2)
@@ -707,53 +679,6 @@ def ReadJobSql(start_date, end_date,start_time_hour,end_time_hour, machinecode):
     return json_string
 
 #无批量号
-# def getJobErrRate(start_date,end_date,machinecode,jobname):
-#     session = Session()
-#     current_date = start_date
-#     JobErrAllNum = 0
-#     JobTypeCounts = {}
-#     json_data=[]
-#     while current_date <= end_date:
-#         inspector = inspect(engine)
-#         # 获取数据库中所有的表名
-#         table_names = inspector.get_table_names()
-#         table_name = f"tab_err_{current_date.strftime('%Y%m%d')[0:]}"
-#         if table_name in table_names:
-#             table = Table(table_name, Base.metadata, autoload_with=engine)
-#             result = session.query(func.count()).filter(table.c.err_key.like('%{}%'.format(jobname)), table.c.err_key.like('%{}%'.format(machinecode))).all()
-#             for row in result:
-#                 JobErrNum = row[0]
-#                 if JobErrNum is None:
-#                     JobErrNum = 0
-#                 JobErrAllNum  = JobErrAllNum + int(JobErrNum)
-#             result = session.query(table.c.ai_err_type,func.count()).filter(table.c.err_key.like('%{}%'.format(jobname)), table.c.err_key.like('%{}%'.format(machinecode)),  table.c.ai_err_type != '').group_by(table.c.ai_err_type)
-#             for row in result:
-#                 JobErrType, JobTypeNum =row;
-#                 if JobErrType is None:
-#                     JobErrType = ''
-#                 if JobTypeNum is None:
-#                     JobTypeNum = 0
-#                 if JobErrType in JobTypeCounts:
-#                     JobTypeCounts[JobErrType] += JobTypeNum
-#                 else :
-#                     JobTypeCounts[JobErrType] = JobTypeNum
-#         current_date += timedelta(days=1)
-#     sorted_counts = sorted(JobTypeCounts.items(), key=lambda x: x[1], reverse=True)
-#     for JobErrType, JobTypeNum in sorted_counts:
-#         if JobErrAllNum != 0:
-#             JobTypeRate = round((JobTypeNum / JobErrAllNum)*100, 2)
-#         else:
-#             JobTypeRate = 0.0  # 默认值应该是数字，而不是字典
-#
-#         data_point = {'errtype': JobErrType, 'JobTypeNum': JobTypeNum, 'JobTypeRate': JobTypeRate,'errAllNum':JobErrAllNum,'jobname':jobname}
-#         json_data.append(data_point)
-#
-#     # 将相对比例的字典转换为 JSON 格式
-#     json_data = json.dumps(json_data, ensure_ascii=False)
-#     # 打印 JSON 数据
-#     session.close()
-#     return  json_data
-
 def getJobErrRate(start_date,end_date,machinecode,jobname):
     session = Session()
     current_date = start_date
@@ -818,50 +743,6 @@ def getJobErrRate(start_date,end_date,machinecode,jobname):
     return  json_data
 
 #批量号
-# def getPlnoErrRate(start_date,end_date,machinecode,jobname,plno):
-#     session = Session()
-#     json_data = []
-#     current_date = start_date
-#     PlnoErrAllNum = 0
-#     PlnoTypeCounts = {}
-#     while current_date <= end_date:
-#         inspector = inspect(engine)
-#         # 获取数据库中所有的表名
-#         table_names = inspector.get_table_names()
-#         table_name = f"tab_err_{current_date.strftime('%Y%m%d')[0:]}"
-#         if table_name in table_names:
-#             table = Table(table_name, Base.metadata, autoload_with=engine)
-#             result = session.query(func.count()).filter(table.c.err_key.like('%{}%'.format(jobname)), table.c.err_key.like('%{}%'.format(machinecode)),table.c.err_key.like('%{}%'.format(plno))).all()
-#             for row in result:
-#                 PlnoErrNum = row[0]
-#                 if PlnoErrNum is None:
-#                     PlnoErrNum = 0
-#                 PlnoErrAllNum  = PlnoErrAllNum + int(PlnoErrNum)
-#             result = session.query(table.c.ai_err_type,func.count()).filter(table.c.err_key.like('%{}%'.format(jobname)), table.c.err_key.like('%{}%'.format(machinecode)), table.c.err_key.like('%{}%'.format(plno)), table.c.ai_err_type != '').group_by(table.c.ai_err_type)
-#             for row in result:
-#                 PlnoErrType, PlnoTypeNum =row;
-#                 if PlnoErrType is None:
-#                     PlnoErrType = ''
-#                 if PlnoTypeNum is None:
-#                     PlnoTypeNum = 0
-#                 if PlnoErrType in PlnoTypeCounts:
-#                     PlnoTypeCounts[PlnoErrType] += PlnoTypeNum
-#                 else :
-#                     PlnoTypeCounts[PlnoErrType] = PlnoTypeNum
-#         current_date += timedelta(days=1)
-#     sorted_counts = sorted(PlnoTypeCounts.items(), key=lambda x: x[1], reverse=True)
-#     for PlnoErrType, PlnoTypeNum in sorted_counts:
-#         if PlnoErrAllNum != 0:
-#             PlnoTypeRate = round((PlnoTypeNum / PlnoErrAllNum)*100, 2)
-#         else:
-#             PlnoTypeRate = 0.0  # 默认值应该是数字，而不是字典
-#         data_point = {'plnoerrtype': PlnoErrType, 'plnoTypeNum': PlnoTypeNum, 'plnoTypeRate': PlnoTypeRate, 'plnoErrAllNum':PlnoErrAllNum,'plnoname':plno}
-#         json_data.append(data_point)
-#     # 将相对比例的字典转换为 JSON 格式
-#     json_data = json.dumps(json_data, ensure_ascii=False)
-#     # 打印 JSON 数据
-#     session.close()
-#     return json_data
 def getPlnoErrRate(start_date,end_date,machinecode,jobname,plno):
     session = Session()
     json_data = []
