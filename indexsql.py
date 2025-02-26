@@ -962,7 +962,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
     start_datetime_str = f"{start_date} {start_time_hour}"
     end_datetime_str = f"{end_date} {end_time_hour}"
     fieldnames = ['日期', '料号', '批量号', '假点过滤率', '总点过滤率','AI漏失总数','漏失率',
-                  '总板数', 'AI跑板数', 'AVI缺陷总数', 'AVI真点总数', 'AI真点总数', '平均报点','平均报点T', '平均报点B',
+                  '总板数', 'AI跑板数', 'AVI缺陷总数', 'AVI真点总数', 'AVI真点总数T', 'AVI真点总数B','AI真点总数', '平均报点','平均报点T', '平均报点B',
                   '平均AI报点', '平均AI报点T', '平均AI报点B', 'OK板总数', 'AI_OK板总数', 'OK板比例', 'AI_OK板比例', '膜面', '机台号']
     if len(machinecode) > 1:
         machinecodename = "多机台"
@@ -1005,6 +1005,8 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                                SUM(CASE WHEN is_top = 1 THEN errnum ELSE 0 END) AS err_num_sum_T,
                                SUM(CASE WHEN is_top = 0 THEN errnum ELSE 0 END) AS err_num_sum_B,
                                SUM(true_num) AS avi_true_num_sum,
+                               SUM(CASE WHEN true_num >= 0 AND is_top = 1 THEN true_num ELSE 0 END) AS avi_true_num_sum_T,
+                               SUM(CASE WHEN true_num >= 0 AND is_top = 0 THEN true_num ELSE 0 END) AS avi_true_num_sum_B,
                                SUM(CASE WHEN ai_true_num >= 0 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum,
                                SUM(CASE WHEN ai_true_num >= 0 AND is_top = 1 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum_T,
                                SUM(CASE WHEN ai_true_num >= 0 AND is_top = 0 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum_B,
@@ -1035,7 +1037,11 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                                              CAST(SUM(has_ai) AS REAL) * 100
                                            ELSE 0 END, 4) AS 漏失板比例,
                                SUM(err_num_sum) AS AVI缺陷总数,
+                               SUM(err_num_sum_T) AS AVI缺陷总数T,
+                               SUM(err_num_sum_B) AS AVI缺陷总数B,
                                SUM(avi_true_num_sum) AS AVI真点总数,
+                               SUM(avi_true_num_sum_T) AS AVI真点总数T,
+                               SUM(avi_true_num_sum_B) AS AVI真点总数B,
                                SUM(ai_true_num_sum) AS AI真点总数,
                                SUM(CASE WHEN has_ai THEN ai_missing_num_sum ELSE 0 END) AS AI漏失总数,
                                ROUND(CASE WHEN COUNT(*) > 0 THEN
@@ -1071,8 +1077,10 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
 
         for i in result:
             nALLNum = float(i[11])
-            nAiNum = float(i[13])
-            nAiFalseRatio = float(i[14])
+            nALLNumT = float(i[12])
+            nALLNumB = float(i[13])
+            nAiNum = float(i[17])
+            nAiFalseRatio = float(i[18])
 
             if nALLNum != 0:
                 fAi = (nALLNum - nAiNum) / (nALLNum - (nALLNum * t_ratio))
@@ -1094,20 +1102,24 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                 fAi = float(nALLNum - nAiNum) / (float(nAviFalse) + 1e-6)
             if fAll > 0.99:
                 fAll = 0.99
-            if t_ratio > 0:
+            if t_ratio > 0.0:
                 nAviNum = int(nALLNum * t_ratio)
+                nAviNumT = int(nALLNumT * t_ratio)
+                nAviNumB = int(nALLNumB * t_ratio)
             else:
-                nAviNum = i[12]
+                nAviNum = i[14]
+                nAviNumT = i[15]
+                nAviNumB = i[16]
             value = {'日期': i[0], '料号': i[1], '批量号': i[2],
                      '假点过滤率': round(fAi*100, 2), '总点过滤率': round(fAll*100, 2),
                      'AI漏失总数': i[14], '漏失率': round(fAiFalseRatio*100, 2), '总板数': i[3],
                      'AI跑板数': i[4], 'AVI缺陷总数': i[11],
-                     'AVI真点总数': nAviNum, 'AI真点总数': i[13],
-                     '平均报点': i[15], '平均报点T': i[16], '平均报点B': i[17],
-                     '平均AI报点': i[18],'平均AI报点T': i[19],'平均AI报点B': i[20],
+                     'AVI真点总数': nAviNum,'AVI真点总数T': nAviNumT,'AVI真点总数B': nAviNumB, 'AI真点总数': i[17],
+                     '平均报点': i[19], '平均报点T': i[20], '平均报点B': i[21],
+                     '平均AI报点': i[22],'平均AI报点T': i[23],'平均AI报点B': i[24],
                      'OK板总数': i[5], 'AI_OK板总数': i[7],
                      'OK板比例': i[6], 'AI_OK板比例': i[8],
-                     '膜面': surface_dict[str(i[21])], '机台号': i[22]}
+                     '膜面': surface_dict[str(i[25])], '机台号': i[26]}
             if value['总点过滤率'] > allFilterRate:
                 statisticdata.append(value)
 
@@ -1144,7 +1156,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
             resFR = (float(df['AVI缺陷总数'].sum() - df['AI真点总数'].sum() - df['AI漏失总数'].sum()) / (float(nAviFalse) + 1e-6))
 
         df.loc[len(df.index)] = ['','总计',len(df)-1,round(resFR*100, 2),round(resAR*100,2),df['AI漏失总数'].sum(),round(df['漏失率'].mean(), 2),df['总板数'].sum(),
-                      df['AI跑板数'].sum(),df['AVI缺陷总数'].sum(),df['AVI真点总数'].sum(),df['AI真点总数'].sum(),round(df['AVI缺陷总数'].sum() / df['总板数'].sum(), 2),round((df['平均报点T'] * df['总板数']).sum()/df['总板数'].sum(), 2),round((df['平均报点B'] * df['总板数']).sum()/df['总板数'].sum(), 2),
+                      df['AI跑板数'].sum(),df['AVI缺陷总数'].sum(),df['AVI真点总数'].sum(),df['AVI真点总数T'].sum(),df['AVI真点总数B'].sum(),df['AI真点总数'].sum(),round(df['AVI缺陷总数'].sum() / df['总板数'].sum(), 2),round((df['平均报点T'] * df['总板数']).sum()/df['总板数'].sum(), 2),round((df['平均报点B'] * df['总板数']).sum()/df['总板数'].sum(), 2),
                       round(df['AI真点总数'].sum() / df['AI跑板数'].sum(), 2),round((df['平均AI报点T'] * df['AI跑板数']).sum()/df['AI跑板数'].sum(), 2),round((df['平均AI报点B'] * df['AI跑板数']).sum()/df['AI跑板数'].sum(), 2),df['OK板总数'].sum(),
                       df['AI_OK板总数'].sum(),round((df['OK板比例'] * df['总板数']).sum() / df['总板数'].sum(), 2) ,round((df['AI_OK板比例'] * df['AI跑板数']).sum() / df['总板数'].sum(), 2),'','']
 
@@ -1176,7 +1188,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
 
             df.loc[len(df.index)] = ['', '总计', len(df) - 1, round(resFR * 100, 2), round(resAR * 100, 2),
                                      df['AI漏失总数'].sum(), round(df['漏失率'].mean(), 2), df['总板数'].sum(),
-                                     df['AI跑板数'].sum(), df['AVI缺陷总数'].sum(), df['AVI真点总数'].sum(),
+                                     df['AI跑板数'].sum(), df['AVI缺陷总数'].sum(), df['AVI真点总数'].sum(),df['AVI真点总数T'].sum(),df['AVI真点总数B'].sum(),
                                      df['AI真点总数'].sum(), round(df['AVI缺陷总数'].sum() / df['总板数'].sum(), 2),
                                      round((df['平均报点T'] * df['总板数']).sum() / df['总板数'].sum(), 2),
                                      round((df['平均报点B'] * df['总板数']).sum() / df['总板数'].sum(), 2),
@@ -1198,7 +1210,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
     start_datetime_str = f"{start_date} {start_time_hour}"
     end_datetime_str = f"{end_date} {end_time_hour}"
     fieldnames = ['日期', '料号', '假点过滤率', '总点过滤率','AI漏失总数','漏失率',
-                  '总板数', 'AI跑板数', 'AVI缺陷总数', 'AVI真点总数', 'AI真点总数', '平均报点', '平均报点T', '平均报点B',
+                  '总板数', 'AI跑板数', 'AVI缺陷总数', 'AVI真点总数','AVI真点总数T', 'AVI真点总数B', 'AI真点总数', '平均报点', '平均报点T', '平均报点B',
                   '平均AI报点', '平均AI报点T', '平均AI报点B', 'OK板总数', 'AI_OK板总数', 'OK板比例', 'AI_OK板比例', '膜面', '机台号']
     if len(machinecode) > 1:
         machinecodename = "多机台"
@@ -1239,6 +1251,8 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                                SUM(CASE WHEN is_top = 1 THEN errnum ELSE 0 END) AS err_num_sum_T,
                                SUM(CASE WHEN is_top = 0 THEN errnum ELSE 0 END) AS err_num_sum_B,
                                SUM(true_num) AS avi_true_num_sum,
+                               SUM(CASE WHEN true_num >= 0 AND is_top = 1 THEN true_num ELSE 0 END) AS avi_true_num_sum_T,
+                               SUM(CASE WHEN true_num >= 0 AND is_top = 0 THEN true_num ELSE 0 END) AS avi_true_num_sum_B,
                                SUM(CASE WHEN ai_true_num >= 0 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum,
                                SUM(CASE WHEN ai_true_num >= 0 AND is_top = 1 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum_T,
                                SUM(CASE WHEN ai_true_num >= 0 AND is_top = 0 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum_B,
@@ -1267,7 +1281,11 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                                              CAST(SUM(has_ai) AS REAL) * 100
                                            ELSE 0 END, 4) AS 漏失板比例,
                                SUM(err_num_sum) AS AVI缺陷总数,
+                               SUM(err_num_sum_T) AS AVI缺陷总数T,
+                               SUM(err_num_sum_B) AS AVI缺陷总数B,
                                SUM(avi_true_num_sum) AS AVI真点总数,
+                               SUM(avi_true_num_sum_T) AS AVI真点总数T,
+                               SUM(avi_true_num_sum_B) AS AVI真点总数B,
                                SUM(ai_true_num_sum) AS AI真点总数,
                                SUM(CASE WHEN has_ai THEN ai_missing_num_sum ELSE 0 END) AS AI漏失总数,
                                ROUND(CASE WHEN COUNT(*) > 0 THEN
@@ -1303,8 +1321,10 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
 
         for i in result:
             nALLNum = float(i[10])
-            nAiNum = float(i[12])
-            nAiFalseRatio = float(i[13])
+            nALLNumT = float(i[11])
+            nALLNumB = float(i[12])
+            nAiNum = float(i[16])
+            nAiFalseRatio = float(i[17])
 
             if nALLNum != 0:
                 fAi = (nALLNum - nAiNum) / (nALLNum - (nALLNum * t_ratio))
@@ -1326,20 +1346,25 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                 fAi = float(nALLNum - nAiNum) / (float(nAviFalse) + 1e-6)
             if fAll > 0.99:
                 fAll = 0.98
-            if t_ratio > 0:
+            if t_ratio > 0.0:
                 nAviNum = int(nALLNum * t_ratio)
+                nAviNumT = int(nALLNumT * t_ratio)
+                nAviNumB = int(nALLNumB * t_ratio)
             else:
-                nAviNum = i[11]
+                nAviNum = i[13]
+                nAviNumT = i[14]
+                nAviNumB = i[15]
             value = {'日期': i[0], '料号': i[1],
                      '假点过滤率': round(fAi*100, 2), '总点过滤率': round(fAll*100, 2),
                      'AI漏失总数': i[13],'漏失率': round(fAiFalseRatio*100, 2), '总板数': i[2],
                      'AI跑板数': i[3], 'AVI缺陷总数': i[10],
-                     'AVI真点总数': nAviNum, 'AI真点总数': i[12],
-                     '平均报点': i[14], '平均报点T': i[15], '平均报点B': i[16],
-                     '平均AI报点': i[17],'平均AI报点T': i[18],'平均AI报点B': i[19],
+                     'AVI真点总数': nAviNum,'AVI真点总数T': nAviNumT,'AVI真点总数B': nAviNumB,
+                     'AI真点总数': i[16],
+                     '平均报点': i[18], '平均报点T': i[19], '平均报点B': i[20],
+                     '平均AI报点': i[21],'平均AI报点T': i[22],'平均AI报点B': i[23],
                      'OK板总数': i[4], 'AI_OK板总数': i[6],
                      'OK板比例': i[5], 'AI_OK板比例': i[7],
-                     '膜面': surface_dict[str(i[20])], '机台号': i[21]}
+                     '膜面': surface_dict[str(i[24])], '机台号': i[25]}
             if value['总点过滤率'] > allFilterRate:
                 statisticdata.append(value)
             # 根据机台号分组
@@ -1372,7 +1397,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
             resFR = (float(df['AVI缺陷总数'].sum() - df['AI真点总数'].sum() - df['AI漏失总数'].sum()) / (float(nAviFalse) + 1e-6))
 
         df.loc[len(df.index)] = ['','总计',round(resFR*100, 2),round(resAR*100, 2),df['AI漏失总数'].sum(),round(df['漏失率'].mean(), 2),df['总板数'].sum(),
-                      df['AI跑板数'].sum(),df['AVI缺陷总数'].sum(),df['AVI真点总数'].sum(),df['AI真点总数'].sum(),round(df['AVI缺陷总数'].sum() / df['总板数'].sum(), 2),round((df['平均报点T'] * df['总板数']).sum()/df['总板数'].sum(), 2),round((df['平均报点B'] * df['总板数']).sum()/df['总板数'].sum(), 2),
+                      df['AI跑板数'].sum(),df['AVI缺陷总数'].sum(),df['AVI真点总数'].sum(),df['AVI真点总数T'].sum(),df['AVI真点总数B'].sum(),df['AI真点总数'].sum(),round(df['AVI缺陷总数'].sum() / df['总板数'].sum(), 2),round((df['平均报点T'] * df['总板数']).sum()/df['总板数'].sum(), 2),round((df['平均报点B'] * df['总板数']).sum()/df['总板数'].sum(), 2),
                       round(df['AI真点总数'].sum() / df['AI跑板数'].sum(), 2),round((df['平均AI报点T'] * df['AI跑板数']).sum()/df['AI跑板数'].sum(), 2),round((df['平均AI报点B'] * df['AI跑板数']).sum()/df['AI跑板数'].sum(), 2),df['OK板总数'].sum(),
                       df['AI_OK板总数'].sum(),round((df['OK板比例'] * df['总板数']).sum() / df['总板数'].sum(), 2) ,round((df['AI_OK板比例'] * df['AI跑板数']).sum() / df['总板数'].sum(), 2),'','']
 
@@ -1403,7 +1428,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
 
             df.loc[len(df.index)] = ['', '总计', round(resFR * 100, 2), round(resAR * 100, 2), df['AI漏失总数'].sum(),
                                      round(df['漏失率'].mean(), 2), df['总板数'].sum(),
-                                     df['AI跑板数'].sum(), df['AVI缺陷总数'].sum(), df['AVI真点总数'].sum(),
+                                     df['AI跑板数'].sum(), df['AVI缺陷总数'].sum(), df['AVI真点总数'].sum(),df['AVI真点总数T'].sum(),df['AVI真点总数B'].sum(),
                                      df['AI真点总数'].sum(), round(df['AVI缺陷总数'].sum() / df['总板数'].sum(), 2),
                                      round((df['平均报点T'] * df['总板数']).sum() / df['总板数'].sum(), 2),
                                      round((df['平均报点B'] * df['总板数']).sum() / df['总板数'].sum(), 2),
