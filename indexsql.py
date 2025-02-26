@@ -44,7 +44,7 @@ if maxTrueNum < 0:
     maxTrueNum = 1000000000   #sql识别不了inf
 # start_time = config['log']['start_time']
 # end_time = config['log']['end_time']
-if t_ratio <= 0.0:
+if t_ratio == 0.0:
     t_ratio = 0.3
 
 # DATABASE_URL = "mysql+pymysql://root:YMZ123@127.0.0.1/avi?charset=utf8"
