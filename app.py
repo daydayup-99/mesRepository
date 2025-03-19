@@ -79,7 +79,7 @@ def on_show_window(icon, item):
     status_label.config(text="MES 软件正在运行中")
 
 def start_flask_app():
-    app.run(threaded=True, use_reloader=False)
+    app.run(host='0.0.0.0', port=5000, threaded=True, use_reloader=False)
 
 def hide_window():
     window.withdraw()  # 最小化窗口

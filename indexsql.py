@@ -70,14 +70,10 @@ Session = sessionmaker(bind=engine)
 curent_date = datetime.now()
 # curent_date = datetime(2024, 6, 25)
 
-
-# 初始数据库连接
-
 class TestRecord(Base):
     # yesterday = curent_date - timedelta(days=6)
     __tablename__ = f"tab_test_{curent_date.strftime('%Y%m%d')[0:]}"
     id = Column(Integer, primary_key=True)
-    # 这里假设test_machine_code是表中的一个字段，而不是表的名字
     errnum = Column(Integer)
     pcbno = Column(Integer)
     ai_num = Column(Integer)
@@ -98,7 +94,6 @@ class MachineCode(Base):
 class ErrRecord(Base):
     __tablename__ = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
     id = Column(Integer, primary_key=True)
-    # 这里假设test_machine_code是表中的一个字段，而不是表的名字
     ai_err_type = Column(String(255))
     err_key = Column(String(100))
 
@@ -132,7 +127,6 @@ def getAllMachineNumSql():
     table_name = f"tab_test_{curent_date.strftime('%Y%m%d')[0:]}"
     # table_name = f"tab_test_{yesterday.strftime('%Y%m%d')[0:]}"
     inspector = inspect(engine)
-    # 获取数据库中所有的表名
     table_names = inspector.get_table_names()
     if table_name in table_names:
         sql_query = text(f"""
@@ -145,7 +139,7 @@ def getAllMachineNumSql():
                     """)
         resulttmp = session.execute(sql_query).fetchone()
         total_pcb_count = resulttmp[0] if resulttmp and resulttmp[0] is not None else 0
-        if isinstance(total_pcb_count, Decimal):  # 转换 Decimal 为 float
+        if isinstance(total_pcb_count, Decimal):
             total_pcb_count = int(total_pcb_count)
         res = total_pcb_count
     json_data = json.dumps(res, ensure_ascii=False)
@@ -299,11 +293,18 @@ def getErrJob():
                             SELECT default_1, default_4 as 'MachineID',SUBSTRING_INDEX(SUBSTRING_INDEX(err_key,'&', -2),'&',1) as 'Surface'
                             FROM {table_name}
                             WHERE ai_err_type = '{key}'
+                        ),
+                        b AS(
+                            SELECT default_1, default_4,count(default_1) as 'JobAllNum'
+                            FROM {table_name}
+                            GROUP BY default_1,default_4
                         )
-                        SELECT CONCAT(Surface,',',default_1) as Job,MachineID
+                        SELECT CONCAT(a.Surface,', ',a.default_1,' , ',(COUNT(a.default_1)/b.JobAllNum)) as Job,a.MachineID
                         FROM a
-                        GROUP BY default_1, MachineID, Surface
-                        ORDER BY COUNT(default_1) DESC
+                        JOIN b ON a.default_1 = b.default_1 
+                        AND a.MachineID = b.default_4 
+                        GROUP BY a.default_1, a.MachineID, a.Surface
+                        ORDER BY COUNT(a.default_1) DESC
                         LIMIT 5
                     """)
         resulttmp = session.execute(sql_query).fetchall()
@@ -364,15 +365,13 @@ def getAllErrRateSql(start_date, end_date, machinecode):
             if JobErrAllNum != 0:
                 JobTypeRate = round((JobTypeNum / JobErrAllNum) * 100, 2)
             else:
-                JobTypeRate = 0.0  # 默认值应该是数字，而不是字典
+                JobTypeRate = 0.0
 
             data_point = {'errtype': JobErrType, 'JobTypeNum': JobTypeNum, 'JobTypeRate': JobTypeRate,
                           'errAllNum': JobErrAllNum, 'jobname': "All"}
             json_data.append(data_point)
 
-    # 将相对比例的字典转换为 JSON 格式
     json_data = json.dumps(json_data, ensure_ascii=False)
-    # 打印 JSON 数据
     session.close()
     return json_data
 
@@ -386,11 +385,9 @@ def selectJob(start_date,end_date,start_time_hour,end_time_hour,machinecode):
     current_date = start_date
     while current_date <= end_date:
         inspector = inspect(engine)
-        # 获取数据库中所有的表名
         table_names = inspector.get_table_names()
         table_name = f"tab_test_{current_date.strftime('%Y%m%d')[0:]}"
         if table_name in table_names:
-            # 如果表存在，则加载它
             sql_query = text(f"""
                                 select job_name
                                 FROM {table_name}
@@ -415,11 +412,9 @@ def selectPlno(start_date,end_date,start_time_hour,end_time_hour,machinecode,job
     current_date = start_date
     while current_date <= end_date:
         inspector = inspect(engine)
-        # 获取数据库中所有的表名
         table_names = inspector.get_table_names()
         table_name = f"tab_test_{current_date.strftime('%Y%m%d')[0:]}"
         if table_name in table_names:
-            # 如果表存在，则加载它
             table = Table(table_name, Base.metadata, autoload_with=engine)
             result = session.query(table.c.plno).filter(
                 table.c.test_machine_code.in_(machinecode),table.c.job_name == jobname ,table.c.test_time >= start_datetime_str,
@@ -457,7 +452,6 @@ def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machi
     nTotalAiNum = 0.0
     while current_date <= end_date:
         inspector = inspect(engine)
-        # 获取数据库中所有的表名
         table_names = inspector.get_table_names()
         table_date = current_date.strftime('%Y%m%d')[0:]
         table_name = f"tab_test_{table_date}"
@@ -578,16 +572,13 @@ def ReadJobSql(start_date, end_date,start_time_hour,end_time_hour, machinecode):
     start_datetime_str = f"{start_date} {start_time_hour}"
     end_datetime_str = f"{end_date} {end_time_hour}"
     json_data = []
-    # 查询并分组 test_machine_code 字段，动态获取表名
     jobname_results = defaultdict(lambda: {'njoball': 0, 'njoberrnum': 0, 'njobainum': 0,'nJobCheckAllNum':0,'nJobCheckTrueNum':0})
     current_date = start_date
     while current_date <= end_date:
         inspector = inspect(engine)
-        # 获取数据库中所有的表名
         table_names = inspector.get_table_names()
         table_name = f"tab_test_{current_date.strftime('%Y%m%d')[0:]}"
         if table_name in table_names:
-            # 如果表存在，则加载它
             table = Table(table_name, Base.metadata, autoload_with=engine)
             sql_query = text(f"""
                             select job_name, sum(errnum), sum(ai_num)
@@ -688,7 +679,6 @@ def getJobErrRate(start_date,end_date,machinecode,jobname):
     like_conditions = ' OR '.join([f"default_4 = '{code}'" for code in machinecode])
     while current_date <= end_date:
         inspector = inspect(engine)
-        # 获取数据库中所有的表名
         table_names = inspector.get_table_names()
         table_name = f"tab_err_{current_date.strftime('%Y%m%d')[0:]}"
         if table_name in table_names:
@@ -736,11 +726,9 @@ def getJobErrRate(start_date,end_date,machinecode,jobname):
         data_point = {'errtype': JobErrType, 'JobTypeNum': JobTypeNum, 'JobTypeRate': JobTypeRate,'errAllNum':JobErrAllNum,'jobname':jobname}
         json_data.append(data_point)
 
-    # 将相对比例的字典转换为 JSON 格式
     json_data = json.dumps(json_data, ensure_ascii=False)
-    # 打印 JSON 数据
     session.close()
-    return  json_data
+    return json_data
 
 #批量号
 def getPlnoErrRate(start_date,end_date,machinecode,jobname,plno):
@@ -752,7 +740,6 @@ def getPlnoErrRate(start_date,end_date,machinecode,jobname,plno):
     like_conditions = ' OR '.join([f"default_4 = '{code}'" for code in machinecode])
     while current_date <= end_date:
         inspector = inspect(engine)
-        # 获取数据库中所有的表名
         table_names = inspector.get_table_names()
         table_name = f"tab_err_{current_date.strftime('%Y%m%d')[0:]}"
         if table_name in table_names:
@@ -797,12 +784,10 @@ def getPlnoErrRate(start_date,end_date,machinecode,jobname,plno):
         if PlnoErrAllNum != 0:
             PlnoTypeRate = round((PlnoTypeNum / PlnoErrAllNum)*100, 2)
         else:
-            PlnoTypeRate = 0.0  # 默认值应该是数字，而不是字典
+            PlnoTypeRate = 0.0
         data_point = {'plnoerrtype': PlnoErrType, 'plnoTypeNum': PlnoTypeNum, 'plnoTypeRate': PlnoTypeRate, 'plnoErrAllNum':PlnoErrAllNum,'plnoname':plno}
         json_data.append(data_point)
-    # 将相对比例的字典转换为 JSON 格式
     json_data = json.dumps(json_data, ensure_ascii=False)
-    # 打印 JSON 数据
     session.close()
     return json_data
 
@@ -812,7 +797,6 @@ def getLayersql(start_date,end_date,machinecode,jobname):
     global MaxNum
     session = Session()
     json_data = []
-    # 查询并分组 test_machine_code 字段，动态获取表名
     layername_results = defaultdict(
         lambda: {'nLayerall': 0, 'nLayererrnum': 0, 'nLayerainum': 0, 'nLayerCheckAllNum': 0, 'nLayerCheckTrueNum': 0})
     jobname_results = defaultdict(
@@ -820,16 +804,10 @@ def getLayersql(start_date,end_date,machinecode,jobname):
     current_date = start_date
     while current_date <= end_date:
         inspector = inspect(engine)
-        # 获取数据库中所有的表名
         table_names = inspector.get_table_names()
         table_name = f"table_test_{current_date.strftime('%Y%m%d')[2:]}"
         if table_name in table_names:
-            # 如果表存在，则加载它
             table = Table(table_name, Base.metadata, autoload_with=engine)
-            # 使用子查询构建主查询
-
-
-            #合并板对板数据进行筛选
             tol_errnum = func.sum(func.ifnull(table.c.errnum, -3000)).label('sum_errnum')
             tol_ainum = func.sum(table.c.ai_num).label('sum_ainum')
             subquery = session.query(
@@ -841,20 +819,13 @@ def getLayersql(start_date,end_date,machinecode,jobname):
                     tol_errnum  >= 0,
                     tol_errnum <= MaxNum).subquery()
 
-            # 执行主查询
             result = session.query(
                     subquery.c.layer_name,
                     func.sum(subquery.c.sum_errnum),
                     func.sum(subquery.c.sum_ainum)
                 ).filter(subquery.c.job_name == jobname).group_by(subquery.c.layer_name).all()
-
-            # 获取结果
-
-
-
             for row in result:
                 layername = row[0]
-                #子查询所有的数据
                 inner_query = session.query(func.count(),tol_errnum).filter(table.c.test_machine_code.in_(machinecode),table.c.job_name == jobname,table.c.layer_name == layername).group_by(table.c.pcbno).having(tol_errnum <= MaxNum,tol_errnum >=0).subquery()
                 res = session.query(func.count()).select_from(inner_query).all()
 
@@ -975,7 +946,6 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
     current_dir = os.path.join(current_dir, 'csvdata')
     print("当前文件的目录路径:", current_dir)
     if not os.path.exists(current_dir):
-        # 如果路径不存在，创建文件夹
         os.makedirs(current_dir)
     start_time_hour = start_time_hour.strftime("%H:%M:%S").replace(":", "_")
     end_time_hour = end_time_hour.strftime("%H:%M:%S").replace(":", "_")
@@ -993,7 +963,6 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
         result = []
         while current_date <= end_date:
             inspector = inspect(engine)
-            # 获取数据库中所有的表名
             table_names = inspector.get_table_names()
             tabledate = current_date.strftime('%Y%m%d')[0:]
             table_name = f"tab_test_{tabledate}"
@@ -1239,7 +1208,6 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
         result = []
         while current_date <= end_date:
             inspector = inspect(engine)
-            # 获取数据库中所有的表名
             table_names = inspector.get_table_names()
             tabledate = current_date.strftime('%Y%m%d')[0:]
             table_name = f"tab_test_{tabledate}"
@@ -1367,7 +1335,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                      '膜面': surface_dict[str(i[24])], '机台号': i[25]}
             if value['总点过滤率'] > allFilterRate:
                 statisticdata.append(value)
-            # 根据机台号分组
+        # 根据机台号分组
         grouped = {}
         for item in statisticdata:
             machine_code = item['机台号']
@@ -1392,7 +1360,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
             )
             if upperBound <= lowerBound:
                 upperBound += 0.1
-            random.seed(123456789)  # 固定种子，保证每次运行生成相同的随机数
+            random.seed(123456789)
             nAviFalse = int(random.uniform(lowerBound, upperBound - 0.01))
             resFR = (float(df['AVI缺陷总数'].sum() - df['AI真点总数'].sum() - df['AI漏失总数'].sum()) / (float(nAviFalse) + 1e-6))
 
@@ -1421,7 +1389,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                 )
                 if upperBound <= lowerBound:
                     upperBound += 0.1
-                random.seed()  # 固定种子，保证每次运行生成相同的随机数
+                random.seed()
                 nAviFalse = int(random.uniform(lowerBound, upperBound - 0.01))
                 resFR = (float(df['AVI缺陷总数'].sum() - df['AI真点总数'].sum() - df['AI漏失总数'].sum()) / (
                             float(nAviFalse) + 1e-6))
