@@ -424,13 +424,13 @@ function MacMeanAi(macnameData,macfMeanData,macfMeanAiData) {
                 },
                 axisLine: {
                     lineStyle: {
-                        color: 'rgba(255,255,255,.2)'  //轴线的颜色
+                        color: 'rgba(255,255,255,1)'  //轴线的颜色
                     }
                 },
                 axisLabel: {         //轴线字体样式设置
                     rotate: 45,
                     textStyle: {
-                        color: "rgba(255,255,255,.6)",
+                        color: "rgba(255,255,255,1)",
                         fontSize: 14,
                     }
                 }
@@ -445,12 +445,15 @@ function MacMeanAi(macnameData,macfMeanData,macfMeanAiData) {
                 axisLabel: {
                     formatter: '{value}',
                     textStyle: {
-                        color: "rgba(255,255,255,.6)",
+                        color: "rgba(255,255,255,1)",
                         fontSize: 14,
                     }
                 },
                 splitLine: {          //去除背景网格线
-                    show: false
+                    lineStyle: {
+                        color: 'rgba(255,255,255,1)',
+                        type: 'dotted',
+                    }
                 },
                 axisTick: {   //刻度
                     show: false         //不显示刻度线
@@ -545,13 +548,13 @@ function MacAiPass(macnameData,macAiData) {
             axisLabel: {
                 rotate: 45,
                 textStyle: {
-                    color: "rgba(255,255,255,.6)",
+                    color: "rgba(255,255,255,1)",
                     fontSize: 14,
                 },
             },
             axisLine: {
                 lineStyle: {
-                    color: 'rgba(255,255,255,.2)'
+                    color: 'rgba(255,255,255,1)'
                 }
 
             },
@@ -572,19 +575,19 @@ function MacAiPass(macnameData,macAiData) {
             splitNumber: 4,
             axisLine: {
                 lineStyle: {
-                    color: 'rgba(255,255,255,.1)'
+                    color: 'rgba(255,255,255,1)'
                 }
             },
             axisLabel: {
                 textStyle: {
-                    color: "rgba(255,255,255,.6)",
+                    color: "rgba(255,255,255,1)",
                     fontSize: 16,
                 },
             },
 
             splitLine: {
                 lineStyle: {
-                    color: 'rgba(255,255,255,.1)',
+                    color: 'rgba(255,255,255,1)',
                     type: 'dotted',
                 }
             }
@@ -607,7 +610,7 @@ function MacAiPass(macnameData,macAiData) {
                 itemStyle: {
                     normal: {
                         color: '#1f7eea',
-                        borderColor: 'rgba(31, 174, 234, .1)',
+                        borderColor: 'rgba(31, 174, 234, 1)',
                         borderWidth: 5
                     }
                 },
