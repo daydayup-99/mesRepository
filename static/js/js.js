@@ -420,11 +420,11 @@ function MacMeanAi(macnameData,macfMeanData,macfMeanAiData) {
                     type: 'shadow'
                 },
                 axisTick: {           //刻度
-                    show: true //不显示刻度线
+                    show: false //不显示刻度线
                 },
                 axisLine: {
                     lineStyle: {
-                        color: 'rgba(255,255,255,1)'  //轴线的颜色
+                        color: 'rgba(255,255,255,.1)'  //轴线的颜色
                     }
                 },
                 axisLabel: {         //轴线字体样式设置
@@ -554,7 +554,7 @@ function MacAiPass(macnameData,macAiData) {
             },
             axisLine: {
                 lineStyle: {
-                    color: 'rgba(255,255,255,1)'
+                    color: 'rgba(255,255,255,.1)'
                 }
 
             },
@@ -575,7 +575,7 @@ function MacAiPass(macnameData,macAiData) {
             splitNumber: 4,
             axisLine: {
                 lineStyle: {
-                    color: 'rgba(255,255,255,1)'
+                    color: 'rgba(255,255,255,.1)'
                 }
             },
             axisLabel: {

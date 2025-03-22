@@ -288,28 +288,26 @@ def getLowRatioJob():
     return response
 
 def getLowRatioJobRequestData(request):
-    start_time_str = request.form['start_time']
-    end_time_str = request.form['end_time']
-    ratio = request.form['ratio']
-    date_format = '%Y-%m-%d'
-    hour_format = '%H:%M'
-    start_time = datetime.strptime(start_time_str, date_format).date()
-    end_time = datetime.strptime(end_time_str, date_format).date()
-    start_time_hour = datetime.strptime(start_time_str, hour_format).time()
-    end_time_hour = datetime.strptime(end_time_str, hour_format).time()
+    start_time_str = request.json['start_time']
+    end_time_str = request.json['end_time']
+    ratio = request.json['ratio']
+    datetime_format = '%Y-%m-%d %H:%M:%S'
+    start_time = datetime.strptime(start_time_str, datetime_format).date()
+    end_time = datetime.strptime(end_time_str, datetime_format).date()
+    start_time_hour = datetime.strptime(start_time_str, datetime_format).time()
+    end_time_hour = datetime.strptime(end_time_str, datetime_format).time()
     return start_time,end_time,start_time_hour,end_time_hour,ratio
 
 def getTopNHighRatioJobRequestData(request):
-    start_time_str = request.form['start_time']
-    end_time_str = request.form['end_time']
-    n = request.form['n']
-    ratio = request.form['ratio']
-    date_format = '%Y-%m-%d'
-    hour_format = '%H:%M'
-    start_time = datetime.strptime(start_time_str, date_format).date()
-    end_time = datetime.strptime(end_time_str, date_format).date()
-    start_time_hour = datetime.strptime(start_time_str, hour_format).time()
-    end_time_hour = datetime.strptime(end_time_str, hour_format).time()
+    start_time_str = request.json['start_time']
+    end_time_str = request.json['end_time']
+    n = request.json['n']
+    ratio = request.json['ratio']
+    datetime_format = '%Y-%m-%d %H:%M:%S'
+    start_time = datetime.strptime(start_time_str, datetime_format).date()
+    end_time = datetime.strptime(end_time_str, datetime_format).date()
+    start_time_hour = datetime.strptime(start_time_str, datetime_format).time()
+    end_time_hour = datetime.strptime(end_time_str, datetime_format).time()
     return start_time,end_time,start_time_hour,end_time_hour,ratio,n
 
 def getRequestData (request):
