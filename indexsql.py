@@ -1437,107 +1437,124 @@ def selectLowRatioJob(start_date,end_date,start_time_hour,end_time_hour,ratio):
                         float(results['njoberrnum']) - float(results['njoberrnum']) * t_ratio)
         else:
             fJobFilterRate = 0.0
-        if fJobFilterRate < ratio:
+        if fJobFilterRate <= ratio:
             job_data = {
-                'jobpath': results['jobpath'],
-                'carpath': results['carpath'],
-                'stdpath': results['stdpath']
+                'job_path': results['jobpath'],
+                'car_path': results['carpath'],
+                'std_path': results['stdpath']
             }
             json_data[jobname] = job_data
 
-    json_string = json.dumps(json_data)
+    json_string = json.dumps(json_data, ensure_ascii=False)
     session.close()
     return json_string
 
 def selectTopNHighRatioJob(start_date,end_date,start_time_hour,end_time_hour,ratio,n):
-    # session = Session()
-    # current_date = start_date
-    # start_datetime_str = f"{start_date} {start_time_hour}"
-    # end_datetime_str = f"{end_date} {end_time_hour}"
-    # inspector = inspect(engine)
-    # table_names = inspector.get_table_names()
-    # ErrAllNum = 0
-    # ErrTypeCounts = {}
-    # JobNum = {}
-    # while current_date <= end_date:
-    #     table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
-    #     if table_name in table_names:
-    #         sql_query = text(f"""
-    #                             SELECT ai_err_type, COUNT(ai_err_type)
-    #                             FROM {table_name}
-    #                             WHERE is_ai = 1
-    #                             GROUP BY ai_err_type;
-    #                             """)
-    #         result = session.execute(sql_query).fetchall()
-    #         for row in result:
-    #             JobErrType, JobTypeNum = row
-    #             ErrAllNum = ErrAllNum + int(JobTypeNum)
-    #             if JobErrType in ErrTypeCounts:
-    #                 ErrTypeCounts[JobErrType] += JobTypeNum
-    #             else:
-    #                 ErrTypeCounts[JobErrType] = JobTypeNum
-    #         sql_query = text(f"""
-    #                             SELECT default_1, count(default_1) as JobAllNum
-    #                             FROM {table_name}
-    #                             GROUP BY default_1
-    #                             """)
-    #         result = session.execute(sql_query).fetchall()
-    #         for row in result:
-    #             Job, JobAllNum = row
-    #             if Job in JobNum:
-    #                 JobNum[Job] += JobAllNum
-    #             else:
-    #                 JobNum[Job] = JobAllNum
-    #         current_date += timedelta(days=1)
-    # sorted_counts = sorted(ErrTypeCounts.items(), key=lambda x: x[1], reverse=True)
-    # top_n = sorted_counts[:n]
-    # for JobErrType, JobTypeNum in top_n:
-    #
-    #
-    # while current_date <= end_date:
-    #     table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
-    #     table_testname = f"tab_test_{curent_date.strftime('%Y%m%d')[0:]}"
-    #     if table_name in table_names and table_testname in table_names:
-    #         sql_query = text(f"""
-    #                         select ai_err_type, COUNT(ai_err_type), default_1
-    #                         from {table_name}
-    #                         WHERE is_ai = 1
-    #                         GROUP BY ai_err_type, default_1
-    #                         ORDER BY COUNT(ai_err_type) DESC
-    #                     """)
-    #         resultErrType = session.execute(sql_query).fetchall()
-    #
-    #         sql_query = text(f"""
-    #                             with a AS(
-    #                                     select err.ai_err_type as errtype, err.default_1 as job , COUNT(DISTINCT err.id) AS error_count, test.default_3 as jobpath, test.default_4 as carpath, test.default_5 as stdpath
-    #                                     from {table_testname} test
-    #                                     left join {table_name} err
-    #                                     on test.plno = err.default_2
-    #                                     and test.job_name = err.default_1
-    #                                     and test.pcbno = err.default_3
-    #                                     where err.is_ai = 1
-    #                                     AND err.ai_err_type IS NOT NULL
-    #                                     WHERE test.test_time between '{start_datetime_str}' and '{end_datetime_str}'
-    #                                     GROUP BY err.ai_err_type, test.default_3, test.default_4, test.default_5, err.default_1
-    #                                     ORDER BY error_count DESC),
-    #                             b AS (
-    #                                     SELECT default_1, count(default_1) as JobAllNum
-    #                                     FROM tab_err_20250319
-    #                                     GROUP BY default_1
-    #                                 )
-    #                             SELECT 	a.errtype, a.job, a.jobpath, a.carpath, a. stdpath, (a.error_count/b.JobAllNum) as ratio, a.error_count
-    #                             FROM b
-    #                             LEFT JOIN a
-    #                             ON b.default_1 = a.job
-    #                             WHERE b.JobAllNum > 0
-    #                             ORDER BY a.error_count DESC)
-    #                     """)
-    #         resultMix = session.execute(sql_query).fetchall()
-    #
-    #     lstJob = []
-    #
-    #     json_data = json.dumps(lstJob, ensure_ascii=False)
-    # session.close()
-    # return json_data
+    session = Session()
+    current_date = start_date
+    start_datetime_str = f"{start_date} {start_time_hour}"
+    end_datetime_str = f"{end_date} {end_time_hour}"
+    inspector = inspect(engine)
+    table_names = inspector.get_table_names()
+    ErrAllNum = 0
+    ErrTypeCounts = {}
+    JobNum = {}
+    ErrResult = {}
 
-    return 1
+    while current_date <= end_date:
+        table_name = f"tab_err_{current_date.strftime('%Y%m%d')[0:]}"
+        if table_name in table_names:
+            sql_query = text(f"""
+                                SELECT ai_err_type, COUNT(ai_err_type)
+                                FROM {table_name}
+                                WHERE is_ai = 1
+                                GROUP BY ai_err_type;
+                                """)
+            result = session.execute(sql_query).fetchall()
+            for row in result:
+                JobErrType, JobTypeNum = row
+                ErrAllNum = ErrAllNum + int(JobTypeNum)
+                if JobErrType in ErrTypeCounts:
+                    ErrTypeCounts[JobErrType] += JobTypeNum
+                else:
+                    ErrTypeCounts[JobErrType] = JobTypeNum
+            sql_query = text(f"""
+                                SELECT default_1, count(default_1) as JobAllNum
+                                FROM {table_name}
+                                GROUP BY default_1
+                                """)
+            result = session.execute(sql_query).fetchall()
+            for row in result:
+                Job, JobAllNum = row
+                if Job in JobNum:
+                    JobNum[Job] += JobAllNum
+                else:
+                    JobNum[Job] = JobAllNum
+        current_date += timedelta(days=1)
+    sorted_counts = sorted(ErrTypeCounts.items(), key=lambda x: x[1], reverse=True)
+    top_n = sorted_counts[:n]
+    for JobErrType, JobTypeNum in top_n:
+        current_date = start_date
+        while current_date <= end_date:
+            table_name = f"tab_err_{current_date.strftime('%Y%m%d')[0:]}"
+            table_testname = f"tab_test_{current_date.strftime('%Y%m%d')[0:]}"
+            if table_name in table_names and table_testname in table_names:
+                sql_query = text(f"""
+                                    with a AS(
+                                            select err.ai_err_type as errtype, err.default_1 as job, COUNT(DISTINCT err.id) as error_count, test.default_3 as jobpath, test.default_4 as carpath, test.default_5 as stdpath
+                                            from {table_testname} test
+                                            left join {table_name} err
+                                            on test.plno = err.default_2
+                                            and test.job_name = err.default_1
+                                            and test.pcbno = err.default_3
+                                            where err.is_ai = 1
+                                            AND err.ai_err_type = '{JobErrType}'
+                                            and test.test_time between '{start_datetime_str}' and '{end_datetime_str}'
+                                            GROUP BY err.ai_err_type, test.default_3, test.default_4, test.default_5, err.default_1
+                                            ORDER BY error_count DESC),
+                                    ranked AS (
+                                        SELECT
+                                                a.errtype,
+                                                a.job,
+                                                a.jobpath,
+                                                a.carpath,
+                                                a.stdpath,
+                                                a.error_count,
+                                                ROW_NUMBER() OVER (
+                                                        PARTITION BY a.job
+                                                        ORDER BY a.error_count DESC
+                                                ) AS rk
+                                        FROM a
+                                    )
+                                    SELECT errtype,job,jobpath,carpath,stdpath,error_count
+                                    FROM ranked
+                                    WHERE rk = 1
+                                    ORDER BY error_count DESC;
+                            """)
+                resultMix = session.execute(sql_query).fetchall()
+                if len(resultMix) == 0:
+                    current_date += timedelta(days=1)
+                    continue
+                JobNameResults = defaultdict(
+                    lambda: {'job_path': "", 'car_path': "", 'std_path': "", 'countNum': 0})
+                for row in resultMix:
+                    errname = row[0]
+                    jobname = row[1]
+                    if errname in ErrResult.keys() and jobname in ErrResult[errname].keys():
+                        ErrResult[errname][jobname]['countNum'] += row[5]
+                    else:
+                        JobNameResults[jobname]['job_path'] = row[2]
+                        JobNameResults[jobname]['car_path'] = row[3]
+                        JobNameResults[jobname]['std_path'] = row[4]
+                        JobNameResults[jobname]['countNum'] += row[5]
+                if errname in ErrResult.keys():
+                    ErrResult[errname].update(JobNameResults)
+                else:
+                    ErrResult[errname] = JobNameResults
+            current_date += timedelta(days=1)
+    for errname, jobs in ErrResult.items():
+        ErrResult[errname] = {jobname: details for jobname, details in jobs.items()
+                              if details['countNum'] / JobNum[jobname] >= ratio}
+    json_data = json.dumps(ErrResult, ensure_ascii=False)
+    session.close()
+    return json_data
