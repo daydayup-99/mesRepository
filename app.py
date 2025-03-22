@@ -8,15 +8,15 @@ from PIL import Image, ImageDraw, ImageTk
 from flask import Flask, render_template, Response, request, jsonify
 from indexsql import selectJob, selectMachine, getRateFilterTotal, ReadJobSql, getJobErrRate, selectPlno, \
     getPlnoErrRate, SelectAiPass, getErrRate, update_db_connection, getLayersql, selectMacRate, \
-    exportcsvbyjob, exportallcsv, getAllErrRateSql, getErrJob, getAllMachineNumSql
+    exportcsvbyjob, exportallcsv, getAllErrRateSql, getErrJob, getAllMachineNumSql, selectTopNHighRatioJob, selectLowRatioJob
 from datetime import datetime, timedelta, time
 import tkinter as tk
 from tkinter import messagebox
 import win32file
 import win32con
 
-# sys_dir = os.path.dirname(os.path.realpath(__file__))
-sys_dir = os.path.dirname(sys.executable)
+sys_dir = os.path.dirname(os.path.realpath(__file__))
+# sys_dir = os.path.dirname(sys.executable)
 lock_file_path = os.path.join(sys_dir, 'my_app.lock')
 def check_if_running():
     global lock_file_handle
@@ -105,8 +105,8 @@ def on_closing():
         hide_window()  # 最小化
 
 config = configparser.ConfigParser()
-# config_dir = os.path.dirname(os.path.realpath(__file__))
-config_dir = os.path.dirname(sys.executable)
+config_dir = os.path.dirname(os.path.realpath(__file__))
+# config_dir = os.path.dirname(sys.executable)
 config_dir = os.path.join(config_dir, 'config.ini')
 config.read(config_dir)
 @app.route('/static')
@@ -272,6 +272,45 @@ def exportliaocsv():
     exportcsvbyjob(start_time, end_time, start_time_hour, end_time_hour, MacNum)
     dataJob = {'message': 'dataJob exported successfully'}
     return jsonify(dataJob)
+
+@app.route('/GetTopNHighRatioJob',methods=['POST'])
+def getTopNHighRatioJob():
+    start_time,end_time,start_time_hour,end_time_hour,ratio,n = getTopNHighRatioJobRequestData(request)
+    jobnameData = selectTopNHighRatioJob(start_time,end_time,start_time_hour,end_time_hour,ratio,n)
+    response = jsonify(data=jobnameData)
+    return response
+
+@app.route('/GetLowRatioJob',methods=['POST'])
+def getLowRatioJob():
+    start_time,end_time,start_time_hour,end_time_hour,ratio = getLowRatioJobRequestData(request)
+    jobnameData = selectLowRatioJob(start_time,end_time,start_time_hour,end_time_hour,ratio)
+    response = jsonify(data=jobnameData)
+    return response
+
+def getLowRatioJobRequestData(request):
+    start_time_str = request.form['start_time']
+    end_time_str = request.form['end_time']
+    ratio = request.form['ratio']
+    date_format = '%Y-%m-%d'
+    hour_format = '%H:%M'
+    start_time = datetime.strptime(start_time_str, date_format).date()
+    end_time = datetime.strptime(end_time_str, date_format).date()
+    start_time_hour = datetime.strptime(start_time_str, hour_format).time()
+    end_time_hour = datetime.strptime(end_time_str, hour_format).time()
+    return start_time,end_time,start_time_hour,end_time_hour,ratio
+
+def getTopNHighRatioJobRequestData(request):
+    start_time_str = request.form['start_time']
+    end_time_str = request.form['end_time']
+    n = request.form['n']
+    ratio = request.form['ratio']
+    date_format = '%Y-%m-%d'
+    hour_format = '%H:%M'
+    start_time = datetime.strptime(start_time_str, date_format).date()
+    end_time = datetime.strptime(end_time_str, date_format).date()
+    start_time_hour = datetime.strptime(start_time_str, hour_format).time()
+    end_time_hour = datetime.strptime(end_time_str, hour_format).time()
+    return start_time,end_time,start_time_hour,end_time_hour,ratio,n
 
 def getRequestData (request):
     start_time = request.form['start_time']
