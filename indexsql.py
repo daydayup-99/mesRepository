@@ -22,8 +22,8 @@ surface_dict = {'1': '金',
                 '6': '喷锡'}
 
 config = configparser.ConfigParser()
-# config_dir = os.path.dirname(os.path.realpath(__file__))
-config_dir = os.path.dirname(sys.executable)
+config_dir = os.path.dirname(os.path.realpath(__file__))
+# config_dir = os.path.dirname(sys.executable)
 config_dir = os.path.join(config_dir, 'config.ini')
 config.read(config_dir)
 t_ratio = float(config['log']['t_ratio'])
@@ -327,19 +327,6 @@ def getAllErrRateSql(start_date, end_date, machinecode):
             table_names = inspector.get_table_names()
             table_name = f"tab_err_{current_date.strftime('%Y%m%d')[0:]}"
             if table_name in table_names:
-                table = Table(table_name, Base.metadata, autoload_with=engine)
-                # sql_query = text(f"""
-                #                     select count(*)
-                #                     FROM {table_name}
-                #                     WHERE ({like_conditions});
-                #                     """)
-                # result = session.execute(sql_query).fetchall()
-                # for row in result:
-                #     JobErrNum = row[0]
-                #     if JobErrNum is None:
-                #         JobErrNum = 0
-                #     JobErrAllNum = JobErrAllNum + int(JobErrNum)
-
                 sql_query = text(f"""
                                     WITH _a AS (
                                       SELECT ai_err_type, is_ai
@@ -941,8 +928,8 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
         machinecodename = machinecode[0]
     placeholders = ', '.join([f"'{code}'" for code in machinecode])
 
-    current_dir = os.path.dirname(sys.executable)
-    # current_dir = os.path.dirname(os.path.realpath(__file__))
+    # current_dir = os.path.dirname(sys.executable)
+    current_dir = os.path.dirname(os.path.realpath(__file__))
     current_dir = os.path.join(current_dir, 'csvdata')
     print("当前文件的目录路径:", current_dir)
     if not os.path.exists(current_dir):
@@ -1172,7 +1159,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
 
         default_sheet = wb['All']
         session.close()
-    return 1;
+    return 1
 
 def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode):
     statisticdata = []
@@ -1187,8 +1174,8 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
         machinecodename = machinecode[0]
     placeholders = ', '.join([f"'{code}'" for code in machinecode])
 
-    current_dir = os.path.dirname(sys.executable)
-    # current_dir = os.path.dirname(os.path.realpath(__file__))
+    # current_dir = os.path.dirname(sys.executable)
+    current_dir = os.path.dirname(os.path.realpath(__file__))
     current_dir = os.path.join(current_dir, 'csvdata')
     print("当前文件的目录路径:", current_dir)
     if not os.path.exists(current_dir):
@@ -1411,4 +1398,146 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
 
         default_sheet = wb['All']
         session.close()
-    return 1;
+    return 1
+
+def selectLowRatioJob(start_date,end_date,start_time_hour,end_time_hour,ratio):
+    session = Session()
+    start_datetime_str = f"{start_date} {start_time_hour}"
+    end_datetime_str = f"{end_date} {end_time_hour}"
+    json_data = {}
+    jobname_results = defaultdict(
+        lambda: {'njoberrnum': 0, 'njobainum': 0, 'jobpath': "", 'carpath': "", 'stdpath': ""})
+    current_date = start_date
+    inspector = inspect(engine)
+    table_names = inspector.get_table_names()
+    while current_date <= end_date:
+        table_name = f"tab_test_{current_date.strftime('%Y%m%d')[0:]}"
+        if table_name in table_names:
+            sql_query = text(f"""
+                                SELECT job_name, sum(errnum), sum(ai_num), default_3, default_4, default_6
+                                FROM {table_name}
+                                WHERE test_time between '{start_datetime_str}' and '{end_datetime_str}'
+                                GROUP BY job_name, default_3, default_4, default_6;
+                                """)
+            result = session.execute(sql_query).fetchall()
+            for row in result:
+                jobname = row[0]
+                njoberrnum = row[1] if row[1] is not None else 0.0
+                njobainum = row[2] if row[2] is not None else 0.0
+
+                jobname_results[jobname]['njoberrnum'] += njoberrnum
+                jobname_results[jobname]['njobainum'] += njobainum
+                jobname_results[jobname]['jobpath'] = row[3]
+                jobname_results[jobname]['carpath'] = row[4]
+                jobname_results[jobname]['stdpath'] = row[5]
+        current_date += timedelta(days=1)
+    for jobname, results in jobname_results.items():
+        if results['njoberrnum'] != 0:
+            fJobFilterRate = float(results['njoberrnum'] - results['njobainum']) / (
+                        float(results['njoberrnum']) - float(results['njoberrnum']) * t_ratio)
+        else:
+            fJobFilterRate = 0.0
+        if fJobFilterRate < ratio:
+            job_data = {
+                'jobpath': results['jobpath'],
+                'carpath': results['carpath'],
+                'stdpath': results['stdpath']
+            }
+            json_data[jobname] = job_data
+
+    json_string = json.dumps(json_data)
+    session.close()
+    return json_string
+
+def selectTopNHighRatioJob(start_date,end_date,start_time_hour,end_time_hour,ratio,n):
+    # session = Session()
+    # current_date = start_date
+    # start_datetime_str = f"{start_date} {start_time_hour}"
+    # end_datetime_str = f"{end_date} {end_time_hour}"
+    # inspector = inspect(engine)
+    # table_names = inspector.get_table_names()
+    # ErrAllNum = 0
+    # ErrTypeCounts = {}
+    # JobNum = {}
+    # while current_date <= end_date:
+    #     table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
+    #     if table_name in table_names:
+    #         sql_query = text(f"""
+    #                             SELECT ai_err_type, COUNT(ai_err_type)
+    #                             FROM {table_name}
+    #                             WHERE is_ai = 1
+    #                             GROUP BY ai_err_type;
+    #                             """)
+    #         result = session.execute(sql_query).fetchall()
+    #         for row in result:
+    #             JobErrType, JobTypeNum = row
+    #             ErrAllNum = ErrAllNum + int(JobTypeNum)
+    #             if JobErrType in ErrTypeCounts:
+    #                 ErrTypeCounts[JobErrType] += JobTypeNum
+    #             else:
+    #                 ErrTypeCounts[JobErrType] = JobTypeNum
+    #         sql_query = text(f"""
+    #                             SELECT default_1, count(default_1) as JobAllNum
+    #                             FROM {table_name}
+    #                             GROUP BY default_1
+    #                             """)
+    #         result = session.execute(sql_query).fetchall()
+    #         for row in result:
+    #             Job, JobAllNum = row
+    #             if Job in JobNum:
+    #                 JobNum[Job] += JobAllNum
+    #             else:
+    #                 JobNum[Job] = JobAllNum
+    #         current_date += timedelta(days=1)
+    # sorted_counts = sorted(ErrTypeCounts.items(), key=lambda x: x[1], reverse=True)
+    # top_n = sorted_counts[:n]
+    # for JobErrType, JobTypeNum in top_n:
+    #
+    #
+    # while current_date <= end_date:
+    #     table_name = f"tab_err_{curent_date.strftime('%Y%m%d')[0:]}"
+    #     table_testname = f"tab_test_{curent_date.strftime('%Y%m%d')[0:]}"
+    #     if table_name in table_names and table_testname in table_names:
+    #         sql_query = text(f"""
+    #                         select ai_err_type, COUNT(ai_err_type), default_1
+    #                         from {table_name}
+    #                         WHERE is_ai = 1
+    #                         GROUP BY ai_err_type, default_1
+    #                         ORDER BY COUNT(ai_err_type) DESC
+    #                     """)
+    #         resultErrType = session.execute(sql_query).fetchall()
+    #
+    #         sql_query = text(f"""
+    #                             with a AS(
+    #                                     select err.ai_err_type as errtype, err.default_1 as job , COUNT(DISTINCT err.id) AS error_count, test.default_3 as jobpath, test.default_4 as carpath, test.default_5 as stdpath
+    #                                     from {table_testname} test
+    #                                     left join {table_name} err
+    #                                     on test.plno = err.default_2
+    #                                     and test.job_name = err.default_1
+    #                                     and test.pcbno = err.default_3
+    #                                     where err.is_ai = 1
+    #                                     AND err.ai_err_type IS NOT NULL
+    #                                     WHERE test.test_time between '{start_datetime_str}' and '{end_datetime_str}'
+    #                                     GROUP BY err.ai_err_type, test.default_3, test.default_4, test.default_5, err.default_1
+    #                                     ORDER BY error_count DESC),
+    #                             b AS (
+    #                                     SELECT default_1, count(default_1) as JobAllNum
+    #                                     FROM tab_err_20250319
+    #                                     GROUP BY default_1
+    #                                 )
+    #                             SELECT 	a.errtype, a.job, a.jobpath, a.carpath, a. stdpath, (a.error_count/b.JobAllNum) as ratio, a.error_count
+    #                             FROM b
+    #                             LEFT JOIN a
+    #                             ON b.default_1 = a.job
+    #                             WHERE b.JobAllNum > 0
+    #                             ORDER BY a.error_count DESC)
+    #                     """)
+    #         resultMix = session.execute(sql_query).fetchall()
+    #
+    #     lstJob = []
+    #
+    #     json_data = json.dumps(lstJob, ensure_ascii=False)
+    # session.close()
+    # return json_data
+
+    return 1
