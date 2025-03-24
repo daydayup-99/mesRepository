@@ -559,16 +559,15 @@ def ReadJobSql(start_date, end_date,start_time_hour,end_time_hour, machinecode):
     start_datetime_str = f"{start_date} {start_time_hour}"
     end_datetime_str = f"{end_date} {end_time_hour}"
     json_data = []
-    jobname_results = defaultdict(lambda: {'njoball': 0, 'njoberrnum': 0, 'njobainum': 0,'nJobCheckAllNum':0,'nJobCheckTrueNum':0})
+    jobname_results = defaultdict(lambda: {'njoball': 0, 'njoberrnum': 0, 'njobainum': 0})
     current_date = start_date
+    inspector = inspect(engine)
+    table_names = inspector.get_table_names()
     while current_date <= end_date:
-        inspector = inspect(engine)
-        table_names = inspector.get_table_names()
         table_name = f"tab_test_{current_date.strftime('%Y%m%d')[0:]}"
         if table_name in table_names:
-            table = Table(table_name, Base.metadata, autoload_with=engine)
             sql_query = text(f"""
-                            select job_name, sum(errnum), sum(ai_num)
+                            select job_name, sum(errnum), sum(ai_true_num)
                             FROM {table_name}
                             WHERE test_machine_code in {machineCode}
                             AND test_time between '{start_datetime_str}' and '{end_datetime_str}'
@@ -578,37 +577,21 @@ def ReadJobSql(start_date, end_date,start_time_hour,end_time_hour, machinecode):
             for row in result:
                 jobname=row[0]
                 sql_query = text(f"""
-                                SELECT COUNT(*)
-                                FROM {table_name}
-                                WHERE test_machine_code in {machineCode}
-                                AND job_name = '{jobname}'
-                                AND test_time between '{start_datetime_str}' and '{end_datetime_str}'
-                                GROUP BY plno, pcbno;
+                                with a as(
+                                    SELECT job_name,plno, pcbno 
+                                    FROM {table_name}
+                                    WHERE test_machine_code in {machineCode}
+                                    AND job_name = '{jobname}'
+                                    AND test_time between '{start_datetime_str}' and '{end_datetime_str}'
+                                    GROUP BY plno, pcbno
+                                )
+                                SELECT count(*)
+                                FROM a
                                 """)
                 res = session.execute(sql_query).fetchall()
-                sql_query = text(f"""
-                                SELECT SUM(errnum), SUM(true_num) 
-                                FROM {table_name}
-                                WHERE true_num IS NOT NULL
-                                AND test_machine_code in {machineCode}
-                                AND job_name = '{jobname}'
-                                AND test_time between '{start_datetime_str}' and '{end_datetime_str}'
-                                GROUP BY plno, pcbno;
-                                """)
-                TrueRes = session.execute(sql_query).fetchall()
-                if TrueRes:
-                    nJobCheckAllNum = TrueRes[0][0] if TrueRes[0][0] is not None else 0.0
-                    nJobCheckTrueNum = TrueRes[0][1] if TrueRes[0][1] is not None else 0.0
-                else:
-                    nJobCheckAllNum = 0.0
-                    nJobCheckTrueNum = 0.0
                 njoball=res[0][0]
                 njoberrnum=row[1]
                 njobainum=row[2]
-                if nJobCheckAllNum is None:
-                    nJobCheckAllNum=0.0
-                if nJobCheckTrueNum is None:
-                    nJobCheckTrueNum=0.0
                 if njoball is None:
                     njoball=0.0
                 if njoberrnum is None:
@@ -619,8 +602,6 @@ def ReadJobSql(start_date, end_date,start_time_hour,end_time_hour, machinecode):
                 jobname_results[jobname]['njoball'] += njoball
                 jobname_results[jobname]['njoberrnum'] += njoberrnum
                 jobname_results[jobname]['njobainum'] += njobainum
-                jobname_results[jobname]['nJobCheckAllNum'] += nJobCheckAllNum
-                jobname_results[jobname]['nJobCheckTrueNum'] += nJobCheckTrueNum
 
         current_date += timedelta(days=1)
     # 打印查询结果
@@ -631,11 +612,6 @@ def ReadJobSql(start_date, end_date,start_time_hour,end_time_hour, machinecode):
         else:
             fJobMeanAll=0.0
             fJobMeanAi =0.0
-
-        if results['nJobCheckAllNum'] != 0:
-            fJobCheckTrueRate = round(float(results['nJobCheckTrueNum']) / float(results['nJobCheckAllNum']),2)
-        else:
-            fJobCheckTrueRate=0.0
         if results['njoberrnum'] != 0:
             fJobAiPass=float(results['njoberrnum'] - results['njobainum']) / (float(results['njoberrnum']) - float(results['njoberrnum'])* t_ratio)
         else:
@@ -1212,7 +1188,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                                SUM(CASE WHEN ai_true_num >= 0 AND is_top = 1 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum_T,
                                SUM(CASE WHEN ai_true_num >= 0 AND is_top = 0 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum_B,
                                SUM(ai_missing_num) AS ai_missing_num_sum,
-                               MAX(CASE WHEN ai_true_num >= 0 THEN 1 ELSE 0 END) AS has_ai
+                               MAX(CASE WHEN ai_true_num > 0 THEN 1 ELSE 0 END) AS has_ai
                         FROM {table_name}
                         WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
                         AND test_machine_code in ({placeholders})
