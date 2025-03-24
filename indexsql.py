@@ -1486,7 +1486,7 @@ def selectTopNHighRatioJob(start_date,end_date,start_time_hour,end_time_hour,rat
                                             where err.is_ai = 1
                                             AND err.ai_err_type = '{JobErrType}'
                                             and test.test_time between '{start_datetime_str}' and '{end_datetime_str}'
-                                            GROUP BY err.ai_err_type, test.default_3, test.default_4, test.default_5, err.default_1
+                                            GROUP BY err.ai_err_type, test.default_3, test.default_4, test.default_6, err.default_1
                                             ORDER BY error_count DESC),
                                     ranked AS (
                                         SELECT
