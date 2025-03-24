@@ -1555,6 +1555,9 @@ def selectTopNHighRatioJob(start_date,end_date,start_time_hour,end_time_hour,rat
     for errname, jobs in ErrResult.items():
         ErrResult[errname] = {jobname: details for jobname, details in jobs.items()
                               if details['countNum'] / JobNum[jobname] >= ratio}
+    keys_to_delete = [errname for errname, jobs in ErrResult.items() if not jobs]
+    for key in keys_to_delete:
+        del ErrResult[key]
     json_data = json.dumps(ErrResult, ensure_ascii=False)
     session.close()
     return json_data
