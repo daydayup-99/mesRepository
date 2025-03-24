@@ -1477,7 +1477,7 @@ def selectTopNHighRatioJob(start_date,end_date,start_time_hour,end_time_hour,rat
             if table_name in table_names and table_testname in table_names:
                 sql_query = text(f"""
                                     with a AS(
-                                            select err.ai_err_type as errtype, err.default_1 as job, COUNT(DISTINCT err.id) as error_count, test.default_3 as jobpath, test.default_4 as carpath, test.default_5 as stdpath
+                                            select err.ai_err_type as errtype, err.default_1 as job, COUNT(DISTINCT err.id) as error_count, test.default_3 as jobpath, test.default_4 as carpath, test.default_6 as stdpath
                                             from {table_testname} test
                                             left join {table_name} err
                                             on test.plno = err.default_2
