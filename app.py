@@ -275,15 +275,15 @@ def exportliaocsv():
 
 @app.route('/GetTopNHighRatioJob',methods=['POST'])
 def getTopNHighRatioJob():
-    start_time,end_time,start_time_hour,end_time_hour,ratio,n = getTopNHighRatioJobRequestData(request)
-    jobnameData = selectTopNHighRatioJob(start_time,end_time,start_time_hour,end_time_hour,ratio,n)
+    start_time,end_time,start_time_hour,end_time_hour,ratio,n,MacNum = getTopNHighRatioJobRequestData(request)
+    jobnameData = selectTopNHighRatioJob(start_time,end_time,start_time_hour,end_time_hour,ratio,n, MacNum)
     response = jsonify(data=jobnameData)
     return response
 
 @app.route('/GetLowRatioJob',methods=['POST'])
 def getLowRatioJob():
-    start_time,end_time,start_time_hour,end_time_hour,ratio = getLowRatioJobRequestData(request)
-    jobnameData = selectLowRatioJob(start_time,end_time,start_time_hour,end_time_hour,ratio)
+    start_time,end_time,start_time_hour,end_time_hour,ratio,MacNum = getLowRatioJobRequestData(request)
+    jobnameData = selectLowRatioJob(start_time,end_time,start_time_hour,end_time_hour,ratio, MacNum)
     response = jsonify(data=jobnameData)
     return response
 
@@ -291,24 +291,26 @@ def getLowRatioJobRequestData(request):
     start_time_str = request.json['start_time']
     end_time_str = request.json['end_time']
     ratio = request.json['ratio']
+    MacNum = request.json['machine_id']
     datetime_format = '%Y-%m-%d %H:%M:%S'
     start_time = datetime.strptime(start_time_str, datetime_format).date()
     end_time = datetime.strptime(end_time_str, datetime_format).date()
     start_time_hour = datetime.strptime(start_time_str, datetime_format).time()
     end_time_hour = datetime.strptime(end_time_str, datetime_format).time()
-    return start_time,end_time,start_time_hour,end_time_hour,ratio
+    return start_time,end_time,start_time_hour,end_time_hour,ratio, MacNum
 
 def getTopNHighRatioJobRequestData(request):
     start_time_str = request.json['start_time']
     end_time_str = request.json['end_time']
     n = request.json['n']
     ratio = request.json['ratio']
+    MacNum = request.json['machine_id']
     datetime_format = '%Y-%m-%d %H:%M:%S'
     start_time = datetime.strptime(start_time_str, datetime_format).date()
     end_time = datetime.strptime(end_time_str, datetime_format).date()
     start_time_hour = datetime.strptime(start_time_str, datetime_format).time()
     end_time_hour = datetime.strptime(end_time_str, datetime_format).time()
-    return start_time,end_time,start_time_hour,end_time_hour,ratio,n
+    return start_time,end_time,start_time_hour,end_time_hour,ratio,n, MacNum
 
 def getRequestData (request):
     start_time = request.form['start_time']

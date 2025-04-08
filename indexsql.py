@@ -1376,10 +1376,11 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
         session.close()
     return 1
 
-def selectLowRatioJob(start_date,end_date,start_time_hour,end_time_hour,ratio):
+def selectLowRatioJob(start_date,end_date,start_time_hour,end_time_hour,ratio,MacNum):
     session = Session()
     start_datetime_str = f"{start_date} {start_time_hour}"
     end_datetime_str = f"{end_date} {end_time_hour}"
+    machineCode = "('" + "', '".join(MacNum) + "')"
     json_data = {}
     jobname_results = defaultdict(
         lambda: {'njoberrnum': 0, 'njobainum': 0, 'jobpath': "", 'carpath': "", 'stdpath': ""})
@@ -1393,6 +1394,7 @@ def selectLowRatioJob(start_date,end_date,start_time_hour,end_time_hour,ratio):
                                 SELECT job_name, sum(errnum), sum(ai_num), default_3, default_4, default_6
                                 FROM {table_name}
                                 WHERE test_time between '{start_datetime_str}' and '{end_datetime_str}'
+                                AND test_machine_code in {machineCode}
                                 GROUP BY job_name, default_3, default_4, default_6;
                                 """)
             result = session.execute(sql_query).fetchall()
@@ -1425,11 +1427,12 @@ def selectLowRatioJob(start_date,end_date,start_time_hour,end_time_hour,ratio):
     session.close()
     return json_string
 
-def selectTopNHighRatioJob(start_date,end_date,start_time_hour,end_time_hour,ratio,n):
+def selectTopNHighRatioJob(start_date,end_date,start_time_hour,end_time_hour,ratio,n,MacNum):
     session = Session()
     current_date = start_date
     start_datetime_str = f"{start_date} {start_time_hour}"
     end_datetime_str = f"{end_date} {end_time_hour}"
+    machineCode = "('" + "', '".join(MacNum) + "')"
     inspector = inspect(engine)
     table_names = inspector.get_table_names()
     ErrAllNum = 0
@@ -1486,6 +1489,7 @@ def selectTopNHighRatioJob(start_date,end_date,start_time_hour,end_time_hour,rat
                                             where err.is_ai = 1
                                             AND err.ai_err_type = '{JobErrType}'
                                             and test.test_time between '{start_datetime_str}' and '{end_datetime_str}'
+                                            and test.test_machine_code in {machineCode}
                                             GROUP BY err.ai_err_type, test.default_3, test.default_4, test.default_6, err.default_1
                                             ORDER BY error_count DESC),
                                     ranked AS (
