@@ -189,7 +189,7 @@ function generateAllAi(dates,fAllAiData) {
     });
 }
 
-function generateOKPass(dates,fPassData) {
+function generateOKPass(dates,fPassData,nAllBoardData) {
    var myChart = echarts.init($("#container3")[0]);
     var option = {
         tooltip: {
@@ -199,7 +199,7 @@ function generateOKPass(dates,fPassData) {
             }
         },
         legend: {
-            data: ['一次Pass率'],
+            data: ['一次Pass率','跑板数'],
             textStyle: {
                 color: '#333'
             }
@@ -218,7 +218,6 @@ function generateOKPass(dates,fPassData) {
                 show: true,
                 textStyle: {
                     color: '#333',
-
                 }
             }
         },
@@ -226,12 +225,25 @@ function generateOKPass(dates,fPassData) {
             {
                 type: 'value',
                 name: '一次Pass率',
-                max: 100,  // 设置最大值为 100
+                max: 100,
                 interval: 10,
                 axisLabel: {
                     show: true,
                     formatter: '{value}%'
-                },
+                }
+            },
+            {
+                type: 'value',
+                name: '跑板数',
+                min: 0,
+                max: nAllBoardData,
+                interval: Math.ceil(nAllBoardData / 5),
+                axisLabel: {
+                    show: true,
+                    textStyle: {
+                        color: '#333'
+                    }
+                }
             }
         ],
         dataZoom: [
@@ -251,6 +263,7 @@ function generateOKPass(dates,fPassData) {
                 name: '一次Pass率',
                 type: 'line',
                 max: 100,
+                yAxisIndex: 0,
                 data: fPassData,
                 itemStyle: {
                     color: '#b1de6a'
@@ -273,7 +286,17 @@ function generateOKPass(dates,fPassData) {
                         restore: {},  // 还原工具
                         saveAsImage: {}  // 保存为图片工具
                     }
-                },
+                }
+            },
+            {
+                name: '跑板数',
+                type: 'bar',
+                barWidth: '10%',
+                yAxisIndex: 1,
+                data: nAllBoardData,
+                itemStyle: {
+                    color: '#4ab0ee'
+                }
             }
         ]
     };

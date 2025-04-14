@@ -217,7 +217,7 @@
                     }
                     generateAi(dates, fAiData);
                     generateAllAi(dates, fAllAiData, fAiData);
-                    generateOKPass(dates, fPassData);
+                    generateOKPass(dates, fPassData, nAllBoardData);
                     generateMean(dates, fMeaAllData, fMeaAiData);
                     $('#fTotalAi').html('假点过滤率: ' + Data.fTotalAi);
                     $('#fTotalAllAi').html('总过滤率: ' + Data.fTotalAllAi);
@@ -667,7 +667,78 @@
                 })
             });
         });
+    </script>
+    <script>
+        layui.use('layer', function() {
+          var layer = layui.layer;
+          var lastRequestData = null;
+          document.getElementById("reportButton").addEventListener("click", function() {
+            var start_time = $('#start_time').val().split('T')[0];
+            var end_time = $('#end_time').val().split('T')[0];
+            var MacNum = $('#MacNum').val();
 
+            // 如果数据没有变化，使用上次的数据生成报告
+            if (lastRequestData &&
+                lastRequestData.start_time === start_time &&
+                lastRequestData.end_time === end_time &&
+                lastRequestData.MacNum === MacNum) {
+                generateReport(lastRequestData);
+                return;
+            }
+
+            // 否则，发起新的请求
+            var loadingIndex = layer.open({
+                type: 1,
+                title: "数据报表",
+                area: ['500px', '300px'],
+                content: '<div style="text-align: center; padding: 50px;"><i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop" style="font-size: 30px; color: #1E9FFF;"></i><br>加载中...</div>',
+                btn: [],
+                closeBtn: 1,
+                shadeClose: false // 禁止点击遮罩层关闭
+            });
+
+<!--            $.ajax({-->
+<!--                url: '/analytics_report',-->
+<!--                type: 'POST',-->
+<!--                data: {-->
+<!--                    start_time: start_time,-->
+<!--                    end_time: end_time,-->
+<!--                    MacNum: MacNum-->
+<!--                },-->
+<!--                success: function (response) {-->
+<!--                    var Data = JSON.parse(response);-->
+
+<!--                    // 更新上次请求数据-->
+<!--                    lastRequestData = {-->
+<!--                        start_time: start_time,-->
+<!--                        end_time: end_time,-->
+<!--                        MacNum: MacNum,-->
+<!--                        Moban: Moban,-->
+<!--                        jobs_count: Data.jobs_count,-->
+<!--                        total_board: Data.total_board,-->
+<!--                        avg_all_rate: Data.avg_all_rate,-->
+<!--                        avg_ai_rate: Data.avg_ai_rate,-->
+<!--                        avg_all_mean_points: Data.avg_all_mean_points,-->
+<!--                        avg_ai_mean_points: Data.avg_ai_mean_points,-->
+<!--                        avg_all_pass: Data.avg_all_pass,-->
+<!--                        avg_ai_pass: Data.avg_ai_pass,-->
+<!--                        top_job_data: Data.top_job_data,-->
+<!--                        top_job_err_rate: Data.top_job_err_rate,-->
+<!--                        weekly_summary_data: Data.weekly_summary_data,-->
+<!--                    };-->
+
+<!--                    generateReport(lastRequestData);-->
+
+<!--                    layer.close(loadingIndex);-->
+<!--                },-->
+<!--                error: function (xhr, status, error) {-->
+<!--                    console.error(error);-->
+<!--                    layer.close(loadingIndex);-->
+<!--                    layer.alert('加载失败，请重试！', { icon: 2 });-->
+<!--                }-->
+<!--            });-->
+            });
+        });
     </script>
 </head>
 
@@ -693,7 +764,7 @@
                     <li class="layui-nav-item"><a href="mes">生产统计信息</a></li>
                     <li class="layui-nav-item"><a href="static">AI统计信息</a></li>
                 </ul></span>
-        <div class="head-right"><span id="time"></span></div>
+        <div class="head-right" style="line-height:3;"><span id="time"></span></div>
     </header>
     <!--身体-->
     <section class="section">
@@ -731,6 +802,7 @@
 <!--                <select class="find_input" id="Surface" style="margin-right: 10px">-->
                 </select>
                 <button type="button" class="layui-btn layui-bg-blue" id="queryButton">查询</button>
+                <button type="button" class="layui-btn layui-bg-blue" id="reportButton" style="width: 90px">数据报表</button>
             </div>
             <div class="check_right r_right">
                 <a class="btn btn-default" id="exportExcel"></span>导出</a>
