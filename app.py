@@ -8,7 +8,8 @@ from PIL import Image, ImageDraw, ImageTk
 from flask import Flask, render_template, Response, request, jsonify
 from indexsql import selectJob, selectMachine, getRateFilterTotal, ReadJobSql, getJobErrRate, selectPlno, \
     getPlnoErrRate, SelectAiPass, getErrRate, update_db_connection, getLayersql, selectMacRate, \
-    exportcsvbyjob, exportallcsv, getAllErrRateSql, getErrJob, getAllMachineNumSql, selectTopNHighRatioJob, selectLowRatioJob
+    exportcsvbyjob, exportallcsv, getAllErrRateSql, getErrJob, getAllMachineNumSql, selectTopNHighRatioJob, \
+    selectLowRatioJob, analyzeData, updateAnalyzeData
 from datetime import datetime, timedelta, time
 import tkinter as tk
 from tkinter import messagebox
@@ -118,6 +119,10 @@ def statics():
 @app.route('/mes')
 def mes():
     return render_template('mes.html')
+
+@app.route('/report_html')
+def report_html():
+    return render_template('report.html')
 
 @app.route('/index')
 def routs():
@@ -257,21 +262,37 @@ def ReadLayersql():
     josn_string = getLayersql(start_time, end_time, MacNum, jobName)
     return josn_string
 
+@app.route('/DataReport', methods=['POST'])
+def AnalyzeDataReport():
+    start_time, end_time, start_time_hour, end_time_hour, MacNum = getRequestData(request)
+    josn_string = analyzeData(start_time, end_time, start_time_hour, end_time_hour, MacNum)
+    return josn_string
+
+@app.route('/UpdateReportEcharts', methods=['POST'])
+def AnalyzeUpdateReportEcharts():
+    start_time, end_time, start_time_hour, end_time_hour, MacNum, days = getUpdateReportRequestData(request)
+    josn_string = updateAnalyzeData(start_time, end_time, start_time_hour, end_time_hour, MacNum, days)
+    return josn_string
+
 @app.route('/ExportSql', methods=['POST'])
 def exportcsv():
     start_time, end_time, start_time_hour, end_time_hour, MacNum = getRequestData(request)
-    # maxnum =request.form['MaxNum']
-    exportallcsv(start_time, end_time, start_time_hour, end_time_hour, MacNum)
-    data = {'message': 'Data exported successfully'}
+    result = exportallcsv(start_time, end_time, start_time_hour, end_time_hour, MacNum)
+    if result is None:
+        data = {'message': '没有可查询的表，请检查时间范围或数据库连接'}
+        return jsonify(data), 404
+    data = {'message': '数据导出成功'}
     return jsonify(data)
 
 @app.route('/ExportLiaoSql', methods=['POST'])
 def exportliaocsv():
     start_time, end_time, start_time_hour, end_time_hour, MacNum = getRequestData(request)
-    # maxnum =request.form['MaxNum']
-    exportcsvbyjob(start_time, end_time, start_time_hour, end_time_hour, MacNum)
-    dataJob = {'message': 'dataJob exported successfully'}
-    return jsonify(dataJob)
+    result = exportcsvbyjob(start_time, end_time, start_time_hour, end_time_hour, MacNum)
+    if result is None:
+        data = {'message': '没有可查询的表，请检查时间范围或数据库连接'}
+        return jsonify(data), 404
+    data = {'message': '数据导出成功'}
+    return jsonify(data)
 
 @app.route('/GetTopNHighRatioJob',methods=['POST'])
 def getTopNHighRatioJob():
@@ -326,6 +347,32 @@ def getRequestData (request):
     start_time_hour = datetime.strptime(start_time_hour, hour_format).time()
     end_time_hour = datetime.strptime(end_time_hour, hour_format).time()
     return start_time,end_time,start_time_hour,end_time_hour,MacNum
+
+def getUpdateReportRequestData (request):
+    start_time = request.form['start_time']
+    timePeriod = request.form['timePeriod']
+    if timePeriod == 'month':
+        days = 30
+    elif timePeriod == 'day':
+        days = 1
+    elif timePeriod == 'week':
+        days = 7
+    end_time = request.form['end_time']
+    start_time_hour = request.form['start_time_hour']
+    end_time_hour = request.form['end_time_hour']
+    MacNum_str = request.form.get('report_macnum')
+    if MacNum_str.startswith("'") and MacNum_str.endswith("'"):
+        MacNum_str = MacNum_str[1:-1]
+    items = MacNum_str.split(',')
+    cleaned_items = [item.strip() for item in items]
+    MacNum = [item for item in cleaned_items if item]
+    date_format = '%Y-%m-%d'
+    hour_format = '%H:%M'
+    start_time = datetime.strptime(start_time, date_format).date()
+    end_time = datetime.strptime(end_time, date_format).date()
+    start_time_hour = datetime.strptime(start_time_hour, hour_format).time()
+    end_time_hour = datetime.strptime(end_time_hour, hour_format).time()
+    return start_time,end_time,start_time_hour,end_time_hour,MacNum, days
 
 if __name__ == '__main__':
     check_if_running()

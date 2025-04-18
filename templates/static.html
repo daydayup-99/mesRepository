@@ -9,14 +9,14 @@
     <link rel="stylesheet" href="../static/css/layui.css">
     <link rel="stylesheet" href="../static/css/jquery-ui.css">
     <link rel="stylesheet" href="../static/css/select2.min.css">
-<!--    <link rel="stylesheet" href="../static/css/exportcsv.css">-->
-    <script src="../static/js/jquery.js"></script>
+
+    <script src="../static/js/jquery.js"></script> <!-- jQuery应优先加载 -->
     <script src="../static/js/jquery-ui.min.js"></script>
-    <script src="../static/js/echarts-all.js"></script>
-    <script src="../static/js/car_analysis.js"></script>
+    <script src="../static/js/echarts-all.js"></script> <!-- 只需要一个版本的echarts -->
     <script src="../static/js/layui.js"></script>
+    <script src="../static/js/select2.min.js"></script> <!-- select2应在jquery.js之后加载 -->
+    <script src="../static/js/car_analysis.js"></script> <!-- 确保在其他依赖项之后加载 -->
     <script src="../static/js/echarts.js"></script>
-    <script src="../static/js/select2.min.js"></script>
     <style>
         /* Loading 层样式 */
         #loading {
@@ -217,7 +217,7 @@
                     }
                     generateAi(dates, fAiData);
                     generateAllAi(dates, fAllAiData, fAiData);
-                    generateOKPass(dates, fPassData);
+                    generateOKPass(dates, fPassData, nAllBoardData);
                     generateMean(dates, fMeaAllData, fMeaAiData);
                     $('#fTotalAi').html('假点过滤率: ' + Data.fTotalAi);
                     $('#fTotalAllAi').html('总过滤率: ' + Data.fTotalAllAi);
@@ -612,26 +612,23 @@
                         end_time_hour: end_time_hour,
                         MacNum: MacNum,
                     },
-                    success: function (response) {
-                        // 显示成功对话框
-                        $("<div>导出成功！</div>").dialog({
-                            title: "提示",
-                            buttons: {
-                                "确定": function() {
-                                    $(this).dialog("close");
-                                }
-                            }
-                        });
+                    success: function (response, status, xhr) {
+                        if (xhr.status === 404) {
+                            layer.alert(response.message, {
+                                icon: 2,
+                                title: '错误'
+                            });
+                        } else {
+                            layer.alert('导出成功！', {
+                                icon: 1,
+                                title: '提示'
+                            });
+                        }
                     },
-                    error:function(){
-                        // 显示错误对话框
-                        $("<div>导出失败，请重试。</div>").dialog({
-                            title: "错误",
-                            buttons: {
-                                "确定": function() {
-                                    $(this).dialog("close");
-                                }
-                            }
+                    error: function () {
+                        layer.alert('导出失败，请重试。', {
+                            icon: 2,
+                            title: '错误'
                         });
                     }
                 })
@@ -653,36 +650,209 @@
                         end_time_hour: end_time_hour,
                         MacNum: MacNum,
                     },
-                    success: function (response) {
-                        $("<div>导出成功！</div>").dialog({
-                            title: "提示",
-                            buttons: {
-                                "确定": function() {
-                                    $(this).dialog("close");
-                                }
-                            }
-                        });
+                    success: function (response, status, xhr) {
+                        if (xhr.status === 404) {
+                            layer.alert(response.message, {
+                                icon: 2,
+                                title: '错误'
+                            });
+                        } else {
+                            layer.alert('导出成功！', {
+                                icon: 1,
+                                title: '提示'
+                            });
+                        }
                     },
-                    error:function(){}
+                    error: function () {
+                        layer.alert('导出失败，请重试。', {
+                            icon: 2,
+                            title: '错误'
+                        });
+                    }
                 })
             });
         });
+    </script>
+    <script>
+        $(document).ready(function() {
+            $('#MacNum').select2({
+                placeholder: "请选择机台号",
+                allowClear: false,
+                width: 'resolve'
+            });
 
+            $('#selectAllButton').click(function() {
+                console.log($.fn.select2);
+                const $macSelect = $('#MacNum');
+                const allSelected = $macSelect.find('option').length === $macSelect.find('option:selected').length;
+                $macSelect.find('option').prop('selected', !allSelected);
+                $macSelect.trigger('change.select2');
+            });
+        });
+    </script>
+    <script>
+        layui.use('layer', function() {
+          var layer = layui.layer;
+          var lastRequestData = null;
+          document.getElementById("reportButton").addEventListener("click", function() {
+            var start_time = $('#start_time').val().split('T')[0];
+            var start_time_hour = $('#start_time').val().split('T')[1];
+            var end_time = $('#end_time').val().split('T')[0];
+            var end_time_hour = $('#end_time').val().split('T')[1];
+            var MacNum = $('#MacNum').val();
+            // 如果数据没有变化，使用上次的数据生成报告
+            if (lastRequestData &&
+                lastRequestData.start_time === start_time &&
+                lastRequestData.end_time === end_time &&
+                lastRequestData.start_time_hour === start_time_hour &&
+                lastRequestData.end_time_hour === end_time_hour &&
+                String(lastRequestData.MacNum) === String(MacNum)) {
+                console.log("使用缓存数据");
+                generateReport(lastRequestData);
+                return;
+            }
+
+            // 否则，发起新的请求
+            var loadingIndex = layer.open({
+                type: 1,
+                title: "数据报表",
+                area: ['500px', '300px'],
+                content: '<div style="text-align: center; padding: 50px;"><i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop" style="font-size: 30px; color: #1E9FFF;"></i><br>加载中...</div>',
+                btn: [],
+                closeBtn: 1,
+                shadeClose: false // 禁止点击遮罩层关闭
+            });
+
+            $.ajax({
+                url: '/DataReport',
+                type: 'POST',
+                data: {
+                    start_time: start_time,
+                    end_time: end_time,
+                    start_time_hour: start_time_hour,
+                    end_time_hour: end_time_hour,
+                    MacNum: MacNum,
+                },
+                success: function (response) {
+                    var Data = JSON.parse(response);
+                    console.log("Data from server:", Data);
+                    // 更新上次请求数据
+                    lastRequestData = {
+                        start_time: start_time,
+                        end_time: end_time,
+                        start_time_hour: start_time_hour,
+                        end_time_hour: end_time_hour,
+                        MacNum: MacNum,
+                        allJobNum: Data.allJobNum,
+                        allPcbNum: Data.allPcbNum,
+                        allFilter: Data.allFilter,
+                        fateFilter: Data.fateFilter,
+                        allErrNum: Data.allErrNum,
+                        alltrueNum: Data.alltrueNum,
+                        allAiTrueNum: Data.allAiTrueNum,
+                        avgPoint: Data.avgPoint,
+                        avgAiPoint: Data.avgAiPoint,
+                        top_job_data: Data.top_job_data,
+                        top_job_err_rate: Data.top_job_err_rate,
+                    };
+
+                    generateReport(lastRequestData);
+
+                    layer.close(loadingIndex);
+                },
+                error: function (xhr, status, error) {
+                    console.error(error);
+                    layer.close(loadingIndex);
+                    layer.alert('加载失败，请重试！', { icon: 2 });
+                }
+            });
+          });
+        });
+
+        function generateReport(data) {
+            $.get('/report_html', function(htmlContent) {
+                // 存储数据到 sessionStorage
+                sessionStorage.setItem('start_time', data.start_time);
+                sessionStorage.setItem('end_time', data.end_time);
+                sessionStorage.setItem('start_time_hour', data.start_time_hour);
+                sessionStorage.setItem('end_time_hour', data.end_time_hour);
+                sessionStorage.setItem('report_macnum', data.MacNum);
+
+                // 打开弹窗
+                layer.open({
+                    type: 1,
+                    title: `数据分析报告 (${data.start_time} 至 ${data.end_time})`,
+                    area: ['90%', '90%'],
+                    content: htmlContent,
+                    btn: ['关闭'],
+                    shadeClose: false,
+                    success: function(layero, index) {
+                        const container = $(layero);
+                        // 向 HTML 注入数据
+                        container.find('#start_time').text(data.start_time);
+                        container.find('#end_time').text(data.end_time);
+                        container.find('#machine_id').text(
+                            Array.isArray(data.MacNum) ? data.MacNum.join(', ') : data.MacNum
+                        );
+                        container.find('#allFilter').text(data.allFilter);
+                        container.find('#fateFilter').text(data.fateFilter);
+                        container.find('#allErrNum').text(data.allErrNum);
+                        container.find('#alltrueNum').text(data.alltrueNum);
+                        container.find('#allAiTrueNum').text(data.allAiTrueNum);
+                        container.find('#avgPoint').text(data.avgPoint);
+                        container.find('#avgAiPoint').text(data.avgAiPoint);
+                        container.find('#allPcbNum').text(data.allPcbNum);
+                        container.find('#allJobNum').text(data.allJobNum);
+
+                        // 渲染图表
+                        if (data.top_job_data && data.top_job_err_rate) {
+                            renderCharts(data.top_job_data, data.top_job_err_rate);
+                        }
+
+                        container.find('.layui-layer-btn0').click(function() {
+                            layer.close(index);
+                        });
+                    },
+                    end: function () {
+                        console.log($.fn.select2);
+                        console.log($('#MacNum').val())
+                        setTimeout(function() {
+                                // 先检查DOM元素是否有select2样式并尝试清理
+                                if ($('#MacNum').hasClass('select2-hidden-accessible')) {
+                                    try {
+                                        $('#MacNum').select2('destroy');
+                                    } catch (e) {
+                                        // 无法通过API销毁，尝试手动清理
+                                        $('#MacNum').removeClass('select2-hidden-accessible');
+                                        $('.select2-container').remove();
+                                    }
+                                }
+
+                                // 确保select2插件可用
+                                if (!$.fn.select2) {
+                                    // 重新加载select2脚本
+                                    $.getScript("../static/js/select2.min.js", function() {
+                                        $('#MacNum').select2({
+                                            placeholder: "请选择机台号",
+                                            allowClear: false,
+                                            width: 'resolve'
+                                        });
+                                    });
+                                } else {
+                                    // 重新初始化
+                                    $('#MacNum').select2({
+                                        placeholder: "请选择机台号",
+                                        allowClear: false,
+                                        width: 'resolve'
+                                    });
+                                }
+                            }, 200); // 增加延迟时间
+                    }
+                });
+            });
+        }
     </script>
 </head>
-
-<!--<body>-->
-<!--<div id="dialog" title="数据导出 ">-->
-<!--    &lt;!&ndash; 在这里添加对话框的内容 &ndash;&gt;-->
-<!--    <button id="liaoex">按料号导出</button>-->
-<!--    <br>-->
-
-<!--    <button id="layerex">按层名导出</button>-->
-<!--    <br>-->
-
-<!--    <button id="plnoex">按批量号导出</button>-->
-<!--    <br>-->
-<!--</div>-->
 
 <main class="main">
     <!--头部-->
@@ -690,10 +860,10 @@
         <span class="head-logo" style="width: 100%">
             <ul class="layui-nav" lay-filter="" style="width: 100%;">
                     <li class="layui-nav-item"><a href="index">首页</a></li>
-                    <li class="layui-nav-item"><a href="mes">生产统计信息</a></li>
+<!--                    <li class="layui-nav-item"><a href="mes">生产统计信息</a></li>-->
                     <li class="layui-nav-item"><a href="static">AI统计信息</a></li>
                 </ul></span>
-        <div class="head-right"><span id="time"></span></div>
+        <div class="head-right" style="line-height:3;"><span id="time"></span></div>
     </header>
     <!--身体-->
     <section class="section">
@@ -713,17 +883,14 @@
                 <label>机台号：</label>
                 <select id="MacNum" name="MacNum" class="find_input" style="margin-right: 10px; overflow-y: auto;width: 200px;" multiple="multiple">
                 </select>
+
                 <button type="button" class="layui-btn layui-bg-blue" id="selectAllButton">全选</button>
                 <label>料号：</label>
-
                 <div style="position: relative; display: inline-block;">
                     <input type="text" id="jobInput" class="find_input" placeholder="输入料号" onfocus="showSuggestions()" oninput="filterFunction()" style="width: 200px;"/>
                     <div id="suggestions" style="position: absolute; top: 100%; left: 0; width: 100%; max-height: 150px; overflow-y: auto; display: none; border: 1px solid #ccc; background: white; z-index: 10;">
                     </div>
                 </div>
-
-<!--                <select class="find_input" id="JobNum" style="margin-right: 10px; overflow-y: auto;">-->
-<!--                </select>-->
                 <label>批量号：</label>
                 <select class="find_input" id="PLNum" style="margin-right: 10px">
 <!--                </select>-->
@@ -731,6 +898,7 @@
 <!--                <select class="find_input" id="Surface" style="margin-right: 10px">-->
                 </select>
                 <button type="button" class="layui-btn layui-bg-blue" id="queryButton">查询</button>
+                <button type="button" class="layui-btn layui-bg-blue" id="reportButton" style="width: 90px">数据报表</button>
             </div>
             <div class="check_right r_right">
                 <a class="btn btn-default" id="exportExcel"></span>导出</a>
@@ -835,15 +1003,6 @@
         }
     </script>
     <script>
-        $(document).ready(function() {
-            $('#MacNum').select2({
-                placeholder: "请选择选项",  // 设置占位符
-                allowClear: false,         // 允许清除选项
-                width: 'resolve'          // 自动调整宽度以适应内容
-            });
-        });
-    </script>
-    <script>
         // 从后端传递的导出时间
         var exportTime = "{{ export_time }}";  // Flask 后端传递的时间变量，如 "14:00"
         var isExport = {{ is_export|tojson }};
@@ -872,28 +1031,5 @@
             setInterval(checkTimeAndExport, 60000);  // 60000 毫秒 = 1 分钟
         }
     </script>
-    <script>
-        $('#selectAllButton').click(function() {
-            var allSelected = true;
-            $('#MacNum option').each(function() {
-                if (!$(this).is(':selected')) {
-                    allSelected = false;
-                    return false;  // 退出循环
-                }
-            });
-
-            if (allSelected) {
-                // 如果已经全选，取消所有选项
-                $('#MacNum option').prop('selected', false);
-            } else {
-                // 如果没有全选，选中所有选项
-                $('#MacNum option').prop('selected', true);
-            }
-
-            $('#MacNum').trigger('change');  // 触发 change 事件，确保更新
-        });
-    </script>
-
-<!--ajax 查询请求-->
 </body>
 </html>
