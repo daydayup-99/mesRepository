@@ -5,6 +5,10 @@
     <title>数据报表</title>
     <script src="../static/js/echarts.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="../static/js/layui.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -566,6 +570,214 @@
                         });
                     });
                 });
+                function exportPDF() {
+                    var loadingLayer = layer.msg('正在生成PDF，请稍候...', {
+                        icon: 16,
+                        shade: 0.3,
+                        time: 0
+                    });
+
+                    // 确保图表已渲染
+                    if (!window.myChart3 || !window.myChart4 || !window.myChart5) {
+                        layer.close(loadingLayer);
+                        layer.msg('图表尚未加载完成，请稍后再试', {icon: 2});
+                        return;
+                    }
+
+                    // 加载必要的库
+                    loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js', function() {
+                        loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js', function() {
+                            generatePDF();
+                        });
+                    });
+
+                    // 加载外部脚本的辅助函数
+                    function loadScript(url, callback) {
+                        var script = document.createElement('script');
+                        script.src = url;
+                        script.onload = callback;
+                        script.onerror = function() {
+                            layer.close(loadingLayer);
+                            layer.msg('加载必要组件失败，请检查网络连接', {icon: 2});
+                        };
+                        document.head.appendChild(script);
+                    }
+
+                    // 生成PDF的主函数
+                    function generatePDF() {
+                        // 获取数据
+                        var allData = {
+                            startTime: sessionStorage.getItem('start_time') || '',
+                            endTime: sessionStorage.getItem('end_time') || '',
+                            allFilter: document.getElementById('allFilter').innerText || '',
+                            fateFilter: document.getElementById('fateFilter').innerText || '',
+                            allErrNum: document.getElementById('allErrNum').innerText || '',
+                            alltrueNum: document.getElementById('alltrueNum').innerText || '',
+                            allAiTrueNum: document.getElementById('allAiTrueNum').innerText || '',
+                            avgPoint: document.getElementById('avgPoint').innerText || '',
+                            avgAiPoint: document.getElementById('avgAiPoint').innerText || ''
+                        };
+
+                        // 获取图表图片
+                        var chartImages = [
+                            myChart3.getDataURL({type: 'png', pixelRatio: 2}),
+                            myChart4.getDataURL({type: 'png', pixelRatio: 2}),
+                            myChart5.getDataURL({type: 'png', pixelRatio: 2})
+                        ];
+
+                        // 创建临时容器
+                        var container = document.createElement('div');
+                        container.style.width = '800px'; // 适合A4纸张宽度
+                        container.style.padding = '20px';
+                        container.style.backgroundColor = 'white';
+                        container.style.position = 'absolute';
+                        container.style.left = '-9999px';
+                        container.style.fontFamily = 'Arial, "Microsoft YaHei"';
+                        document.body.appendChild(container);
+
+                        // 填充内容
+                        container.innerHTML = `
+                            <h1 style="text-align:center; font-size:24px; margin-bottom:10px;">数据分析报告</h1>
+                            <p style="text-align:center; margin-bottom:20px;">日期范围: ${allData.startTime} 至 ${allData.endTime}</p>
+
+                            <table style="width:100%; border-collapse:collapse; margin-bottom:20px;">
+                                <thead>
+                                    <tr>
+                                        <th style="border:1px solid #ddd; padding:8px; background-color:#00008b; color:white;">指标</th>
+                                        <th style="border:1px solid #ddd; padding:8px; background-color:#00008b; color:white;">数值</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="background-color:#fff;">
+                                        <td style="border:1px solid #ddd; padding:8px; text-align:center;">总过滤率</td>
+                                        <td style="border:1px solid #ddd; padding:8px; text-align:center;">${allData.allFilter}%</td>
+                                    </tr>
+                                    <tr style="background-color:#f2f2f2;">
+                                        <td style="border:1px solid #ddd; padding:8px; text-align:center;">假点过滤率</td>
+                                        <td style="border:1px solid #ddd; padding:8px; text-align:center;">${allData.fateFilter}%</td>
+                                    </tr>
+                                    <tr style="background-color:#fff;">
+                                        <td style="border:1px solid #ddd; padding:8px; text-align:center;">缺陷总数</td>
+                                        <td style="border:1px solid #ddd; padding:8px; text-align:center;">${allData.allErrNum}</td>
+                                    </tr>
+                                    <tr style="background-color:#f2f2f2;">
+                                        <td style="border:1px solid #ddd; padding:8px; text-align:center;">真点总数</td>
+                                        <td style="border:1px solid #ddd; padding:8px; text-align:center;">${allData.alltrueNum}</td>
+                                    </tr>
+                                    <tr style="background-color:#fff;">
+                                        <td style="border:1px solid #ddd; padding:8px; text-align:center;">AI真点总数</td>
+                                        <td style="border:1px solid #ddd; padding:8px; text-align:center;">${allData.allAiTrueNum}</td>
+                                    </tr>
+                                    <tr style="background-color:#f2f2f2;">
+                                        <td style="border:1px solid #ddd; padding:8px; text-align:center;">平均报点</td>
+                                        <td style="border:1px solid #ddd; padding:8px; text-align:center;">${allData.avgPoint}</td>
+                                    </tr>
+                                    <tr style="background-color:#fff;">
+                                        <td style="border:1px solid #ddd; padding:8px; text-align:center;">AI平均报点</td>
+                                        <td style="border:1px solid #ddd; padding:8px; text-align:center;">${allData.avgAiPoint}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        `;
+
+                        // 添加图表
+                        var chartTitles = ['过滤率对比趋势图', '平均点数对比趋势图', '总点数对比趋势图'];
+                        for (var i = 0; i < chartImages.length; i++) {
+                            var chartDiv = document.createElement('div');
+                            chartDiv.style.marginBottom = '25px';
+
+                            var title = document.createElement('h3');
+                            title.textContent = chartTitles[i];
+                            title.style.color = '#1E9FFF';
+                            title.style.textAlign = 'center';
+                            title.style.marginBottom = '10px';
+                            chartDiv.appendChild(title);
+
+                            var img = document.createElement('img');
+                            img.src = chartImages[i];
+                            img.style.width = '100%';
+                            img.style.maxHeight = '300px';
+                            img.style.objectFit = 'contain';
+                            chartDiv.appendChild(img);
+
+                            container.appendChild(chartDiv);
+                        }
+
+                        // 等待所有内容渲染完成
+                        setTimeout(function() {
+                            html2canvas(container, {
+                                scale: 2,
+                                logging: false,
+                                useCORS: true,
+                                allowTaint: true,
+                                backgroundColor: '#ffffff'
+                            }).then(function(canvas) {
+                                try {
+                                    var { jsPDF } = window.jspdf;
+
+                                    // 创建PDF
+                                    var pdf = new jsPDF('p', 'mm', 'a4');
+                                    var imgData = canvas.toDataURL('image/jpeg', 1.0);
+
+                                    // 计算PDF尺寸
+                                    var pdfWidth = pdf.internal.pageSize.getWidth();
+                                    var pdfHeight = pdf.internal.pageSize.getHeight();
+                                    var canvasWidth = canvas.width;
+                                    var canvasHeight = canvas.height;
+
+                                    // 计算缩放比例
+                                    var ratio = Math.min(pdfWidth / canvasWidth, pdfHeight / canvasHeight);
+                                    var scaledWidth = canvasWidth * ratio;
+                                    var scaledHeight = canvasHeight * ratio;
+
+                                    // 添加图片到PDF
+                                    var totalPages = Math.ceil(scaledHeight / pdfHeight);
+                                    var imgHeight = pdfHeight;
+
+                                    for (var i = 0; i < totalPages; i++) {
+                                        if (i > 0) {
+                                            pdf.addPage();
+                                        }
+
+                                        // 计算裁剪位置
+                                        var sourceY = i * imgHeight / ratio;
+                                        var sourceHeight = Math.min(imgHeight / ratio, canvasHeight - sourceY);
+                                        var destHeight = sourceHeight * ratio;
+
+                                        pdf.addImage(
+                                            imgData, 'JPEG',
+                                            0, 0,
+                                            pdfWidth, destHeight,
+                                            null, null,
+                                            0, i * imgHeight / ratio,
+                                            canvasWidth, sourceHeight
+                                        );
+                                    }
+
+                                    // 保存PDF
+                                    pdf.save('数据分析报告_' + sessionStorage.getItem('start_time') + '_至_' + sessionStorage.getItem('end_time') + '.pdf');
+
+                                    // 移除临时元素
+                                    document.body.removeChild(container);
+
+                                    // 关闭加载提示
+                                    layer.close(loadingLayer);
+                                    layer.msg('PDF导出成功', {icon: 1});
+                                } catch (error) {
+                                    console.error('生成PDF失败:', error);
+                                    document.body.removeChild(container);
+                                    layer.close(loadingLayer);
+                                    layer.msg('PDF导出失败: ' + error.message, {icon: 2});
+                                }
+                            }).catch(function(error) {
+                                console.error('生成画布失败:', error);
+                                document.body.removeChild(container);
+                                layer.close(loadingLayer);
+                                layer.msg('导出失败: ' + error.message, {icon: 2});
+                            });
+                        }, 1000);
+                    }
+                }
             </script>
         </div>
     </div>
