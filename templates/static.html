@@ -812,6 +812,10 @@
                         container.find('.layui-layer-btn0').click(function() {
                             layer.close(index);
                         });
+                        container.find('.layui-layer-btn0').click(function() {
+                            exportPDF();
+                            return false;
+                        });
                     },
                     end: function () {
                         console.log($.fn.select2);
