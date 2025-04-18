@@ -2,13 +2,572 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>数据报表</title>
+    <script src="../static/js/echarts.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            color: #333;
+            margin: 0;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            background-color: #f1f1f1;
+            cursor: pointer;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+            transition: all 0.3s;
+        }
+        .tab.active-tab {
+            background-color: #2c7be5;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active-content {
+            display: block;
+        }
+        .summary-box {
+            width: 100%;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            font-size: 18px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+        thead {
+            background-color: darkblue;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        .chart-container {
+            width: 100%;
+            height: 350px;
+            margin-top: 20px;
+        }
+        h3 {
+            text-align: center;
+            color: #1E9FFF;
+            margin-bottom: 30px;
+        }
+    </style>
 </head>
 <body>
-    <div style="display: flex; margin-bottom: 20px;">
-        <div id="tab1" class="tab" style="padding: 10px 20px; background-color: rgb(224, 224, 224); cursor: pointer; border-radius: 5px 5px 0px 0px; margin-right: 5px;">概述</div>
-        <div id="tab2" class="tab" style="padding: 10px 20px; background-color: rgb(241, 241, 241); cursor: pointer; border-radius: 5px 5px 0px 0px; margin-right: 5px;">过滤率</div>
-<!--        <div id="tab3" class="tab" style="padding: 10px 20px; background-color: rgb(241, 241, 241); cursor: pointer; border-radius: 5px 5px 0px 0px;">缺陷类型</div>-->
+    <div class="layui-layer-content" style="height: 100%; overflow: auto;">
+        <div style="padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+
+                <!-- 标签切换 -->
+                <div class="tabs" style="flex: 1; display: flex; justify-content: flex-start;">
+                    <div id="tab1" class="tab active-tab">概述</div>
+                    <div id="tab2" class="tab">过滤率</div>
+                </div>
+
+                <!-- 时间选择框放置在最右边 -->
+                <div style="flex: 0; display: flex; justify-content: flex-end;">
+                    <select id="timePeriod" style="width: 60px; padding: 8px; font-size: 14px; border: 2px solid #ccc; border-radius: 5px; background-color: #f5f5f5; text-align: center;">
+                        <option value="day">天</option>
+                        <option value="week" selected>周</option>
+                        <option value="month">月</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 概述内容 -->
+            <div id="content1" class="tab-content active-content">
+                <div class="summary-box">
+                    本次报告在 <strong id="start_time" style="color: #2c7be5;"></strong> 至 <strong id="end_time" style="color: #2c7be5;"></strong> 期间，
+                    <strong id="machine_id" style="color: #00a854;"></strong> 以上机台共用 AI 软件处理了
+                    <strong id="allPcbNum" style="color: #00a854;"></strong> 片板，
+                    <strong id="allJobNum" style="color: #00a854;"></strong> 个料号。
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>指标</th>
+                            <th>数值</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>总过滤率</td><td id="allFilter"></td></tr>
+                        <tr><td>假点过滤率</td><td id="fateFilter"></td></tr>
+                        <tr><td>缺陷总数</td><td id="allErrNum"></td></tr>
+                        <tr><td>真点总数</td><td id="alltrueNum"></td></tr>
+                        <tr><td>AI真点总数</td><td id="allAiTrueNum"></td></tr>
+                        <tr><td>平均报点</td><td id="avgPoint"></td></tr>
+                        <tr><td>AI平均报点</td><td id="avgAiPoint"></td></tr>
+                    </tbody>
+                </table>
+
+                <div style="display: flex; justify-content: center; margin-bottom: 40px;">
+                    <div id="JobAIChart3" style="width: 100%; height: 400px;"></div>
+                </div>
+                <div style="display: flex; justify-content: center;">
+                    <div id="JobAIChart4" style="width: 100%; height: 400px;"></div>
+                </div>
+                <div style="display: flex; justify-content: center;">
+                    <div id="JobAIChart5" style="width: 100%; height: 400px;"></div>
+                </div>
+            </div>
+
+            <!-- 过滤率内容 -->
+            <div id="content2" class="tab-content">
+                <h3>假点过滤率最差料号 TOP10</h3>
+                <div style="display: flex; justify-content: center; margin-bottom: 40px;">
+                    <div id="JobAIChart1" style="width: 100%; height: 400px;"></div>
+                </div>
+                <div style="display: flex; justify-content: center;">
+                    <div id="JobAIChart2" style="width: 100%; height: 400px;"></div>
+                </div>
+            </div>
+
+            <script>
+                $(function () {
+                    $('.tab').on('click', function () {
+                        // 切换 tab 样式
+                        $('.tab').removeClass('active-tab');
+                        $(this).addClass('active-tab');
+
+                        // 切换内容区域
+                        const tabId = $(this).attr('id').replace('tab', '');
+                        $('.tab-content').removeClass('active-content').hide();
+                        $('#content' + tabId).addClass('active-content').fadeIn(200);
+
+                        setTimeout(() => {
+                            if (window.myChart1 && window.myChart2) {
+                                myChart1.resize();
+                                myChart2.resize();
+                            }
+                        }, 1);
+                    });
+                });
+            </script>
+
+            <script>
+                function renderCharts(jobNames, fateRates) {
+                    window.myChart1 = echarts.init(document.getElementById('JobAIChart1'));
+                    window.myChart2 = echarts.init(document.getElementById('JobAIChart2'));
+                    window.myChart3 = echarts.init(document.getElementById('JobAIChart3'));
+                    window.myChart4 = echarts.init(document.getElementById('JobAIChart4'));
+                    window.myChart5 = echarts.init(document.getElementById('JobAIChart5'));
+
+                    const commonXAxis = {
+                        type: 'category',
+                        data: jobNames,
+                        axisLabel: {
+                            interval: 0,
+                            rotate: 45,
+                            formatter: function (value) {
+                                return value.length > 12 ? value.slice(0, 12) + '\n' + value.slice(12) : value;
+                            }
+                        }
+                    };
+
+                    // myChart1: 过滤率
+                    myChart1.setOption({
+                        tooltip: {
+                            trigger: 'axis',
+                            formatter: function (params) {
+                                let res = params[0].name + '<br/>';
+                                params.forEach(item => {
+                                    res += item.marker + item.seriesName + ': ' + item.data + '%<br/>';
+                                });
+                                return res;
+                            }
+                        },
+                        xAxis: commonXAxis,
+                        yAxis: {
+                            type: 'value',
+                            name: '过滤率 (%)'
+                        },
+                        title: {
+                            text: '假点过滤率 vs 总过滤率',
+                            left: 'center',
+                            top: 10,
+                            textStyle: {
+                                fontSize: 18,
+                                fontWeight: 'bold'
+                            }
+                        },
+                        legend: {
+                            top: 40,
+                            data: ['假点过滤率', '总过滤率'],
+                            selected: {
+                                '假点过滤率': true,
+                                '总过滤率': true
+                            }
+                        },
+                        series: [
+                            {
+                                name: '假点过滤率',
+                                type: 'bar',
+                                data: fateRates.false_point_filter_rate,
+                                itemStyle: { color: '#FF5722' },
+                                label: {
+                                    show: true,
+                                    position: 'top',
+                                    formatter: '{c}%',
+                                    fontSize: 14
+                                }
+                            },
+                            {
+                                name: '总过滤率',
+                                type: 'bar',
+                                data: fateRates.total_filter_rate,
+                                itemStyle: { color: '#1E9FFF' },
+                                label: {
+                                    show: true,
+                                    position: 'top',
+                                    formatter: '{c}%',
+                                    fontSize: 14
+                                }
+                            }
+                        ]
+                    });
+
+                    // myChart2: 平均报点
+                    myChart2.setOption({
+                        tooltip: {
+                            trigger: 'axis',
+                            formatter: function (params) {
+                                let res = params[0].name + '<br/>';
+                                params.forEach(item => {
+                                    res += item.marker + item.seriesName + ': ' + item.data + '<br/>';
+                                });
+                                return res;
+                            }
+                        },
+                        xAxis: commonXAxis,
+                        yAxis: {
+                            type: 'value',
+                            name: '平均点数'
+                        },
+                        title: {
+                            text: '平均报点 vs AI平均报点',
+                            left: 'center',
+                            top: 10,
+                            textStyle: {
+                                fontSize: 18,
+                                fontWeight: 'bold'
+                            }
+                        },
+                        legend: {
+                            top: 40,
+                            data: ['平均报点', 'AI平均报点'],
+                            selected: {
+                                '平均报点': true,
+                                'AI平均报点': true
+                            }
+                        },
+                        series: [
+                            {
+                                name: '平均报点',
+                                type: 'bar',
+                                data: fateRates.avg_report_point,
+                                itemStyle: { color: '#FF5722' },
+                                label: {
+                                    show: true,
+                                    position: 'top',
+                                    fontSize: 14
+                                }
+                            },
+                            {
+                                name: 'AI平均报点',
+                                type: 'bar',
+                                data: fateRates.avg_ai_report_point,
+                                itemStyle: { color: '#1E9FFF' },
+                                label: {
+                                    show: true,
+                                    position: 'top',
+                                    fontSize: 14
+                                }
+                            }
+                        ]
+                    });
+
+                    window.addEventListener('resize', () => {
+                        myChart1.resize();
+                        myChart2.resize();
+                    });
+                }
+                function UpdateCharts(data) {
+                    // 检查数据有效性
+                    if (!data || !data.chart3Data || !data.chart4Data || !data.chart5Data) {
+                        console.error("无效的图表数据");
+                        return;
+                    }
+
+                    // 提取时间标签（从chart3Data中获取）
+                    const timeLabels = data.chart3Data.map(item => item.name);
+
+                    // 检查图表实例是否已存在，不重复初始化
+                    if (!window.myChart3) {
+                        window.myChart3 = echarts.init(document.getElementById('JobAIChart3'));
+                        window.myChart4 = echarts.init(document.getElementById('JobAIChart4'));
+                        window.myChart5 = echarts.init(document.getElementById('JobAIChart5'));
+
+                        // 只在首次初始化时添加resize监听
+                        window.addEventListener('resize', () => {
+                            myChart3 && myChart3.resize();
+                            myChart4 && myChart4.resize();
+                            myChart5 && myChart5.resize();
+                        });
+                    }
+
+                    // 公共X轴配置
+                    const commonXAxis = {
+                        type: 'category',
+                        data: timeLabels,
+                        axisLabel: {
+                            interval: 0,
+                            rotate: 45,
+                            formatter: function (value) {
+                                return value.length > 12 ? value.slice(0, 12) + '\n' + value.slice(12) : value;
+                            }
+                        }
+                    };
+
+                    // 更新图表3 - 过滤率对比趋势
+                    myChart3.setOption({
+                        tooltip: {
+                            trigger: 'axis',
+                            formatter: function (params) {
+                                let res = params[0].name + '<br/>';
+                                params.forEach(item => {
+                                    res += item.marker + item.seriesName + ': ' + item.data + '%<br/>';
+                                });
+                                return res;
+                            }
+                        },
+                        xAxis: commonXAxis,
+                        yAxis: {
+                            type: 'value',
+                            name: '过滤率 (%)'
+                        },
+                        title: {
+                            text: '过滤率对比趋势图',
+                            left: 'center',
+                            top: 10,
+                            textStyle: {
+                                fontSize: 18,
+                                fontWeight: 'bold'
+                            }
+                        },
+                        legend: {
+                            top: 40,
+                            data: ['总点过滤率', '假点过滤率']
+                        },
+                        series: [
+                            {
+                                name: '总点过滤率',
+                                type: 'line',
+                                data: data.chart3Data.map(item => item.总点过滤率),
+                                itemStyle: { color: '#FF5722' },
+                                smooth: true,
+                                lineStyle: { width: 3 },
+                                symbol: 'circle',
+                                symbolSize: 6
+                            },
+                            {
+                                name: '假点过滤率',
+                                type: 'line',
+                                data: data.chart3Data.map(item => item.假点过滤率),
+                                itemStyle: { color: '#1E9FFF' },
+                                smooth: true,
+                                lineStyle: { width: 3 },
+                                symbol: 'circle',
+                                symbolSize: 6
+                            }
+                        ]
+                    });
+
+                    // 更新图表4 - 平均点数对比趋势
+                    myChart4.setOption({
+                        tooltip: {
+                            trigger: 'axis',
+                            formatter: function (params) {
+                                let res = params[0].name + '<br/>';
+                                params.forEach(item => {
+                                    res += item.marker + item.seriesName + ': ' + item.data + '<br/>';
+                                });
+                                return res;
+                            }
+                        },
+                        xAxis: commonXAxis,
+                        yAxis: {
+                            type: 'value',
+                            name: '平均点数'
+                        },
+                        title: {
+                            text: '平均点数对比趋势图',
+                            left: 'center',
+                            top: 10,
+                            textStyle: {
+                                fontSize: 18,
+                                fontWeight: 'bold'
+                            }
+                        },
+                        legend: {
+                            top: 40,
+                            data: ['平均报点', 'AI平均报点']
+                        },
+                        series: [
+                            {
+                                name: '平均报点',
+                                type: 'line',
+                                data: data.chart4Data.map(item => item.平均报点),
+                                itemStyle: { color: '#FF5722' },
+                                smooth: true,
+                                lineStyle: { width: 3 },
+                                symbol: 'circle',
+                                symbolSize: 6
+                            },
+                            {
+                                name: 'AI平均报点',
+                                type: 'line',
+                                data: data.chart4Data.map(item => item.平均AI报点),
+                                itemStyle: { color: '#1E9FFF' },
+                                smooth: true,
+                                lineStyle: { width: 3 },
+                                symbol: 'circle',
+                                symbolSize: 6
+                            }
+                        ]
+                    });
+
+                    // 更新图表5 - 总点数对比趋势
+                    myChart5.setOption({
+                        tooltip: {
+                            trigger: 'axis',
+                            formatter: function (params) {
+                                let res = params[0].name + '<br/>';
+                                params.forEach(item => {
+                                    res += item.marker + item.seriesName + ': ' + item.data + '<br/>';
+                                });
+                                return res;
+                            }
+                        },
+                        xAxis: commonXAxis,
+                        yAxis: {
+                            type: 'value',
+                            name: '总点数'
+                        },
+                        title: {
+                            text: '总点数对比趋势图',
+                            left: 'center',
+                            top: 10,
+                            textStyle: {
+                                fontSize: 18,
+                                fontWeight: 'bold'
+                            }
+                        },
+                        legend: {
+                            top: 40,
+                            data: ['缺陷总数', 'AI真点总数']
+                        },
+                        series: [
+                            {
+                                name: '缺陷总数',
+                                type: 'line',
+                                data: data.chart5Data.map(item => item.缺陷总数),
+                                itemStyle: { color: '#FF5722' },
+                                smooth: true,
+                                lineStyle: { width: 3 },
+                                symbol: 'circle',
+                                symbolSize: 6
+                            },
+                            {
+                                name: 'AI真点总数',
+                                type: 'line',
+                                data: data.chart5Data.map(item => item.AI真点总数),
+                                itemStyle: { color: '#1E9FFF' },
+                                smooth: true,
+                                lineStyle: { width: 3 },
+                                symbol: 'circle',
+                                symbolSize: 6
+                            }
+                        ]
+                    });
+                }
+                $(document).ready(function() {
+                    var start_time = sessionStorage.getItem('start_time');
+                    var end_time = sessionStorage.getItem('end_time');
+                    var start_time_hour = sessionStorage.getItem('start_time_hour');
+                    var end_time_hour = sessionStorage.getItem('end_time_hour');
+                    var report_macnum = sessionStorage.getItem('report_macnum');
+                    console.log(report_macnum)
+                    var timePeriod = 'week';  // 默认使用周模式
+
+                    // 调用API获取图表数据
+                    $.ajax({
+                        url: '/UpdateReportEcharts',
+                        type: 'POST',
+                        data: {
+                            start_time: start_time,
+                            end_time: end_time,
+                            start_time_hour: start_time_hour,
+                            end_time_hour: end_time_hour,
+                            report_macnum: report_macnum,
+                            timePeriod: timePeriod,
+                        },
+                        success: function (response) {
+                            var Data = response;
+                            UpdateCharts(Data);
+                        },
+                        error: function (xhr, status, error) {
+                            console.error('加载失败：', error);
+                            layer.alert('数据加载失败', { icon: 2 });
+                        }
+                    });
+
+                    $('#timePeriod').on('change', function() {
+                        var timePeriod = $(this).val();
+                        $.ajax({
+                            url: '/UpdateReportEcharts',
+                            type: 'POST',
+                            data: {
+                                start_time: start_time,
+                                end_time: end_time,
+                                start_time_hour,
+                                end_time_hour,
+                                report_macnum: report_macnum,
+                                timePeriod: timePeriod,
+                            },
+                            success: function (response) {
+                                var Data = response;
+                                UpdateCharts(Data);
+                            },
+                            error: function (xhr, status, error) {
+                                console.error('更新失败：', error);
+                                layer.alert('数据更新失败', { icon: 2 });
+                            }
+                        });
+                    });
+                });
+            </script>
+        </div>
     </div>
 </body>
 </html>
