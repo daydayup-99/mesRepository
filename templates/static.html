@@ -135,9 +135,47 @@
             option.onclick = function() {
                 document.getElementById("jobInput").value = job; // 点击后填充输入框
                 suggestionsBox.style.display = "none"; // 隐藏下拉框
+                loadPlnoOptions(job);
             };
 
             suggestionsBox.appendChild(option); // 添加到下拉框中
+        }
+
+        function loadPlnoOptions(jobNum) {
+            if (!jobNum) return;
+
+            var start_time = $('#start_time').val().split('T')[0];
+            var start_time_hour = $('#start_time').val().split('T')[1];
+            var end_time = $('#end_time').val().split('T')[0];
+            var end_time_hour = $('#end_time').val().split('T')[1];
+            var MacNum = $('#MacNum').val();
+            // 获取该料号对应的批量号
+            $.ajax({
+                url: '/selectPlno',
+                type: 'POST',
+                data: {
+                    start_time: start_time,
+                    end_time: end_time,
+                    start_time_hour: start_time_hour,
+                    end_time_hour: end_time_hour,
+                    MacNum: MacNum,
+                    jobNum: jobNum,
+                },
+                success: function (response) {
+                    // 清空原有的下拉框数据
+                    $('#PLNum').empty();
+                    // 添加空选项
+                    $('#PLNum').append('<option value="">' + "" + '</option>');
+                    // 添加批量号选项
+                    $.each(response.data, function (index, item) {
+                        $('#PLNum').append('<option value="' + item + '">' + item + '</option>');
+                    });
+                    console.log("批量号数据已加载:", response.data.length, "条");
+                },
+                error: function (xhr, status, error) {
+                    console.error("获取批量号失败:", error);
+                }
+            });
         }
 
         // 点击输入框外部时隐藏建议框
@@ -153,9 +191,8 @@
             var end_time = $('#end_time').val().split('T')[0];
             var end_time_hour = $('#end_time').val().split('T')[1];
             var MacNum = $('#MacNum').val();
-            console.log("Selected MacNum1:", MacNum);
-
-            // 使用 Promise 包装每个 AJAX 请求，并返回每个请求的 Promise
+            var jobNum = $('#jobInput').val();
+            var PLNum = $('#PLNum').val();
             const ajaxRequests = [
                 $.ajax({
                     url: '/AllErrRate',
@@ -168,8 +205,6 @@
                         MacNum: MacNum,
                     }
                 }).then(response => {
-                    $('#PLNum').empty();
-                    document.getElementById("jobInput").value = "";
                     var Data = JSON.parse(response);
                     var errJobtypedata = [];
                     var errJobNumData = [];
@@ -183,10 +218,13 @@
                         errAllNumData.push(Data[i].errAllNum);
                         errPlnoNameData.push(Data[i].jobname);
                     }
-                    generateJobErr(errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0]);
-                    $('#jobname').html('料号缺陷占比数量: ' + errPlnoNameData[0]);
+                    if(!jobNum)
+                    {
+                        $('#PLNum').empty();
+                        generateJobErr(errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0]);
+                        $('#jobname').html('料号缺陷占比数量: ' + errPlnoNameData[0]);
+                    }
                 }),
-
                 $.ajax({
                     url: '/staticSubmit',
                     type: 'POST',
@@ -222,7 +260,6 @@
                     $('#fTotalAi').html('假点过滤率: ' + Data.fTotalAi);
                     $('#fTotalAllAi').html('总过滤率: ' + Data.fTotalAllAi);
                 }),
-
                 $.ajax({
                     url: '/LiaohualvSubmit',
                     type: 'POST',
@@ -249,9 +286,105 @@
                     generateJobAi(jobnamedata, fJobAiPassData);
                 })
             ];
+            if (jobNum) {
+                if ($('#PLNum option').length <= 1) {
+                    // 如果批量号下拉框为空或只有一个空选项，重新获取批量号列表
+                    ajaxRequests.push(
+                        $.ajax({
+                            url: '/selectPlno',
+                            type: 'POST',
+                            data: {
+                                start_time: start_time,
+                                end_time: end_time,
+                                start_time_hour: start_time_hour,
+                                end_time_hour: end_time_hour,
+                                MacNum: MacNum,
+                                jobNum: jobNum,
+                            }
+                        }).then(response => {
+                            // 清空原有的下拉框数据
+                            $('#PLNum').empty();
+                            // 添加空选项
+                            $('#PLNum').append('<option value="">' + "" + '</option>');
+                            // 添加批量号选项
+                            $.each(response.data, function (index, item) {
+                                $('#PLNum').append('<option value="' + item + '">' + item + '</option>');
+                            });
+
+                            // 如果之前有选中的PLNum，尝试恢复选中状态
+                            if (PLNum) {
+                                $('#PLNum').val(PLNum);
+                            }
+                        })
+                    );
+                }
+                // 料号缺陷统计请求
+                ajaxRequests.push(
+                    $.ajax({
+                        url: '/LiaohuaErrRate',
+                        type: 'POST',
+                        data: {
+                            start_time: start_time,
+                            end_time: end_time,
+                            start_time_hour: start_time_hour,
+                            end_time_hour: end_time_hour,
+                            MacNum: MacNum,
+                            jobNum: jobNum,
+                        }
+                    }).then(response => {
+                        var Data = JSON.parse(response);
+                        var errJobtypedata = [];
+                        var errJobNumData = [];
+                        var errJobRateData = [];
+                        var errAllNumData = [];
+                        var errPlnoNameData = [];
+                        for (var i = 0; i < Data.length; i++) {
+                            errJobtypedata.push(Data[i].errtype);
+                            errJobNumData.push(Data[i].JobTypeNum);
+                            errJobRateData.push(Data[i].JobTypeRate);
+                            errAllNumData.push(Data[i].errAllNum);
+                            errPlnoNameData.push((Data[i].jobname));
+                        }
+                        generateJobErr(errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0]);
+                        $('#jobname').html('料号缺陷占比数量: ' + errPlnoNameData[0]);
+                    })
+                );
+            }
+            if (PLNum) {
+                ajaxRequests.push(
+                    $.ajax({
+                        url: '/PlnoErrRate',
+                        type: 'POST',
+                        data: {
+                            start_time: start_time,
+                            end_time: end_time,
+                            start_time_hour: start_time_hour,
+                            end_time_hour: end_time_hour,
+                            MacNum: MacNum,
+                            jobNum: jobNum,
+                            PLNum: PLNum,
+                        }
+                    }).then(response => {
+                        var Data = JSON.parse(response);
+                        var errPlnotypedata = [];
+                        var errPlnoNumData = [];
+                        var errPlnoRateData = [];
+                        var errPlnoAllNumData = [];
+                        var errPlnoNameData = [];
+                        for (var i = 0; i < Data.length; i++) {
+                            errPlnotypedata.push(Data[i].plnoerrtype);
+                            errPlnoNumData.push(Data[i].plnoTypeNum);
+                            errPlnoRateData.push(Data[i].plnoTypeRate);
+                            errPlnoAllNumData.push(Data[i].plnoErrAllNum);
+                            errPlnoNameData.push(Data[i].plnoname);
+                        }
+                        generatePlnoErr(errPlnotypedata, errPlnoNumData, errPlnoRateData, errPlnoAllNumData[0], errPlnoNameData[0]);
+                        $('#plnoname').html('批量号缺陷占比数量: ' + errPlnoNameData[0]);
+                    })
+                );
+            }
             // 等待所有请求完成
             await Promise.all(ajaxRequests);
-
         }
 
         function sendRequest() {
@@ -262,25 +395,6 @@
             var end_time_hour = $('#end_time').val().split('T')[1];
             var MacNum = $('#MacNum').val();
             console.log("Selected MacNum1:", MacNum);
-<!--            $.ajax({-->
-<!--                url: '/getTrueRate',-->
-<!--                type: 'POST',-->
-<!--                data: {-->
-<!--                    start_time: start_time,-->
-<!--                    end_time: end_time,-->
-<!--                    start_time_hour: start_time_hour,-->
-<!--                    end_time_hour: end_time_hour,-->
-<!--                    MacNum: MacNum,-->
-<!--&lt;!&ndash;                    MaxNum: maxnum,&ndash;&gt;-->
-<!--                },-->
-<!--                async: false,-->
-<!--                success: function (response) {-->
-<!--                },-->
-<!--                error: function (xhr, status, error) {-->
-<!--                    console.error(error);-->
-<!--                }-->
-<!--            });-->
-
             $.ajax({
                 url: '/AllErrRate',
                 type: 'POST',
@@ -387,33 +501,6 @@
                 }
             });
             $('#loading').hide();
-
-<!--            $.ajax({-->
-<!--                url: '/selectJob',  // 此处为获取数据的路由-->
-<!--                type: 'POST',-->
-<!--                data: {-->
-<!--                    start_time: start_time,-->
-<!--                    end_time: end_time,-->
-<!--                    start_time_hour: start_time_hour,-->
-<!--                    end_time_hour: end_time_hour,-->
-<!--                    MacNum: MacNum,-->
-<!--                },-->
-<!--                async: false,-->
-<!--                success: function (response) {-->
-<!--                    // 清空原有的下拉框数据-->
-<!--                    $('#PLNum').empty();-->
-<!--                    $('#JobNum').empty();-->
-<!--                    // 遍历获取的数据并添加到下拉框下方-->
-
-<!--                    $('#JobNum').append('<option >' + "" + '</option>')-->
-<!--                    $.each(response.data, function (index, item) {-->
-<!--                        $('#JobNum').append('<option >' + item + '</option>');-->
-<!--                    });-->
-<!--                },-->
-<!--                error: function (xhr, status, error) {-->
-<!--                    console.error(error);-->
-<!--                }-->
-<!--            });-->
         }
 
         function initdate() {
@@ -450,6 +537,7 @@
         }
 
         $(document).ready(function () {
+            $('#PLNum').off('click');
             initdate();
             sendRequest();
             $('#process').click(function () {
@@ -463,119 +551,6 @@
                 });
             });
 
-            $('#suggestions').click(function () {
-                // 发送 AJAX 请求获取数据
-                var start_time = $('#start_time').val().split('T')[0];
-                var start_time_hour = $('#start_time').val().split('T')[1];
-                var end_time = $('#end_time').val().split('T')[0];
-                var end_time_hour = $('#end_time').val().split('T')[1];
-                var MacNum = $('#MacNum').val();
-                console.log("Selected MacNum2:", MacNum);
-                var jobNum = $('#jobInput').val();
-                console.log("Job1:", jobNum);
-                $.ajax({
-                    url: '/LiaohuaErrRate',
-                    type: 'POST',
-                    data: {
-                        start_time: start_time,
-                        end_time: end_time,
-                        start_time_hour: start_time_hour,
-                        end_time_hour: end_time_hour,
-                        MacNum: MacNum,
-                        jobNum: jobNum,
-                    },
-                    success: function (response) {
-                        var Data = JSON.parse(response);
-                        var errJobtypedata = [];
-                        var errJobNumData = [];
-                        var errJobRateData = [];
-                        var errAllNumData = [];
-                        var errPlnoNameData = [];
-                        for (var i = 0; i < Data.length; i++) {
-                            errJobtypedata.push(Data[i].errtype);
-                            errJobNumData.push(Data[i].JobTypeNum);
-                            errJobRateData.push(Data[i].JobTypeRate);
-                            errAllNumData.push(Data[i].errAllNum);
-                            errPlnoNameData.push((Data[i].jobname));
-                        }
-                        generateJobErr(errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0])
-                        $('#jobname').html('料号缺陷占比数量: ' + errPlnoNameData[0]);
-                    },
-                    error: function (xhr, status, error) {
-                        console.error(error);
-                    }
-                });
-                $.ajax({
-                    url: '/selectPlno',
-                    type: 'POST',
-                    data: {
-                        start_time: start_time,
-                        end_time: end_time,
-                        start_time_hour: start_time_hour,
-                        end_time_hour: end_time_hour,
-                        MacNum: MacNum,
-                        jobNum: jobNum,
-                    },
-                    success: function (response) {
-                        // 清空原有的下拉框数据
-                        $('#PLNum').empty();
-                        // 遍历获取的数据并添加到下拉框下方
-                        $('#PLNum').append('<option >' + "" + '</option>')
-                        $.each(response.data, function (index, item) {
-                            $('#PLNum').append('<option >' + item + '</option>');
-                        });
-                    },
-                    error: function (xhr, status, error) {
-                        console.error(error);
-                        console.log("Response:", xhr.responseText);
-                    }
-                });
-            });
-
-            $('#PLNum').click(function () {
-                // 发送 AJAX 请求获取数据
-                var start_time = $('#start_time').val().split('T')[0];
-                var start_time_hour = $('#start_time').val().split('T')[1];
-                var end_time = $('#end_time').val().split('T')[0];
-                var end_time_hour = $('#end_time').val().split('T')[1];
-                var MacNum = $('#MacNum').val();
-                var jobNum = $('#jobInput').val();
-                var PLNum = $('#PLNum').val();
-                $.ajax({
-                    url: '/PlnoErrRate',
-                    type: 'POST',
-                    data: {
-                        start_time: start_time,
-                        end_time: end_time,
-                        start_time_hour: start_time_hour,
-                        end_time_hour: end_time_hour,
-                        MacNum: MacNum,
-                        jobNum: jobNum,
-                        PLNum: PLNum,
-                    },
-                    success: function (response) {
-                        var Data = JSON.parse(response);
-                        var errPlnotypedata = [];
-                        var errPlnoNumData = [];
-                        var errPlnoRateData = [];
-                        var errPlnoAllNumData = [];
-                        var errPlnoNameData = [];
-                        for (var i = 0; i < Data.length; i++) {
-                            errPlnotypedata.push(Data[i].plnoerrtype);
-                            errPlnoNumData.push(Data[i].plnoTypeNum);
-                            errPlnoRateData.push(Data[i].plnoTypeRate);
-                            errPlnoAllNumData.push(Data[i].plnoErrAllNum);
-                            errPlnoNameData.push(Data[i].plnoname);
-                        }
-                        generatePlnoErr(errPlnotypedata, errPlnoNumData, errPlnoRateData, errPlnoAllNumData[0], errPlnoNameData[0])
-                        $('#plnoname').html('批量号缺陷占比数量: ' + errPlnoNameData[0]);
-                    },
-                    error: function (xhr, status, error) {
-                        console.error(error);
-                    }
-                });
-            });
-
             $('#queryButton').click(function () {
                 var container7 = document.getElementById('container7');
                 var myChart7 = echarts.init(container7);
@@ -583,15 +558,19 @@
                 var container8 = document.getElementById('container8');
                 var myChart8 = echarts.init(container8);
                 myChart8.clear();
+                var currentPLNum = $('#PLNum').val();
                 $('#loading').show(); // 显示 loading 动画
                 sendRequests()
                     .then(function() {
                         console.log('所有请求完成');
-                        $('#loading').hide(); // 所有请求完成后隐藏 loading 动画
+                        if (currentPLNum) {
+                            $('#PLNum').val(currentPLNum);
+                        }
+                        $('#loading').hide();
                     })
                     .catch(function(error) {
                         console.error('请求出错:', error);
-                        $('#loading').hide(); // 所有请求完成后隐藏 loading 动画
+                        $('#loading').hide();
                     });
             });
 
