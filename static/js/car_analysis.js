@@ -712,7 +712,9 @@ function exportToCSV(start_time, end_time, types, numbers, rates, errPlnoNameDat
     for (var i = 0; i < types.length; i++) {
         let item = machineIdData[i];
         let machineStr = '';
-        if (Array.isArray(item)) {
+        if (item == null || item === '' || (Array.isArray(item) && item.length === 0)) {
+            machineStr = '';
+        } else if (Array.isArray(item)) {
             machineStr = item.map(x => String(x).replace(/#/g, '')).join(';');
         } else {
             machineStr = String(item).replace(/#/g, '');
@@ -739,7 +741,7 @@ function exportToCSV(start_time, end_time, types, numbers, rates, errPlnoNameDat
 }
 
 function csvSafe(str) {
-    if (str == null) return '';
+    if (str == null || str === '') return '""';
     str = String(str).replace(/"/g, '""').replace(/\r?\n/g, ' ');
     return '"' + str + '"';
 }

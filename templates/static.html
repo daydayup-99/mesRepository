@@ -348,7 +348,7 @@
                             errAllNumData.push(Data[i].errAllNum);
                             errPlnoNameData.push((Data[i].jobname));
                         }
-                        generateJobErr(start_time, end_time, errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0]);
+                        generateJobErr(start_time, end_time, errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0], []);
                         $('#jobname').html('料号缺陷占比数量: ' + errPlnoNameData[0]);
                     })
                 );
