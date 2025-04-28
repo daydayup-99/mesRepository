@@ -211,17 +211,20 @@
                     var errJobRateData = [];
                     var errAllNumData = [];
                     var errPlnoNameData = [];
+                    var machineIdData = [];
                     for (var i = 0; i < Data.length; i++) {
                         errJobtypedata.push(Data[i].errtype);
                         errJobNumData.push(Data[i].JobTypeNum);
                         errJobRateData.push(Data[i].JobTypeRate);
                         errAllNumData.push(Data[i].errAllNum);
                         errPlnoNameData.push(Data[i].jobname);
+                        machineIdData.push(Data[i].sorted_machines);
                     }
+                    console.log("machineIdData:", machineIdData.length);
                     if(!jobNum)
                     {
                         $('#PLNum').empty();
-                        generateJobErr(errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0]);
+                        generateJobErr(start_time, end_time, errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0], machineIdData);
                         $('#jobname').html('料号缺陷占比数量: ' + errPlnoNameData[0]);
                     }
                 }),
@@ -345,7 +348,7 @@
                             errAllNumData.push(Data[i].errAllNum);
                             errPlnoNameData.push((Data[i].jobname));
                         }
-                        generateJobErr(errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0]);
+                        generateJobErr(start_time, end_time, errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0], []);
                         $('#jobname').html('料号缺陷占比数量: ' + errPlnoNameData[0]);
                     })
                 );
@@ -421,7 +424,7 @@
                         errAllNumData.push(Data[i].errAllNum);
                         errPlnoNameData.push((Data[i].jobname));
                     }
-                    generateJobErr(errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0])
+                    generateJobErr(start_time, end_time, errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0])
                     $('#jobname').html('料号缺陷占比数量: ' + errPlnoNameData[0]);
                 },
                 error: function (xhr, status, error) {

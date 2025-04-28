@@ -599,7 +599,7 @@ function generateJobAi(jobnameData,fJobAiData){
     });
 }
 
- function generateJobErr(errJobtypedata, errJobNumData, errJobRateData, errAllNum, errPlnoNameData) {
+ function generateJobErr(start_time, end_time, errJobtypedata, errJobNumData, errJobRateData, errAllNum, errPlnoNameData, machineIdData) {
     console.log(errAllNum);
     var myChart = echarts.init($("#container7")[0]);
     var option = {
@@ -701,33 +701,49 @@ function generateJobAi(jobnameData,fJobAiData){
 
         // 添加导出按钮点击事件
     $('#exportButton').off('click').click(function() {
-        exportToCSV(errJobtypedata, errJobNumData, errJobRateData, errPlnoNameData);
+        exportToCSV(start_time, end_time, errJobtypedata, errJobNumData, errJobRateData, errPlnoNameData, machineIdData);
     });
-//    myChart.off('click');
-//    myChart.on('click', function (params) {
-//    if (params.seriesType === 'line') {
-//        // 弹框显示点击的柱状图对应的数据
-//        alert("缺陷名: " + params.name + "\n数量: " + params.value);
-//    }
 }
 // 导出为 CSV 的函数
-function exportToCSV(types, numbers, rates, errPlnoNameData) {
+function exportToCSV(start_time, end_time, types, numbers, rates, errPlnoNameData, machineIdData) {
     var csvContent = "\uFEFF";
-    csvContent += "缺陷名,数量,占比\n"; // CSV header
-
+    console.log(machineIdData.length);
+    csvContent += "缺陷名,数量,占比,机台号\n"; 
     for (var i = 0; i < types.length; i++) {
-        csvContent += types[i] + "," + numbers[i] + "," + rates[i] + "%\n";
+        let item = machineIdData[i];
+        let machineStr = '';
+        if (item == null || item === '' || (Array.isArray(item) && item.length === 0)) {
+            machineStr = '';
+        } else if (Array.isArray(item)) {
+            machineStr = item.map(x => String(x).replace(/#/g, '')).join(';');
+        } else {
+            machineStr = String(item).replace(/#/g, '');
+        }
+        var row = [
+            csvSafe(types[i]),
+            csvSafe(numbers[i]),
+            csvSafe(rates[i] + "%"),
+            csvSafe(machineStr)
+        ].join(",");
+        csvContent += row + "\n";
     }
-
-    // 创建一个隐藏的下载链接
+    var startDate = start_time.replace(/-/g, '');
+    var endDate = end_time.replace(/-/g, '');
+    var dateString = startDate === endDate ? startDate : startDate + "_" + endDate;
     var encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvContent);
     var link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", errPlnoNameData + "_" + "ErrTypeData.csv");
+    link.setAttribute("download", errPlnoNameData + "_" + dateString + "_ErrTypeData.csv");
     document.body.appendChild(link); // 需要将链接加入到 DOM 中才能点击
 
     link.click();
     document.body.removeChild(link); // 点击后移除该链接
+}
+
+function csvSafe(str) {
+    if (str == null || str === '') return '""';
+    str = String(str).replace(/"/g, '""').replace(/\r?\n/g, ' ');
+    return '"' + str + '"';
 }
 
  function generatePlnoErr(errPlnotypedata, errPlnoNumData, errPlnoRateData,errPlnoAllNum) {
