@@ -606,9 +606,7 @@ def ReadJobSql(start_date, end_date,start_time_hour,end_time_hour, machinecode):
                 jobname_results[jobname]['njoball'] += njoball
                 jobname_results[jobname]['njoberrnum'] += njoberrnum
                 jobname_results[jobname]['njobainum'] += njobainum
-
         current_date += timedelta(days=1)
-    # 打印查询结果
     for jobname, results in jobname_results.items():
         if results['njoball'] != 0:
             fJobMeanAll = float(results['njoberrnum']) / float(results['njoball'])
@@ -992,20 +990,12 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                            SUM(avi_true_num_sum_B) AS AVI真点总数B,
                            SUM(ai_true_num_sum) AS AI真点总数,
                            SUM(CASE WHEN has_ai THEN ai_missing_num_sum ELSE 0 END) AS AI漏失总数,
-                           ROUND(CASE WHEN COUNT(*) > 0 THEN
-                                         CAST(SUM(err_num_sum) AS REAL) / CAST(COUNT(*) AS REAL)
-                                       ELSE 0 END, 2) AS 平均报点,
+                           ROUND(CAST(SUM(err_num_sum) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点,
                            ROUND(CAST(SUM(err_num_sum_T) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点T,
                            ROUND(CAST(SUM(err_num_sum_B) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点B,
-                           ROUND(CASE WHEN SUM(has_ai) > 0 THEN
-                                         CAST(SUM(ai_true_num_sum) AS REAL) / CAST(SUM(has_ai) AS REAL)
-                                       ELSE 0 END, 2) AS 平均AI报点,
-                           ROUND(CASE  WHEN SUM(has_ai) > 0 THEN
-                                          CAST(SUM(ai_true_num_sum_T) AS REAL) /CAST(SUM(has_ai) AS REAL)
-                                       ELSE 0 END, 2)  AS 平均AI报点T,
-                           ROUND(CASE WHEN SUM(has_ai) > 0 THEN
-                                         CAST(SUM(ai_true_num_sum_B) AS REAL) / CAST(SUM(has_ai) AS REAL)
-                                       ELSE 0 END, 2)  AS 平均AI报点B,
+                           ROUND(CAST(SUM(ai_true_num_sum) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均AI报点,
+                           ROUND(CAST(SUM(ai_true_num_sum_T) AS REAL) /CAST(COUNT(*) AS REAL), 2)  AS 平均AI报点T,
+                           ROUND(CAST(SUM(ai_true_num_sum_B) AS REAL) / CAST(COUNT(*) AS REAL), 2)  AS 平均AI报点B,
                            surface AS 膜面,
                            test_machine_code AS 机台号
                     FROM board_info
@@ -1250,20 +1240,12 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                            SUM(avi_true_num_sum_B) AS AVI真点总数B,
                            SUM(ai_true_num_sum) AS AI真点总数,
                            SUM(CASE WHEN has_ai THEN ai_missing_num_sum ELSE 0 END) AS AI漏失总数,
-                           ROUND(CASE WHEN COUNT(*) > 0 THEN
-                                         CAST(SUM(err_num_sum) AS REAL) / CAST(COUNT(*) AS REAL)
-                                       ELSE 0 END, 2) AS 平均报点,
+                           ROUND(CAST(SUM(err_num_sum) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点,
                            ROUND(CAST(SUM(err_num_sum_T) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点T,
                            ROUND(CAST(SUM(err_num_sum_B) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点B,
-                           ROUND(CASE WHEN SUM(has_ai) > 0 THEN
-                                         CAST(SUM(ai_true_num_sum) AS REAL) / CAST(SUM(has_ai) AS REAL)
-                                       ELSE 0 END, 2) AS 平均AI报点,
-                           ROUND(CASE  WHEN SUM(has_ai) > 0 THEN
-                                          CAST(SUM(ai_true_num_sum_T) AS REAL) /CAST(SUM(has_ai) AS REAL)
-                                       ELSE 0 END, 2)  AS 平均AI报点T,
-                           ROUND(CASE WHEN SUM(has_ai) > 0 THEN
-                                         CAST(SUM(ai_true_num_sum_B) AS REAL) / CAST(SUM(has_ai) AS REAL)
-                                       ELSE 0 END, 2)  AS 平均AI报点B,
+                           ROUND(CAST(SUM(ai_true_num_sum) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均AI报点,
+                           ROUND(CAST(SUM(ai_true_num_sum_T) AS REAL) /CAST(COUNT(*) AS REAL), 2)  AS 平均AI报点T,
+                           ROUND(CAST(SUM(ai_true_num_sum_B) AS REAL) / CAST(COUNT(*) AS REAL), 2)  AS 平均AI报点B,
                            surface AS 膜面,
                            test_machine_code AS 机台号
                     FROM board_info
