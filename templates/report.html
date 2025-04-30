@@ -82,13 +82,12 @@
         <div style="padding: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
 
-                <!-- 标签切换 -->
                 <div class="tabs" style="flex: 1; display: flex; justify-content: flex-start;">
                     <div id="tab1" class="tab active-tab">概述</div>
                     <div id="tab2" class="tab">过滤率</div>
+                    <div id="tab3" class="tab">缺陷占比</div>
                 </div>
 
-                <!-- 时间选择框放置在最右边 -->
                 <div style="flex: 0; display: flex; justify-content: flex-end;">
                     <select id="timePeriod" style="width: 60px; padding: 8px; font-size: 14px; border: 2px solid #ccc; border-radius: 5px; background-color: #f5f5f5; text-align: center;">
                         <option value="day">天</option>
@@ -98,7 +97,6 @@
                 </div>
             </div>
 
-            <!-- 概述内容 -->
             <div id="content1" class="tab-content active-content">
                 <div class="summary-box">
                     本次报告在 <strong id="start_time" style="color: #2c7be5;"></strong> 至 <strong id="end_time" style="color: #2c7be5;"></strong> 期间，
@@ -136,7 +134,6 @@
                 </div>
             </div>
 
-            <!-- 过滤率内容 -->
             <div id="content2" class="tab-content">
                 <h3>假点过滤率最差料号 TOP10</h3>
                 <div style="display: flex; justify-content: center; margin-bottom: 40px;">
@@ -147,22 +144,25 @@
                 </div>
             </div>
 
+            <div id="content3" class="tab-content">
+
+            </div>
             <script>
                 $(function () {
                     $('.tab').on('click', function () {
-                        // 切换 tab 样式
                         $('.tab').removeClass('active-tab');
                         $(this).addClass('active-tab');
 
-                        // 切换内容区域
                         const tabId = $(this).attr('id').replace('tab', '');
                         $('.tab-content').removeClass('active-content').hide();
                         $('#content' + tabId).addClass('active-content').fadeIn(200);
 
                         setTimeout(() => {
-                            if (window.myChart1 && window.myChart2) {
-                                myChart1.resize();
-                                myChart2.resize();
+                            if (tabId === '2') {
+                                if (window.myChart1 && window.myChart2) {
+                                    myChart1.resize();
+                                    myChart2.resize();
+                                }
                             }
                         }, 1);
                     });
@@ -522,9 +522,8 @@
                     var end_time_hour = sessionStorage.getItem('end_time_hour');
                     var report_macnum = sessionStorage.getItem('report_macnum');
                     console.log(report_macnum)
-                    var timePeriod = 'week';  // 默认使用周模式
+                    var timePeriod = 'week';
 
-                    // 调用API获取图表数据
                     $.ajax({
                         url: '/UpdateReportEcharts',
                         type: 'POST',
@@ -778,6 +777,164 @@
                         }, 1000);
                     }
                 }
+            </script>
+
+            <script>
+                var currentJobNames = [];
+                var jobErrorTypesData = {};
+                window.ErrChart = function(jobNames, errorTypesData) {
+                    currentJobNames = jobNames;
+                    jobErrorTypesData = errorTypesData;
+                    $('#tab3').trigger('click');
+                };
+                $(function() {
+                    $('#tab3').on('click', function() {
+                        createMultipleDefectCharts(currentJobNames);
+                    });
+                });
+                function createMultipleDefectCharts(customJobNames) {
+                    $('#content3').html('<h3>假点过滤率最差料号缺陷类型占比 TOP10</h3><div id="defectChartsContainer" style="display: flex; flex-wrap: wrap; justify-content: space-between;"></div>');
+
+                    // 如果没有传入自定义料号，使用默认值
+                    var jobNames = customJobNames;
+                    for (var i = 0; i < jobNames.length; i++) {
+                        var chartDiv = document.createElement('div');
+                        chartDiv.id = 'defectTypeChart_' + i;
+                        chartDiv.style.width = '48%'; 
+                        chartDiv.style.height = '350px'; 
+                        chartDiv.style.marginBottom = '30px';
+                        
+                        document.getElementById('defectChartsContainer').appendChild(chartDiv);
+                        
+                        var chartData;
+                        if (jobErrorTypesData[jobNames[i]]) {
+                            chartData = {
+                                types: jobErrorTypesData[jobNames[i]].map(item => item.type),
+                                nums: jobErrorTypesData[jobNames[i]].map(item => item.count)
+                            };
+                        }
+                        
+                        var chart = echarts.init(document.getElementById('defectTypeChart_' + i));
+                        chart.setOption(getDefectChartOption(jobNames[i], chartData));
+                        
+                        if (!window.defectCharts) window.defectCharts = [];
+                        window.defectCharts.push(chart);
+                    }
+                }
+                
+                function getDefectChartOption(jobName, defectData) {
+                    return {
+                        title: {
+                            text: jobName,
+                            left: 'center',
+                            top: 0,
+                            textStyle: {
+                                fontSize: 16,
+                                fontWeight: 'bold',
+                                color: '#000000'
+                            }
+                        },
+                        tooltip: {
+                            trigger: 'item',
+                            formatter: '{a} <br/>{b} : {c}'
+                        },
+                        grid: {
+                            left: '0',
+                            top: '30',
+                            right: '40%',
+                            bottom: '0%',
+                            containLabel: true
+                        },
+                        yAxis: [{
+                            show: true,
+                            data: defectData.types,
+                            inverse: true,
+                            axisLine: {show: false},
+                            splitLine: {show: false},
+                            axisTick: {show: false},
+                            axisLabel: {
+                                textStyle: {
+                                    color: '#000000'
+                                },
+                            },
+                        }, {
+                            show: false,
+                            inverse: true,
+                            data: defectData.nums,
+                            axisLabel: {textStyle: {color: '#fff'}},
+                            axisLine: {show: false},
+                            splitLine: {show: false},
+                            axisTick: {show: false},
+                        }],
+                        xAxis: {
+                            show: false
+                        },
+                        series: [
+                            {
+                                // 条形图部分
+                                name: '数量',
+                                type: 'bar',
+                                yAxisIndex: 0,
+                                data: defectData.nums,
+                                barWidth: 15,
+                                itemStyle: {
+                                    normal: {
+                                        barBorderRadius: 50,
+                                        color: '#1089E7',
+                                    }
+                                },
+                                label: {
+                                    normal: {
+                                        show: true,
+                                        position: 'right',
+                                        formatter: '{c}',
+                                        textStyle: {color: '#000000'}
+                                    }
+                                }
+                            },
+                            {
+                                // 饼图部分
+                                name: '缺陷类型',
+                                type: 'pie',
+                                radius: ['10%', '70%'],
+                                center: ['80%', '50%'],
+                                roseType: 'radius',
+                                label: {
+                                    show: true,
+                                    fontFamily: 'Roboto, sans-serif',
+                                    fontSize: 10,
+                                    fontWeight: 500,
+                                    lineHeight: 1.5,
+                                    WebkitFontSmoothing: 'antialiased'
+                                },
+                                labelLine: {
+                                    length: 8,
+                                    length2: 10
+                                },
+                                data: defectData.types.map((type, index) => {
+                                    return {
+                                        name: type,
+                                        value: defectData.nums[index]
+                                    };
+                                }),
+                                itemStyle: {
+                                    color: function(params) {
+                                        var colorList = ['#006cff', '#60cdc9', '#ed8884', '#ff9f7f', '#0096ff', '#9fe6b8', '#32c5e9', '#1d9dff'];
+                                        return colorList[params.dataIndex % colorList.length];
+                                    }
+                                }
+                            }
+                        ]
+                    };
+                }
+                
+                window.addEventListener('resize', function() {
+                    if (window.defectCharts) {
+                        window.defectCharts.forEach(function(chart) {
+                            chart && chart.resize();
+                        });
+                    }
+                });
             </script>
         </div>
     </div>

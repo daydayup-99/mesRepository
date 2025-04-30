@@ -1586,12 +1586,49 @@ def analyzeData(start_time, end_time, start_time_hour, end_time_hour, MacNum):
                 avg_ai_report_point = df_top10['平均AI报点'].tolist()
                 res['top_job_data'] = top_job_data
                 res['top_job_err_rate'] = {'false_point_filter_rate': false_point_filter_rate,'total_filter_rate': total_filter_rate,'avg_report_point': avg_report_point,'avg_ai_report_point': avg_ai_report_point}
-
         if os.path.exists(filePath):
             if filePath.lower().endswith('.xlsx'):
                 os.remove(filePath)
+    job_error_types = {}
+    session = Session()
+    inspector = inspect(engine)
+    table_names = inspector.get_table_names()
+    for job in res['top_job_data']:
+        error_stats = []
+        current_date = start_time
+        while current_date <= end_time:
+            table_name = f"tab_err_{current_date.strftime('%Y%m%d')[0:]}"
+            if table_name in table_names:
+                sql_query = text(f"""
+                                select ai_err_type, COUNT(ai_err_type)
+                                from {table_name}
+                                WHERE is_ai = 1
+                                AND default_1 = '{job}'
+                                GROUP BY ai_err_type
+                                ORDER BY COUNT(ai_err_type) DESC
+                                LIMIT 10
+                            """)
+                error_results = session.execute(sql_query).fetchall()
+                for err_type, count in error_results:
+                    found = False
+                    for item in error_stats:
+                        if item['type'] == err_type:
+                            item['count'] += count
+                            found = True
+                            break
+                    if not found:
+                        error_stats.append({
+                            'type': err_type,
+                            'count': count
+                        })
+            current_date += timedelta(days=1)
+        error_stats.sort(key=lambda x: x['count'], reverse=True)
+        error_stats = error_stats[:10] 
+        job_error_types[job] = error_stats
 
+    res['job_error_types'] = job_error_types
     json_data = json.dumps(res, ensure_ascii=False)
+    session.close()
     return json_data
 
 def updateAnalyzeData(start_date, end_date, start_time_hour, end_time_hour, MacNum, days):
@@ -1653,7 +1690,6 @@ def updateAnalyzeData(start_date, end_date, start_time_hour, end_time_hour, MacN
         else:
             period_end_date = period_end
 
-        # 为每个时间段调用exportcsvbyjob获取数据
         filePath = exportcsvbyjob(period_start_date, period_end_date, start_time_hour, end_time_hour, MacNum)
 
         if filePath and os.path.exists(filePath):
@@ -1704,7 +1740,6 @@ def updateAnalyzeData(start_date, end_date, start_time_hour, end_time_hour, MacN
                     })
                 os.remove(filePath)
 
-    # 返回图表数据
     return {
         "chart3Data": chart3Data,
         "chart4Data": chart4Data,
