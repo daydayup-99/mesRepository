@@ -737,6 +737,7 @@
                         avgAiPoint: Data.avgAiPoint,
                         top_job_data: Data.top_job_data,
                         top_job_err_rate: Data.top_job_err_rate,
+                        job_error_types: Data.job_error_types,
                     };
 
                     generateReport(lastRequestData);
@@ -754,7 +755,6 @@
 
         function generateReport(data) {
             $.get('/report_html', function(htmlContent) {
-                // 存储数据到 sessionStorage
                 sessionStorage.setItem('start_time', data.start_time);
                 sessionStorage.setItem('end_time', data.end_time);
                 sessionStorage.setItem('start_time_hour', data.start_time_hour);
@@ -791,6 +791,9 @@
                         if (data.top_job_data && data.top_job_err_rate) {
                             renderCharts(data.top_job_data, data.top_job_err_rate);
                         }
+                        if (data.top_job_data && data.job_error_types) {
+                            ErrChart(data.top_job_data, data.job_error_types);
+                        }
 
                         container.find('.layui-layer-btn0').click(function() {
                             layer.close(index);
@@ -814,8 +817,6 @@
                                         $('.select2-container').remove();
                                     }
                                 }
-
-                                // 确保select2插件可用
                                 if (!$.fn.select2) {
                                     // 重新加载select2脚本
                                     $.getScript("../static/js/select2.min.js", function() {
@@ -833,7 +834,7 @@
                                         width: 'resolve'
                                     });
                                 }
-                            }, 200); // 增加延迟时间
+                            }, 200);
                     }
                 });
             });
