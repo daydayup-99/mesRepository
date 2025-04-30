@@ -1099,7 +1099,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
 
             df.loc[len(df.index)] = ['','总计',len(df)-1,round(resFR*100, 2),round(resAR*100,2),df['AI漏失总数'].sum(),round(df['漏失率'].mean(), 2),df['总板数'].sum(),
                           df['AI跑板数'].sum(),df['AVI缺陷总数'].sum(),df['AVI真点总数'].sum(),df['AVI真点总数T'].sum(),df['AVI真点总数B'].sum(),df['AI真点总数'].sum(),round(df['AVI缺陷总数'].sum() / df['总板数'].sum(), 2),round((df['平均报点T'] * df['总板数']).sum()/df['总板数'].sum(), 2),round((df['平均报点B'] * df['总板数']).sum()/df['总板数'].sum(), 2),
-                          round(df['AI真点总数'].sum() / df['AI跑板数'].sum(), 2),round((df['平均AI报点T'] * df['AI跑板数']).sum()/df['AI跑板数'].sum(), 2),round((df['平均AI报点B'] * df['AI跑板数']).sum()/df['AI跑板数'].sum(), 2),df['OK板总数'].sum(),
+                          round(df['AI真点总数'].sum() / df['总板数'].sum(), 2),round((df['平均AI报点T'] * df['总板数']).sum()/df['总板数'].sum(), 2),round((df['平均AI报点B'] * df['总板数']).sum()/df['总板数'].sum(), 2),df['OK板总数'].sum(),
                           df['AI_OK板总数'].sum(),round((df['OK板比例'] * df['总板数']).sum() / df['总板数'].sum(), 2) ,round((df['AI_OK板比例'] * df['AI跑板数']).sum() / df['总板数'].sum(), 2),'','']
             df.to_excel(w, sheet_name="All", index=False)
 
@@ -1133,9 +1133,9 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                                          df['AI真点总数'].sum(), round(df['AVI缺陷总数'].sum() / df['总板数'].sum(), 2),
                                          round((df['平均报点T'] * df['总板数']).sum() / df['总板数'].sum(), 2),
                                          round((df['平均报点B'] * df['总板数']).sum() / df['总板数'].sum(), 2),
-                                         round(df['AI真点总数'].sum() / df['AI跑板数'].sum(), 2),
-                                         round((df['平均AI报点T'] * df['AI跑板数']).sum() / df['AI跑板数'].sum(), 2),
-                                         round((df['平均AI报点B'] * df['AI跑板数']).sum() / df['AI跑板数'].sum(), 2),
+                                         round(df['AI真点总数'].sum() / df['总板数'].sum(), 2),
+                                         round((df['平均AI报点T'] * df['总板数']).sum() / df['总板数'].sum(), 2),
+                                         round((df['平均AI报点B'] * df['总板数']).sum() / df['总板数'].sum(), 2),
                                          df['OK板总数'].sum(),
                                          df['AI_OK板总数'].sum(),
                                          round((df['OK板比例'] * df['总板数']).sum() / df['总板数'].sum(), 2),
@@ -1344,7 +1344,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                 resFR = (float(df['AVI缺陷总数'].sum() - df['AI真点总数'].sum() - df['AI漏失总数'].sum()) / (float(nAviFalse) + 1e-6))
             df.loc[len(df.index)] = ['','总计',round(resFR*100, 2),round(resAR*100, 2),df['AI漏失总数'].sum(),round(df['漏失率'].mean(), 2),df['总板数'].sum(),
                           df['AI跑板数'].sum(),df['AVI缺陷总数'].sum(),df['AVI真点总数'].sum(),df['AVI真点总数T'].sum(),df['AVI真点总数B'].sum(),df['AI真点总数'].sum(),round(df['AVI缺陷总数'].sum() / df['总板数'].sum(), 2),round((df['平均报点T'] * df['总板数']).sum()/df['总板数'].sum(), 2),round((df['平均报点B'] * df['总板数']).sum()/df['总板数'].sum(), 2),
-                          round(df['AI真点总数'].sum() / df['AI跑板数'].sum(), 2),round((df['平均AI报点T'] * df['AI跑板数']).sum()/df['AI跑板数'].sum(), 2),round((df['平均AI报点B'] * df['AI跑板数']).sum()/df['AI跑板数'].sum(), 2),df['OK板总数'].sum(),
+                          round(df['AI真点总数'].sum() / df['总板数'].sum(), 2),round((df['平均AI报点T'] * df['总板数']).sum()/df['总板数'].sum(), 2),round((df['平均AI报点B'] * df['总板数']).sum()/df['总板数'].sum(), 2),df['OK板总数'].sum(),
                           df['AI_OK板总数'].sum(),round((df['OK板比例'] * df['总板数']).sum() / df['总板数'].sum(), 2) ,round((df['AI_OK板比例'] * df['AI跑板数']).sum() / df['总板数'].sum(), 2),'','']
 
             df.to_excel(w, sheet_name="All", index=False)
@@ -1379,9 +1379,9 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                                          df['AI真点总数'].sum(), round(df['AVI缺陷总数'].sum() / df['总板数'].sum(), 2),
                                          round((df['平均报点T'] * df['总板数']).sum() / df['总板数'].sum(), 2),
                                          round((df['平均报点B'] * df['总板数']).sum() / df['总板数'].sum(), 2),
-                                         round(df['AI真点总数'].sum() / df['AI跑板数'].sum(), 2),
-                                         round((df['平均AI报点T'] * df['AI跑板数']).sum() / df['AI跑板数'].sum(), 2),
-                                         round((df['平均AI报点B'] * df['AI跑板数']).sum() / df['AI跑板数'].sum(), 2),
+                                         round(df['AI真点总数'].sum() / df['总板数'].sum(), 2),
+                                         round((df['平均AI报点T'] * df['总板数']).sum() / df['总板数'].sum(), 2),
+                                         round((df['平均AI报点B'] * df['总板数']).sum() / df['总板数'].sum(), 2),
                                          df['OK板总数'].sum(),
                                          df['AI_OK板总数'].sum(),
                                          round((df['OK板比例'] * df['总板数']).sum() / df['总板数'].sum(), 2),
