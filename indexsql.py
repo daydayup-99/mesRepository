@@ -1351,7 +1351,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                          'OK板总数': i[4], 'AI_OK板总数': i[6],
                          'OK板比例': i[5], 'AI_OK板比例': i[7],
                          '膜面': surface_dict[str(i[24])], '机台号': i[25]}
-                if value['总点过滤率'] > allFilterRate:
+                if value['总点过滤率'] >= allFilterRate:
                     statisticdata.append(value)
             grouped = {}
             for item in statisticdata:
