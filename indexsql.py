@@ -359,7 +359,7 @@ def getAllErrRateSql(start_date, end_date, machinecode):
             sorted_machines = sorted(data['machines'].items(), key=lambda x: x[1], reverse=True)
             sorted_machine_ids = [machine[0] for machine in sorted_machines]
             data_point = {'errtype': JobErrType, 'JobTypeNum': JobTypeNum, 'JobTypeRate': JobTypeRate,
-                          'errAllNum': JobErrAllNum, 'jobname': "All",'sorted_machines': sorted_machine_ids}
+                          'errAllNum': JobErrAllNum, 'jobname': "All",'sorted_machines': sorted_machine_ids[0:5]}
             json_data.append(data_point)
     json_data = json.dumps(json_data, ensure_ascii=False)
     session.close()
