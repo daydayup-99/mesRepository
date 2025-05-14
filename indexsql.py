@@ -1,6 +1,5 @@
 import random
 import sys
-import re
 import pandas as pd
 from sqlalchemy import create_engine, inspect, Column, Integer, String, Table, func, not_, Float, and_, text
 from sqlalchemy.exc import SQLAlchemyError
@@ -9,7 +8,7 @@ from sqlalchemy.orm import declarative_base
 from datetime import datetime, timedelta
 from decimal import Decimal
 import json
-import os,csv
+import os
 from collections import defaultdict
 import configparser
 global MacTrueRate
@@ -911,11 +910,17 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
     if not dates_to_query:
         print(f"没有可查询的表，时间范围: {start_date} 到 {end_date}")
         return None
-
+    fieldnames = []
     statisticdata = []
-    fieldnames = ['日期', '料号', '批量号', '假点过滤率', '总点过滤率','AI漏失总数','漏失率',
-                  '总板数', 'AI跑板数', 'AVI缺陷总数', 'AVI真点总数', 'AVI真点总数T', 'AVI真点总数B','AI真点总数', '平均报点','平均报点T', '平均报点B',
-                  '平均AI报点', '平均AI报点T', '平均AI报点B', 'OK板总数', 'AI_OK板总数', 'OK板比例', 'AI_OK板比例', '膜面', '机台号']
+    if 'export' in config and 'selected_headers' in config['export']:
+        headers_str = config['export']['selected_headers']
+        if headers_str:
+            fieldnames = headers_str.split(',')
+    if not fieldnames:
+        fieldnames = ['日期', '料号', '批量号', '假点过滤率', '总点过滤率', 'AI漏失总数', '漏失率',
+                           '总板数', 'AI跑板数', 'AVI缺陷总数', 'AVI真点总数', 'AVI真点总数T', 'AVI真点总数B',
+                           'AI真点总数', '平均报点', '平均报点T', '平均报点B', '平均AI报点', '平均AI报点T',
+                           '平均AI报点B', 'OK板总数', 'AI_OK板总数', 'OK板比例', 'AI_OK板比例', '膜面', '机台号']
     if len(machinecode) > 1:
         machinecodename = "多机台"
     else:
@@ -1007,7 +1012,6 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                 WHERE 总板数 > {smallBatch}
                 AND AI真点总数 < {maxTrueNum}
                 """)
-
             try:
                 resulttmp = session.execute(sql_query).fetchall()
                 for i in resulttmp:
@@ -1015,7 +1019,6 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
             except Exception as e:
                 print(f"查询表 {table_name} 出错: {e}")
                 continue
-
         if len(result) > 0:
             for i in result:
                 nALLNum = float(i[11])
@@ -1043,7 +1046,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                     nAviFalse = int(random.uniform(lowerBound, upperBound - 0.01))
                     fAi = float(nALLNum - nAiNum) / (float(nAviFalse) + 1e-6)
                 if fAll > 0.99:
-                    fAll = 0.99
+                    fAll = 0.98
                 if t_ratio > 0.0:
                     nAviNum = int(nALLNum * t_ratio)
                     nAviNumT = int(nALLNumT * t_ratio)
@@ -1064,7 +1067,6 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                          '膜面': surface_dict[str(i[25])], '机台号': i[26]}
                 if value['总点过滤率'] > allFilterRate:
                     statisticdata.append(value)
-
             # 根据机台号分组
             grouped = {}
             for item in statisticdata:
@@ -1073,74 +1075,109 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                     grouped[machine_code] = []
                 grouped[machine_code].append(item)
 
-            df = pd.DataFrame(statisticdata, columns=fieldnames)
-            df['平均AI报点T'] = df['平均AI报点T'].astype(float)
-            df['AI跑板数'] = df['AI跑板数'].astype(float)
-            df['AI真点总数'] = df['AI真点总数'].astype(float)
-            df['AVI缺陷总数'] = df['AVI缺陷总数'].astype(float)
-            df['AI漏失总数'] = df['AI漏失总数'].astype(float)
+            all_data_df = pd.DataFrame(statisticdata)
+            all_data_df['平均AI报点T'] = all_data_df['平均AI报点T'].astype(float)
+            all_data_df['AI跑板数'] = all_data_df['AI跑板数'].astype(float)
+            all_data_df['AI真点总数'] = all_data_df['AI真点总数'].astype(float)
+            all_data_df['AVI缺陷总数'] = all_data_df['AVI缺陷总数'].astype(float)
+            all_data_df['AI漏失总数'] = all_data_df['AI漏失总数'].astype(float)
 
-            resAR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / df['AVI缺陷总数'].sum())
-            resFR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / (df['AVI缺陷总数'].sum() - (df['AVI缺陷总数'].sum() * t_ratio)))
+            resAR = float((all_data_df['AVI缺陷总数'].sum() - all_data_df['AI真点总数'].sum()) / all_data_df['AVI缺陷总数'].sum())
+            resFR = float((all_data_df['AVI缺陷总数'].sum() - all_data_df['AI真点总数'].sum()) / (all_data_df['AVI缺陷总数'].sum() - (all_data_df['AVI缺陷总数'].sum() * t_ratio)))
             if resFR > 1.0 and isOptimizeFRate == 1:
-                lowerBound = float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum())
+                lowerBound = float(all_data_df['AVI缺陷总数'].sum() - all_data_df['AI漏失总数'].sum() - all_data_df['AI真点总数'].sum())
                 upperBound = min(
-                    float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum()),
-                    float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum()) / 0.96
+                    float(all_data_df['AVI缺陷总数'].sum() - all_data_df['AI漏失总数'].sum()),
+                    float(all_data_df['AVI缺陷总数'].sum() - all_data_df['AI漏失总数'].sum() - all_data_df['AI真点总数'].sum()) / 0.96
                 )
-                # 确保上界大于下界
                 if upperBound <= lowerBound:
                     upperBound += 0.1
-                # 创建随机数生成器，并生成均匀分布的随机数
-                random.seed(123456789)  # 固定种子，保证每次运行生成相同的随机数
+                random.seed(123456789)
                 nAviFalse = int(random.uniform(lowerBound, upperBound - 0.01))
-                # 假点过滤率
-                resFR = (float(df['AVI缺陷总数'].sum() - df['AI真点总数'].sum() - df['AI漏失总数'].sum()) / (float(nAviFalse) + 1e-6))
+                resFR = (float(all_data_df['AVI缺陷总数'].sum() - all_data_df['AI真点总数'].sum() - all_data_df['AI漏失总数'].sum()) / (float(nAviFalse) + 1e-6))
 
-            df.loc[len(df.index)] = ['','总计',len(df)-1,round(resFR*100, 2),round(resAR*100,2),df['AI漏失总数'].sum(),round(df['漏失率'].mean(), 2),df['总板数'].sum(),
-                          df['AI跑板数'].sum(),df['AVI缺陷总数'].sum(),df['AVI真点总数'].sum(),df['AVI真点总数T'].sum(),df['AVI真点总数B'].sum(),df['AI真点总数'].sum(),round(df['AVI缺陷总数'].sum() / df['总板数'].sum(), 2),round((df['平均报点T'] * df['总板数']).sum()/df['总板数'].sum(), 2),round((df['平均报点B'] * df['总板数']).sum()/df['总板数'].sum(), 2),
-                          round(df['AI真点总数'].sum() / df['总板数'].sum(), 2),round((df['平均AI报点T'] * df['总板数']).sum()/df['总板数'].sum(), 2),round((df['平均AI报点B'] * df['总板数']).sum()/df['总板数'].sum(), 2),df['OK板总数'].sum(),
-                          df['AI_OK板总数'].sum(),round((df['OK板比例'] * df['总板数']).sum() / df['总板数'].sum(), 2) ,round((df['AI_OK板比例'] * df['AI跑板数']).sum() / df['总板数'].sum(), 2),'','']
-            df.to_excel(w, sheet_name="All", index=False)
+            total_row = {
+                '日期': '',
+                '料号': '总计',
+                '批量号': len(all_data_df) - 1,
+                '假点过滤率': round(resFR * 100, 2),
+                '总点过滤率': round(resAR * 100, 2),
+                'AI漏失总数': all_data_df['AI漏失总数'].sum(),
+                '漏失率': round(all_data_df['漏失率'].mean(), 2),
+                '总板数': all_data_df['总板数'].sum(),
+                'AI跑板数': all_data_df['AI跑板数'].sum(),
+                'AVI缺陷总数': all_data_df['AVI缺陷总数'].sum(),
+                'AVI真点总数': all_data_df['AVI真点总数'].sum(),
+                'AVI真点总数T': all_data_df['AVI真点总数T'].sum(),
+                'AVI真点总数B': all_data_df['AVI真点总数B'].sum(),
+                'AI真点总数': all_data_df['AI真点总数'].sum(),
+                '平均报点': round(all_data_df['AVI缺陷总数'].sum() / all_data_df['总板数'].sum(), 2),
+                '平均报点T': round((all_data_df['平均报点T'] * all_data_df['总板数']).sum() / all_data_df['总板数'].sum(), 2),
+                '平均报点B': round((all_data_df['平均报点B'] * all_data_df['总板数']).sum() / all_data_df['总板数'].sum(), 2),
+                '平均AI报点': round(all_data_df['AI真点总数'].sum() / all_data_df['总板数'].sum(), 2),
+                '平均AI报点T': round((all_data_df['平均AI报点T'] * all_data_df['总板数']).sum() / all_data_df['总板数'].sum(), 2),
+                '平均AI报点B': round((all_data_df['平均AI报点B'] * all_data_df['总板数']).sum() / all_data_df['总板数'].sum(), 2),
+                'OK板总数': all_data_df['OK板总数'].sum(),
+                'AI_OK板总数': all_data_df['AI_OK板总数'].sum(),
+                'OK板比例': round((all_data_df['OK板比例'] * all_data_df['总板数']).sum() / all_data_df['总板数'].sum(), 2),
+                'AI_OK板比例': round((all_data_df['AI_OK板比例'] * all_data_df['AI跑板数']).sum() / all_data_df['总板数'].sum(), 2)
+            }
+            all_data_with_total = pd.concat([all_data_df, pd.DataFrame([total_row])], ignore_index=True)
+            selected_columns = [col for col in fieldnames if col in all_data_with_total.columns]
+            df_to_export = all_data_with_total[selected_columns]
+            df_to_export.to_excel(w, sheet_name="All", index=False)
 
             for machine_code, data in grouped.items():
-                df = pd.DataFrame(data, columns=fieldnames)
-                df['平均AI报点T'] = df['平均AI报点T'].astype(float)
-                df['AI跑板数'] = df['AI跑板数'].astype(float)
-                df['AI真点总数'] = df['AI真点总数'].astype(float)
-                df['AVI缺陷总数'] = df['AVI缺陷总数'].astype(float)
-                df['AI漏失总数'] = df['AI漏失总数'].astype(float)
+                machine_df_all = pd.DataFrame(data)
+                machine_df_all['平均AI报点T'] = machine_df_all['平均AI报点T'].astype(float)
+                machine_df_all['AI跑板数'] = machine_df_all['AI跑板数'].astype(float)
+                machine_df_all['AI真点总数'] = machine_df_all['AI真点总数'].astype(float)
+                machine_df_all['AVI缺陷总数'] = machine_df_all['AVI缺陷总数'].astype(float)
+                machine_df_all['AI漏失总数'] = machine_df_all['AI漏失总数'].astype(float)
 
-                resAR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / df['AVI缺陷总数'].sum())
-                resFR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / (
-                            df['AVI缺陷总数'].sum() - (df['AVI缺陷总数'].sum() * t_ratio)))
-                if resFR > 1.0 and isOptimizeFRate == 1:
-                    lowerBound = float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum())
+                machine_resAR = float((machine_df_all['AVI缺陷总数'].sum() - machine_df_all['AI真点总数'].sum()) / machine_df_all['AVI缺陷总数'].sum())
+                machine_resFR = float((machine_df_all['AVI缺陷总数'].sum() - machine_df_all['AI真点总数'].sum()) / (machine_df_all['AVI缺陷总数'].sum() - (machine_df_all['AVI缺陷总数'].sum() * t_ratio)))
+
+                if machine_resFR > 1.0 and isOptimizeFRate == 1:
+                    lowerBound = float(machine_df_all['AVI缺陷总数'].sum() - machine_df_all['AI漏失总数'].sum() - machine_df_all['AI真点总数'].sum())
                     upperBound = min(
-                        float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum()),
-                        float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum()) / 0.96
+                        float(machine_df_all['AVI缺陷总数'].sum() - machine_df_all['AI漏失总数'].sum()),
+                        float(machine_df_all['AVI缺陷总数'].sum() - machine_df_all['AI漏失总数'].sum() - machine_df_all['AI真点总数'].sum()) / 0.96
                     )
                     if upperBound <= lowerBound:
                         upperBound += 0.1
-                    random.seed()  # 固定种子，保证每次运行生成相同的随机数
+                    random.seed()
                     nAviFalse = int(random.uniform(lowerBound, upperBound - 0.01))
-                    resFR = (float(df['AVI缺陷总数'].sum() - df['AI真点总数'].sum() - df['AI漏失总数'].sum()) / (
-                                float(nAviFalse) + 1e-6))
-
-                df.loc[len(df.index)] = ['', '总计', len(df) - 1, round(resFR * 100, 2), round(resAR * 100, 2),
-                                         df['AI漏失总数'].sum(), round(df['漏失率'].mean(), 2), df['总板数'].sum(),
-                                         df['AI跑板数'].sum(), df['AVI缺陷总数'].sum(), df['AVI真点总数'].sum(),df['AVI真点总数T'].sum(),df['AVI真点总数B'].sum(),
-                                         df['AI真点总数'].sum(), round(df['AVI缺陷总数'].sum() / df['总板数'].sum(), 2),
-                                         round((df['平均报点T'] * df['总板数']).sum() / df['总板数'].sum(), 2),
-                                         round((df['平均报点B'] * df['总板数']).sum() / df['总板数'].sum(), 2),
-                                         round(df['AI真点总数'].sum() / df['总板数'].sum(), 2),
-                                         round((df['平均AI报点T'] * df['总板数']).sum() / df['总板数'].sum(), 2),
-                                         round((df['平均AI报点B'] * df['总板数']).sum() / df['总板数'].sum(), 2),
-                                         df['OK板总数'].sum(),
-                                         df['AI_OK板总数'].sum(),
-                                         round((df['OK板比例'] * df['总板数']).sum() / df['总板数'].sum(), 2),
-                                         round((df['AI_OK板比例'] * df['AI跑板数']).sum() / df['总板数'].sum(), 2), '', '']
-                df.to_excel(w, sheet_name=f"机台_{machine_code}", index=False)
+                    machine_resFR = (float(machine_df_all['AVI缺陷总数'].sum() - machine_df_all['AI真点总数'].sum() - machine_df_all['AI漏失总数'].sum()) / (float(nAviFalse) + 1e-6))
+                machine_total_row = {
+                    '日期': '',
+                    '料号': '总计',
+                    '批量号': len(machine_df_all) - 1,
+                    '假点过滤率': round(machine_resFR * 100, 2),
+                    '总点过滤率': round(machine_resAR * 100, 2),
+                    'AI漏失总数': machine_df_all['AI漏失总数'].sum(),
+                    '漏失率': round(machine_df_all['漏失率'].mean(), 2),
+                    '总板数': machine_df_all['总板数'].sum(),
+                    'AI跑板数': machine_df_all['AI跑板数'].sum(),
+                    'AVI缺陷总数': machine_df_all['AVI缺陷总数'].sum(),
+                    'AVI真点总数': machine_df_all['AVI真点总数'].sum(),
+                    'AVI真点总数T': machine_df_all['AVI真点总数T'].sum(),
+                    'AVI真点总数B': machine_df_all['AVI真点总数B'].sum(),
+                    'AI真点总数': machine_df_all['AI真点总数'].sum(),
+                    '平均报点': round(machine_df_all['AVI缺陷总数'].sum() / machine_df_all['总板数'].sum(), 2),
+                    '平均报点T': round((machine_df_all['平均报点T'] * machine_df_all['总板数']).sum() / machine_df_all['总板数'].sum(), 2),
+                    '平均报点B': round((machine_df_all['平均报点B'] * machine_df_all['总板数']).sum() / machine_df_all['总板数'].sum(), 2),
+                    '平均AI报点': round(machine_df_all['AI真点总数'].sum() / machine_df_all['总板数'].sum(), 2),
+                    '平均AI报点T': round((machine_df_all['平均AI报点T'] * machine_df_all['总板数']).sum() / machine_df_all['总板数'].sum(), 2),
+                    '平均AI报点B': round((machine_df_all['平均AI报点B'] * machine_df_all['总板数']).sum() / machine_df_all['总板数'].sum(), 2),
+                    'OK板总数': machine_df_all['OK板总数'].sum(),
+                    'AI_OK板总数': machine_df_all['AI_OK板总数'].sum(),
+                    'OK板比例': round((machine_df_all['OK板比例'] * machine_df_all['总板数']).sum() / machine_df_all['总板数'].sum(), 2),
+                    'AI_OK板比例': round((machine_df_all['AI_OK板比例'] * machine_df_all['AI跑板数']).sum() / machine_df_all['总板数'].sum(), 2)
+                }
+                machine_df_with_total = pd.concat([machine_df_all, pd.DataFrame([machine_total_row])],ignore_index=True)
+                machine_df_to_export = machine_df_with_total[selected_columns]
+                machine_df_to_export.to_excel(w, sheet_name=f"机台_{machine_code}", index=False)
 
             default_sheet = wb['All']
         session.close()
@@ -1159,16 +1196,20 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
         if table_name in table_names:
             dates_to_query.append(table_name)
         current_date += timedelta(days=1)
-
-    # 如果没有可查询的表，直接返回None
     if not dates_to_query:
         print(f"没有可查询的表，时间范围: {start_date} 到 {end_date}")
         return None
-
+    fieldnames = []
     statisticdata = []
-    fieldnames = ['日期', '料号', '假点过滤率', '总点过滤率','AI漏失总数','漏失率',
-                  '总板数', 'AI跑板数', 'AVI缺陷总数', 'AVI真点总数','AVI真点总数T', 'AVI真点总数B', 'AI真点总数', '平均报点', '平均报点T', '平均报点B',
-                  '平均AI报点', '平均AI报点T', '平均AI报点B', 'OK板总数', 'AI_OK板总数', 'OK板比例', 'AI_OK板比例', '膜面', '机台号']
+    if 'export' in config and 'selected_headers' in config['export']:
+        headers_str = config['export']['selected_headers']
+        if headers_str:
+            fieldnames = headers_str.split(',')
+    else:
+        fieldnames = ['日期', '料号', '假点过滤率', '总点过滤率', 'AI漏失总数', '漏失率',
+                          '总板数', 'AI跑板数', 'AVI缺陷总数', 'AVI真点总数', 'AVI真点总数T', 'AVI真点总数B',
+                          'AI真点总数', '平均报点', '平均报点T', '平均报点B', '平均AI报点', '平均AI报点T',
+                          '平均AI报点B', 'OK板总数', 'AI_OK板总数', 'OK板比例', 'AI_OK板比例', '膜面', '机台号']
     if len(machinecode) > 1:
         machinecodename = "多机台"
     else:
@@ -1264,7 +1305,6 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
             except Exception as e:
                 print(f"查询表 {table_name} 出错: {e}")
                 continue
-
         if len(result) > 0:
             for i in result:
                 nALLNum = float(i[10])
@@ -1277,7 +1317,6 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                     fAi = (nALLNum - nAiNum) / (nALLNum - (nALLNum * t_ratio))
                     fAll = (nALLNum - nAiNum) / nALLNum
                     fAiFalseRatio = nAiFalseRatio / nALLNum
-
                 else:
                     fAi = 0.0
                     fAll = 0.0
@@ -1314,7 +1353,6 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                          '膜面': surface_dict[str(i[24])], '机台号': i[25]}
                 if value['总点过滤率'] > allFilterRate:
                     statisticdata.append(value)
-        # 根据机台号分组
             grouped = {}
             for item in statisticdata:
                 machine_code = item['机台号']
@@ -1322,71 +1360,108 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                     grouped[machine_code] = []
                 grouped[machine_code].append(item)
 
-            df = pd.DataFrame(statisticdata, columns=fieldnames)
-            df['平均AI报点T'] = df['平均AI报点T'].astype(float)
-            df['AI跑板数'] = df['AI跑板数'].astype(float)
-            df['AI真点总数'] = df['AI真点总数'].astype(float)
-            df['AVI缺陷总数'] = df['AVI缺陷总数'].astype(float)
-            df['AI漏失总数'] = df['AI漏失总数'].astype(float)
+            all_data_df = pd.DataFrame(statisticdata)
+            all_data_df['平均AI报点T'] = all_data_df['平均AI报点T'].astype(float)
+            all_data_df['AI跑板数'] = all_data_df['AI跑板数'].astype(float)
+            all_data_df['AI真点总数'] = all_data_df['AI真点总数'].astype(float)
+            all_data_df['AVI缺陷总数'] = all_data_df['AVI缺陷总数'].astype(float)
+            all_data_df['AI漏失总数'] = all_data_df['AI漏失总数'].astype(float)
 
-            resAR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / df['AVI缺陷总数'].sum())
-            resFR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / (df['AVI缺陷总数'].sum() - (df['AVI缺陷总数'].sum() * t_ratio)))
+            resAR = float((all_data_df['AVI缺陷总数'].sum() - all_data_df['AI真点总数'].sum()) / all_data_df['AVI缺陷总数'].sum())
+            resFR = float((all_data_df['AVI缺陷总数'].sum() - all_data_df['AI真点总数'].sum()) / (all_data_df['AVI缺陷总数'].sum() - (all_data_df['AVI缺陷总数'].sum() * t_ratio)))
+
             if resFR > 1.0 and isOptimizeFRate == 1:
-                lowerBound = float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum())
+                lowerBound = float(all_data_df['AVI缺陷总数'].sum() - all_data_df['AI漏失总数'].sum() - all_data_df['AI真点总数'].sum())
                 upperBound = min(
-                    float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum()),
-                    float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum()) / 0.96
+                    float(all_data_df['AVI缺陷总数'].sum() - all_data_df['AI漏失总数'].sum()),
+                    float(all_data_df['AVI缺陷总数'].sum() - all_data_df['AI漏失总数'].sum() - all_data_df['AI真点总数'].sum()) / 0.96
                 )
                 if upperBound <= lowerBound:
                     upperBound += 0.1
                 random.seed(123456789)
                 nAviFalse = int(random.uniform(lowerBound, upperBound - 0.01))
-                resFR = (float(df['AVI缺陷总数'].sum() - df['AI真点总数'].sum() - df['AI漏失总数'].sum()) / (float(nAviFalse) + 1e-6))
-            df.loc[len(df.index)] = ['','总计',round(resFR*100, 2),round(resAR*100, 2),df['AI漏失总数'].sum(),round(df['漏失率'].mean(), 2),df['总板数'].sum(),
-                          df['AI跑板数'].sum(),df['AVI缺陷总数'].sum(),df['AVI真点总数'].sum(),df['AVI真点总数T'].sum(),df['AVI真点总数B'].sum(),df['AI真点总数'].sum(),round(df['AVI缺陷总数'].sum() / df['总板数'].sum(), 2),round((df['平均报点T'] * df['总板数']).sum()/df['总板数'].sum(), 2),round((df['平均报点B'] * df['总板数']).sum()/df['总板数'].sum(), 2),
-                          round(df['AI真点总数'].sum() / df['总板数'].sum(), 2),round((df['平均AI报点T'] * df['总板数']).sum()/df['总板数'].sum(), 2),round((df['平均AI报点B'] * df['总板数']).sum()/df['总板数'].sum(), 2),df['OK板总数'].sum(),
-                          df['AI_OK板总数'].sum(),round((df['OK板比例'] * df['总板数']).sum() / df['总板数'].sum(), 2) ,round((df['AI_OK板比例'] * df['AI跑板数']).sum() / df['总板数'].sum(), 2),'','']
-
-            df.to_excel(w, sheet_name="All", index=False)
+                resFR = (float(all_data_df['AVI缺陷总数'].sum() - all_data_df['AI真点总数'].sum() - all_data_df['AI漏失总数'].sum()) / (float(nAviFalse) + 1e-6))
+            total_row = {
+                '日期': '',
+                '料号': '总计',
+                '假点过滤率': round(resFR * 100, 2),
+                '总点过滤率': round(resAR * 100, 2),
+                'AI漏失总数': all_data_df['AI漏失总数'].sum(),
+                '漏失率': round(all_data_df['漏失率'].mean(), 2),
+                '总板数': all_data_df['总板数'].sum(),
+                'AI跑板数': all_data_df['AI跑板数'].sum(),
+                'AVI缺陷总数': all_data_df['AVI缺陷总数'].sum(),
+                'AVI真点总数': all_data_df['AVI真点总数'].sum(),
+                'AVI真点总数T': all_data_df['AVI真点总数T'].sum(),
+                'AVI真点总数B': all_data_df['AVI真点总数B'].sum(),
+                'AI真点总数': all_data_df['AI真点总数'].sum(),
+                '平均报点': round(all_data_df['AVI缺陷总数'].sum() / all_data_df['总板数'].sum(), 2),
+                '平均报点T': round((all_data_df['平均报点T'] * all_data_df['总板数']).sum() / all_data_df['总板数'].sum(), 2),
+                '平均报点B': round((all_data_df['平均报点B'] * all_data_df['总板数']).sum() / all_data_df['总板数'].sum(), 2),
+                '平均AI报点': round(all_data_df['AI真点总数'].sum() / all_data_df['总板数'].sum(), 2),
+                '平均AI报点T': round((all_data_df['平均AI报点T'] * all_data_df['总板数']).sum() / all_data_df['总板数'].sum(), 2),
+                '平均AI报点B': round((all_data_df['平均AI报点B'] * all_data_df['总板数']).sum() / all_data_df['总板数'].sum(), 2),
+                'OK板总数': all_data_df['OK板总数'].sum(),
+                'AI_OK板总数': all_data_df['AI_OK板总数'].sum(),
+                'OK板比例': round((all_data_df['OK板比例'] * all_data_df['总板数']).sum() / all_data_df['总板数'].sum(), 2),
+                'AI_OK板比例': round((all_data_df['AI_OK板比例'] * all_data_df['AI跑板数']).sum() / all_data_df['总板数'].sum(), 2)
+            }
+            all_data_with_total = pd.concat([all_data_df, pd.DataFrame([total_row])], ignore_index=True)
+            selected_columns = [col for col in fieldnames if col in all_data_with_total.columns]
+            df_to_export = all_data_with_total[selected_columns]
+            df_to_export.to_excel(w, sheet_name="All", index=False)
 
             for machine_code, data in grouped.items():
-                df = pd.DataFrame(data, columns=fieldnames)
-                df['平均AI报点T'] = df['平均AI报点T'].astype(float)
-                df['AI跑板数'] = df['AI跑板数'].astype(float)
-                df['AI真点总数'] = df['AI真点总数'].astype(float)
-                df['AVI缺陷总数'] = df['AVI缺陷总数'].astype(float)
-                df['AI漏失总数'] = df['AI漏失总数'].astype(float)
+                machine_df = pd.DataFrame(data)
+                machine_df['平均AI报点T'] = machine_df['平均AI报点T'].astype(float)
+                machine_df['AI跑板数'] = machine_df['AI跑板数'].astype(float)
+                machine_df['AI真点总数'] = machine_df['AI真点总数'].astype(float)
+                machine_df['AVI缺陷总数'] = machine_df['AVI缺陷总数'].astype(float)
+                machine_df['AI漏失总数'] = machine_df['AI漏失总数'].astype(float)
 
-                resAR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / df['AVI缺陷总数'].sum())
-                resFR = float((df['AVI缺陷总数'].sum() - df['AI真点总数'].sum()) / (
-                            df['AVI缺陷总数'].sum() - (df['AVI缺陷总数'].sum() * t_ratio)))
-                if resFR > 1.0 and isOptimizeFRate == 1:
-                    lowerBound = float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum())
+                machine_resAR = float((machine_df['AVI缺陷总数'].sum() - machine_df['AI真点总数'].sum()) / machine_df['AVI缺陷总数'].sum())
+                machine_resFR = float((machine_df['AVI缺陷总数'].sum() - machine_df['AI真点总数'].sum()) / (
+                            machine_df['AVI缺陷总数'].sum() - (machine_df['AVI缺陷总数'].sum() * t_ratio)))
+                if machine_resFR > 1.0 and isOptimizeFRate == 1:
+                    lowerBound = float(machine_df['AVI缺陷总数'].sum() - machine_df['AI漏失总数'].sum() - machine_df['AI真点总数'].sum())
                     upperBound = min(
-                        float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum()),
-                        float(df['AVI缺陷总数'].sum() - df['AI漏失总数'].sum() - df['AI真点总数'].sum()) / 0.96
+                        float(machine_df['AVI缺陷总数'].sum() - machine_df['AI漏失总数'].sum()),
+                        float(machine_df['AVI缺陷总数'].sum() - machine_df['AI漏失总数'].sum() - machine_df['AI真点总数'].sum()) / 0.96
                     )
                     if upperBound <= lowerBound:
                         upperBound += 0.1
                     random.seed()
                     nAviFalse = int(random.uniform(lowerBound, upperBound - 0.01))
-                    resFR = (float(df['AVI缺陷总数'].sum() - df['AI真点总数'].sum() - df['AI漏失总数'].sum()) / (
+                    machine_resFR = (float(machine_df['AVI缺陷总数'].sum() - machine_df['AI真点总数'].sum() - machine_df['AI漏失总数'].sum()) / (
                                 float(nAviFalse) + 1e-6))
-
-                df.loc[len(df.index)] = ['', '总计', round(resFR * 100, 2), round(resAR * 100, 2), df['AI漏失总数'].sum(),
-                                         round(df['漏失率'].mean(), 2), df['总板数'].sum(),
-                                         df['AI跑板数'].sum(), df['AVI缺陷总数'].sum(), df['AVI真点总数'].sum(),df['AVI真点总数T'].sum(),df['AVI真点总数B'].sum(),
-                                         df['AI真点总数'].sum(), round(df['AVI缺陷总数'].sum() / df['总板数'].sum(), 2),
-                                         round((df['平均报点T'] * df['总板数']).sum() / df['总板数'].sum(), 2),
-                                         round((df['平均报点B'] * df['总板数']).sum() / df['总板数'].sum(), 2),
-                                         round(df['AI真点总数'].sum() / df['总板数'].sum(), 2),
-                                         round((df['平均AI报点T'] * df['总板数']).sum() / df['总板数'].sum(), 2),
-                                         round((df['平均AI报点B'] * df['总板数']).sum() / df['总板数'].sum(), 2),
-                                         df['OK板总数'].sum(),
-                                         df['AI_OK板总数'].sum(),
-                                         round((df['OK板比例'] * df['总板数']).sum() / df['总板数'].sum(), 2),
-                                         round((df['AI_OK板比例'] * df['AI跑板数']).sum() / df['总板数'].sum(), 2), '', '']
-                df.to_excel(w, sheet_name=f"机台_{machine_code}", index=False)
+                machine_total_row = {
+                    '日期': '',
+                    '料号': '总计',
+                    '假点过滤率': round(machine_resFR * 100, 2),
+                    '总点过滤率': round(machine_resAR * 100, 2),
+                    'AI漏失总数': machine_df['AI漏失总数'].sum(),
+                    '漏失率': round(machine_df['漏失率'].mean(), 2),
+                    '总板数': machine_df['总板数'].sum(),
+                    'AI跑板数': machine_df['AI跑板数'].sum(),
+                    'AVI缺陷总数': machine_df['AVI缺陷总数'].sum(),
+                    'AVI真点总数': machine_df['AVI真点总数'].sum(),
+                    'AVI真点总数T': machine_df['AVI真点总数T'].sum(),
+                    'AVI真点总数B': machine_df['AVI真点总数B'].sum(),
+                    'AI真点总数': machine_df['AI真点总数'].sum(),
+                    '平均报点': round(machine_df['AVI缺陷总数'].sum() / machine_df['总板数'].sum(), 2),
+                    '平均报点T': round((machine_df['平均报点T'] * machine_df['总板数']).sum() / machine_df['总板数'].sum(), 2),
+                    '平均报点B': round((machine_df['平均报点B'] * machine_df['总板数']).sum() / machine_df['总板数'].sum(), 2),
+                    '平均AI报点': round(machine_df['AI真点总数'].sum() / machine_df['总板数'].sum(), 2),
+                    '平均AI报点T': round((machine_df['平均AI报点T'] * machine_df['总板数']).sum() / machine_df['总板数'].sum(), 2),
+                    '平均AI报点B': round((machine_df['平均AI报点B'] * machine_df['总板数']).sum() / machine_df['总板数'].sum(), 2),
+                    'OK板总数': machine_df['OK板总数'].sum(),
+                    'AI_OK板总数': machine_df['AI_OK板总数'].sum(),
+                    'OK板比例': round((machine_df['OK板比例'] * machine_df['总板数']).sum() / machine_df['总板数'].sum(), 2),
+                    'AI_OK板比例': round((machine_df['AI_OK板比例'] * machine_df['AI跑板数']).sum() / machine_df['总板数'].sum(), 2)
+                }
+                machine_df_with_total = pd.concat([machine_df, pd.DataFrame([machine_total_row])],ignore_index=True)
+                machine_df_to_export = machine_df_with_total[selected_columns]
+                machine_df_to_export.to_excel(w, sheet_name=f"机台_{machine_code}", index=False)
             default_sheet = wb['All']
         session.close()
     return job_file if os.path.exists(job_file) else None
