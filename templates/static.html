@@ -225,7 +225,7 @@
                     {
                         $('#PLNum').empty();
                         generateJobErr(start_time, end_time, errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0], machineIdData);
-                        $('#jobname').html('料号缺陷占比数量: ' + errPlnoNameData[0]);
+                        $('#jobname').html('料号: ' + errPlnoNameData[0]);
                     }
                 }),
                 $.ajax({
@@ -349,7 +349,7 @@
                             errPlnoNameData.push((Data[i].jobname));
                         }
                         generateJobErr(start_time, end_time, errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0], []);
-                        $('#jobname').html('料号缺陷占比数量: ' + errPlnoNameData[0]);
+                        $('#jobname').html('料号: ' + errPlnoNameData[0] + ',膜面: ' + Data[0].surface);
                     })
                 );
             }
@@ -426,7 +426,7 @@
                         machineIdData.push(Data[i].sorted_machines);
                     }
                     generateJobErr(start_time, end_time, errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0], machineIdData)
-                    $('#jobname').html('料号缺陷占比数量: ' + errPlnoNameData[0]);
+                    $('#jobname').html('料号: ' + errPlnoNameData[0]);
                 },
                 error: function (xhr, status, error) {
                     console.error(error);
@@ -942,7 +942,7 @@
 
         <div class="e_chart">
             <div class="charts l_left">
-                <p class="charts_p" id="jobname">料号缺陷占比数量</p>
+                <p class="charts_p" id="jobname">料号</p>
                 <div id="container7" style="height:300px;width: 100%;"></div>
                 <button id="exportButton" style="margin-top: 10px;">导出</button>
                 <div style="width: 100%;margin-top: 0px">
@@ -951,7 +951,7 @@
                 </div>
             </div>
             <div class="charts l_left last_charts">
-                <p class="charts_p" id="plnoname">批量号缺陷占比数量</p>
+                <p class="charts_p" id="plnoname">批量号</p>
                 <div id="container8" style="height:300px;"></div>
                 <div style="width: 100%;margin-top: 0px">
                     <table class="annyTable" border="1">

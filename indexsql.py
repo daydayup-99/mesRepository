@@ -639,14 +639,13 @@ def getJobErrRate(start_date,end_date,machinecode,jobname):
     current_date = start_date
     JobErrAllNum = 0
     JobTypeCounts = {}
-    json_data=[]
+    json_data = []
     like_conditions = ' OR '.join([f"default_4 = '{code}'" for code in machinecode])
+    inspector = inspect(engine)
+    table_names = inspector.get_table_names()
     while current_date <= end_date:
-        inspector = inspect(engine)
-        table_names = inspector.get_table_names()
         table_name = f"tab_err_{current_date.strftime('%Y%m%d')[0:]}"
         if table_name in table_names:
-            table = Table(table_name, Base.metadata, autoload_with=engine)
             sql_query = text(f"""
                             select count(*)
                             FROM {table_name}
@@ -661,16 +660,16 @@ def getJobErrRate(start_date,end_date,machinecode,jobname):
                 JobErrAllNum  = JobErrAllNum + int(JobErrNum)
 
             sql_query = text(f"""
-                            select ai_err_type, count(*)
+                            select ai_err_type, count(*), SUBSTRING_INDEX(SUBSTRING_INDEX(err_key,'&', -2),'&',1) as 'Surface'
                             FROM {table_name}
                             WHERE default_1 = '{jobname}' 
                             AND ({like_conditions})
                             AND is_ai = 1
-                            GROUP BY ai_err_type;
+                            GROUP BY ai_err_type, Surface;
                             """)
             result = session.execute(sql_query).fetchall()
             for row in result:
-                JobErrType, JobTypeNum =row;
+                JobErrType, JobTypeNum,surface =row;
                 if JobErrType is None:
                     JobErrType = ''
                 if JobTypeNum is None:
@@ -685,9 +684,9 @@ def getJobErrRate(start_date,end_date,machinecode,jobname):
         if JobErrAllNum != 0:
             JobTypeRate = round((JobTypeNum / JobErrAllNum)*100, 2)
         else:
-            JobTypeRate = 0.0  # 默认值应该是数字，而不是字典
+            JobTypeRate = 0.0
 
-        data_point = {'errtype': JobErrType, 'JobTypeNum': JobTypeNum, 'JobTypeRate': JobTypeRate,'errAllNum':JobErrAllNum,'jobname':jobname}
+        data_point = {'errtype': JobErrType, 'JobTypeNum': JobTypeNum, 'JobTypeRate': JobTypeRate,'errAllNum':JobErrAllNum,'jobname':jobname,'surface':surface}
         json_data.append(data_point)
 
     json_data = json.dumps(json_data, ensure_ascii=False)
