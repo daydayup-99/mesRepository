@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <title>数据报表</title>
     <script src="../static/js/echarts.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="../static/js/jquery-3.6.0.min.js"></script>
     <script src="../static/js/layui.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="../static/js/html2canvas.min.js"></script>
+    <script src="../static/js/jspdf.umd.min.js"></script>
+    <script src="../static/js/jspdf.plugin.autotable.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -584,8 +584,8 @@
                     }
 
                     // 加载必要的库
-                    loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js', function() {
-                        loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js', function() {
+                    loadScript('../static/js/html2canvas.min.js', function() {
+                        loadScript('../static/js/jspdf.umd.min.js', function() {
                             generatePDF();
                         });
                     });
