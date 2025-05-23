@@ -28,8 +28,8 @@ def load_headers_config():
         if headers_str:
             return headers_str.split(',')
     return ['日期', '料号', '批量号', '假点过滤率', '总点过滤率', 'AI漏失总数', '漏失率',
-           '总板数', 'AI跑板数', 'AVI缺陷总数', 'AVI真点总数', 'AVI真点总数T', 'AVI真点总数B',
-           'AI真点总数', '平均报点', '平均报点T', '平均报点B', '平均AI报点', '平均AI报点T', 
+           '总板数', 'AI跑板数', 'AVI缺陷总数', 'AVI缺陷总数T', 'AVI缺陷总数B', 'AVI真点总数', 'AVI真点总数T', 'AVI真点总数B',
+           'AI真点总数', 'AI真点总数T', 'AI真点总数B', 'AI假点总数', 'AI假点总数T', 'AI假点总数B', '平均报点', '平均报点T', '平均报点B', '平均AI报点', '平均AI报点T',
            '平均AI报点B', 'OK板总数', 'AI_OK板总数', 'OK板比例', 'AI_OK板比例', '膜面', '机台号']
 
 back_path = os.path.join(config_dir, 'background.jpg')
@@ -68,8 +68,8 @@ def show_headers_config(icon=None, item=None):
     config_window.configure(bg=BG_COLOR)
     config_window.transient(window)  # 设置为主窗口的子窗口
     all_headers = ['日期', '料号', '批量号', '假点过滤率', '总点过滤率', 'AI漏失总数', '漏失率',
-                  '总板数', 'AI跑板数', 'AVI缺陷总数', 'AVI真点总数', 'AVI真点总数T', 'AVI真点总数B',
-                  'AI真点总数', '平均报点', '平均报点T', '平均报点B', '平均AI报点', '平均AI报点T', 
+                  '总板数', 'AI跑板数', 'AVI缺陷总数', 'AVI缺陷总数T', 'AVI缺陷总数B', 'AVI真点总数', 'AVI真点总数T', 'AVI真点总数B',
+                  'AI真点总数', 'AI真点总数T', 'AI真点总数B', 'AI假点总数', 'AI假点总数T', 'AI假点总数B', '平均报点', '平均报点T', '平均报点B', '平均AI报点', '平均AI报点T',
                   '平均AI报点B', 'OK板总数', 'AI_OK板总数', 'OK板比例', 'AI_OK板比例', '膜面', '机台号']
     current_headers = load_headers_config()
     title_frame = tk.Frame(config_window, bg=BG_COLOR, pady=10)
