@@ -5,6 +5,7 @@ from tkinter import messagebox
 from PIL import Image, ImageDraw, ImageTk
 from pystray import Icon, MenuItem, Menu
 import configparser
+import subprocess
 
 config = configparser.ConfigParser()
 # config_dir = os.path.dirname(os.path.realpath(__file__))
@@ -12,7 +13,6 @@ config_dir = os.path.dirname(sys.executable)
 config_path = os.path.join(config_dir, 'config.ini')
 config.read(config_path)
 
-# 将表头配置保存到配置文件
 def save_headers_config(selected_headers):
     if 'export' not in config:
         config.add_section('export')
@@ -21,7 +21,6 @@ def save_headers_config(selected_headers):
         config.write(f)
     return True
 
-# 从配置文件读取表头配置
 def load_headers_config():
     if 'export' in config and 'selected_headers' in config['export']:
         headers_str = config['export']['selected_headers']
@@ -58,7 +57,6 @@ status_label = tk.Label(window, text="MES 软件正在运行中",
                         bd=1)
 canvas.create_window(250, 150, window=status_label)
 
-# 创建表头配置窗口
 def show_headers_config(icon=None, item=None):
     window.deiconify()
     
@@ -199,12 +197,10 @@ def show_headers_config(icon=None, item=None):
             return
         
         if save_headers_config(selected):
-            messagebox.showinfo("成功", "表头配置已保存")
-            status_label.config(text="表头配置已保存")
-            window.after(3000, lambda: status_label.config(text="MES 软件正在运行中"))
+            messagebox.showinfo("成功", "表头配置已保存，程序将重启以应用新配置")
+            status_label.config(text="正在重启...")
             config_window.destroy()
-            if icon is not None:
-                hide_window()
+            window.after(500, restart_application)
     
     cancel_btn = tk.Button(bottom_frame, 
                           text="取消", 
@@ -277,3 +273,15 @@ def on_closing():
         close_application(None, None)
     else:
         hide_window()
+
+def restart_application():
+    python = sys.executable
+    script = os.path.abspath(sys.argv[0])
+    try:
+        if 'icon_instance' in globals() and icon_instance:
+            icon_instance.stop()
+    except:
+        pass
+    subprocess.Popen([python, script])
+    window.quit()
+    sys.exit(0)
