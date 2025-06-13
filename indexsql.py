@@ -1678,6 +1678,7 @@ def analyzeData(start_time, end_time, start_time_hour, end_time_hour, MacNum):
     res = {'allJobNum': 0, 'allPcbNum': 0, 'allFilter': 0, 'fateFilter': 0, 'allErrNum': 0,
             'alltrueNum': 0, 'allAiTrueNum': 0, 'avgPoint': 0, 'avgAiPoint': 0, 'top_job_data': [], 'top_job_err_rate': {}}
     filePath = exportcsvbyjob(start_time, end_time, start_time_hour, end_time_hour, MacNum)
+    like_conditions = ' OR '.join([f"default_4 = '{code}'" for code in MacNum])
     if filePath and os.path.exists(filePath):
         if filePath.lower().endswith('.xlsx'):
             df = pd.read_excel(filePath, engine='openpyxl')
@@ -1719,7 +1720,8 @@ def analyzeData(start_time, end_time, start_time_hour, end_time_hour, MacNum):
                 sql_query = text(f"""
                                 select ai_err_type, COUNT(ai_err_type)
                                 from {table_name}
-                                WHERE is_ai = 1
+                                WHERE ({like_conditions})
+                                AND is_ai = 1
                                 AND default_1 = '{job}'
                                 GROUP BY ai_err_type
                                 ORDER BY COUNT(ai_err_type) DESC
