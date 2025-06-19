@@ -343,7 +343,6 @@ def getAllErrRateSql(start_date, end_date, machinecode):
                         }
                     else:
                         JobTypeCounts[JobErrType]['total'] += JobTypeNum
-
                         if MachineId in JobTypeCounts[JobErrType]['machines']:
                             JobTypeCounts[JobErrType]['machines'][MachineId] += MachineNum
                         else:
@@ -352,10 +351,7 @@ def getAllErrRateSql(start_date, end_date, machinecode):
         sorted_counts = sorted(JobTypeCounts.items(), key=lambda x: x[1]['total'], reverse=True)
         for JobErrType, data in sorted_counts:
             JobTypeNum = data['total']
-            if JobErrAllNum != 0:
-                JobTypeRate = round((JobTypeNum / JobErrAllNum) * 100, 2)
-            else:
-                JobTypeRate = 0.0
+            JobTypeRate = round((JobTypeNum / JobErrAllNum) * 100, 2) if JobErrAllNum else 0.0
             sorted_machines = sorted(data['machines'].items(), key=lambda x: x[1], reverse=True)
             sorted_machine_ids = [machine[0] for machine in sorted_machines]
             data_point = {'errtype': JobErrType, 'JobTypeNum': JobTypeNum, 'JobTypeRate': JobTypeRate,
