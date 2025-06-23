@@ -331,13 +331,21 @@ def getAllErrRateSql(start_date, end_date, machinecode):
             table_name = f"tab_err_{current_date.strftime('%Y%m%d')[0:]}"
             if table_name in table_names:
                 sql_query = text(f"""
-                                  SELECT ai_err_type, COUNT(*), default_4, COUNT(default_4)
+                                  SELECT ai_err_type, COUNT(is_ai), default_4, COUNT(default_4)
                                   FROM {table_name}
                                   WHERE ({like_conditions})
                                   AND is_ai = 1
                                   GROUP BY ai_err_type, default_4
                                     """)
+                sql_all_query = text(f"""
+                                  SELECT COUNT(*)
+                                  FROM {table_name}
+                                  WHERE ({like_conditions})
+                                    """)
                 result = session.execute(sql_query).fetchall()
+                resultErrAllNum = session.execute(sql_all_query).fetchall()
+                for row in resultErrAllNum:
+                    JobErrAllNum = JobErrAllNum + int(row[0])
                 for row in result:
                     JobErrType, JobTypeNum, MachineId, MachineNum = row;
                     JobErrAllNum = JobErrAllNum + int(JobTypeNum)
