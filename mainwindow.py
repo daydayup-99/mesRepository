@@ -21,6 +21,21 @@ def save_headers_config(selected_headers):
         config.write(f)
     return True
 
+def save_true_point_filters(filter_types):
+    if 'export' not in config:
+        config.add_section('export')
+    config['export']['true_point_types'] = ','.join(filter_types)
+    with open(config_path, 'w') as f:
+        config.write(f)
+    return True
+
+def load_true_point_filters():
+    if 'export' in config and 'true_point_types' in config['export']:
+        types_str = config['export']['true_point_types']
+        if types_str:
+            return types_str.split(',')
+    return []
+
 def load_headers_config():
     if 'export' in config and 'selected_headers' in config['export']:
         headers_str = config['export']['selected_headers']
@@ -221,6 +236,87 @@ def show_headers_config(icon=None, item=None):
                         relief="flat")
     save_btn.pack(side="right")
 
+
+def show_true_point_filters(icon=None, item=None):
+    window.deiconify()
+
+    filter_window = tk.Toplevel(window)
+    filter_window.title("过滤真点类型配置")
+    filter_window.geometry("450x500")
+    filter_window.configure(bg=BG_COLOR)
+    filter_window.transient(window)
+
+    title_frame = tk.Frame(filter_window, bg=BG_COLOR, pady=10)
+    title_frame.pack(fill="x")
+
+    title_label = tk.Label(title_frame,
+                           text="配置过滤真点类型",
+                           font=("Arial", 16, "bold"),
+                           bg=BG_COLOR,
+                           fg=PRIMARY_COLOR)
+    title_label.pack()
+
+    desc_label = tk.Label(title_frame,
+                          text="输入要过滤的真点类型名称（每行一个）",
+                          font=("Arial", 10),
+                          bg=BG_COLOR)
+    desc_label.pack(pady=(5, 0))
+
+    # 创建文本框
+    content_frame = tk.Frame(filter_window, bg=BG_COLOR)
+    content_frame.pack(fill="both", expand=True, padx=20, pady=10)
+
+    text_box = tk.Text(content_frame, height=15, width=40, font=("Arial", 10))
+    text_box.pack(fill="both", expand=True)
+
+    # 加载现有配置
+    current_filters = load_true_point_filters()
+    if current_filters:
+        text_box.insert("1.0", "\n".join(current_filters))
+
+    # 底部按钮
+    bottom_frame = tk.Frame(filter_window, bg=BG_COLOR, pady=15)
+    bottom_frame.pack(fill="x", padx=20)
+
+    def save_filters():
+        text_content = text_box.get("1.0", "end-1c")
+        filter_types = [line.strip() for line in text_content.split('\n') if line.strip()]
+        if save_true_point_filters(filter_types):
+            messagebox.showinfo("成功", "真点类型过滤配置已保存")
+            status_label.config(text="正在重启...")
+            filter_window.destroy()
+            window.after(500, restart_application)
+
+    cancel_btn = tk.Button(bottom_frame,
+                           text="取消",
+                           command=filter_window.destroy,
+                           bg="#e0e0e0",
+                           font=("Arial", 10),
+                           padx=15,
+                           relief="flat")
+    cancel_btn.pack(side="right", padx=(5, 0))
+    save_btn = tk.Button(bottom_frame,
+                         text="保存",
+                         command=save_filters,
+                         bg=PRIMARY_COLOR,
+                         fg="white",
+                         font=("Arial", 10, "bold"),
+                         padx=15,
+                         relief="flat")
+    save_btn.pack(side="right")
+
+
+filter_btn = tk.Button(window,
+                       text="配置过滤真点类型",
+                       command=show_true_point_filters,
+                       bg=PRIMARY_COLOR,
+                       fg="white",
+                       font=("Arial", 12, "bold"),
+                       padx=15,
+                       pady=5,
+                       relief="flat")
+canvas.create_window(250, 280, window=filter_btn)
+
 export_btn = tk.Button(window,
                       text="配置导出表头", 
                       command=show_headers_config,
@@ -262,6 +358,7 @@ def minimize_to_tray():
     menu_items = [
         MenuItem("显示窗口", on_show_window),
         MenuItem("配置导出表头", show_headers_config),
+        MenuItem("配置过滤真点类型", show_true_point_filters),
         MenuItem("退出", on_closing)
     ]
     icon_instance = Icon("test", create_image(), menu=Menu(*menu_items))

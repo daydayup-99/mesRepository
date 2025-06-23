@@ -46,6 +46,11 @@ if maxTrueNum < 0:
 if t_ratio == 0.0:
     t_ratio = 0.3
 
+true_point_filters = []
+if 'export' in config and 'true_point_types' in config['export']:
+    types_str = config['export']['true_point_types']
+    if types_str:
+        true_point_filters = types_str.split(',')
 # DATABASE_URL = "mysql+pymysql://root:YMZ123@127.0.0.1/avi?charset=utf8"
 DATABASE_URL = f"mysql+pymysql://{user}:{password}@{host}:{port}/{dbname}?charset={charset}"
 print("Database URL:", DATABASE_URL)
