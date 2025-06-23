@@ -348,7 +348,6 @@ def getAllErrRateSql(start_date, end_date, machinecode):
                     JobErrAllNum = JobErrAllNum + int(row[0])
                 for row in result:
                     JobErrType, JobTypeNum, MachineId, MachineNum = row;
-                    JobErrAllNum = JobErrAllNum + int(JobTypeNum)
                     if JobErrType not in JobTypeCounts:
                         JobTypeCounts[JobErrType] = {
                             'total': JobTypeNum,
