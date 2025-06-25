@@ -948,8 +948,8 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
     placeholders = ', '.join([f"'{code}'" for code in machinecode])
     if true_point_filters:
         filter_conditions ='AND ' + ' OR '.join([f"ai_err_type = '{err_type}'" for err_type in true_point_filters])
-    # current_dir = os.path.dirname(sys.executable)
-    current_dir = os.path.dirname(os.path.realpath(__file__))
+    current_dir = os.path.dirname(sys.executable)
+    # current_dir = os.path.dirname(os.path.realpath(__file__))
     current_dir = os.path.join(current_dir, 'csvdata')
     print("当前文件的目录路径:", current_dir)
     if not os.path.exists(current_dir):
@@ -1345,8 +1345,8 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
     placeholders = ', '.join([f"'{code}'" for code in machinecode])
     if true_point_filters:
         filter_conditions ='AND ' + ' OR '.join([f"ai_err_type = '{err_type}'" for err_type in true_point_filters])
-    # current_dir = os.path.dirname(sys.executable)
-    current_dir = os.path.dirname(os.path.realpath(__file__))
+    current_dir = os.path.dirname(sys.executable)
+    # current_dir = os.path.dirname(os.path.realpath(__file__))
     current_dir = os.path.join(current_dir, 'csvdata')
     print("当前文件的目录路径:", current_dir)
     if not os.path.exists(current_dir):
