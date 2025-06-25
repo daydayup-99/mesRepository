@@ -918,11 +918,14 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
 
     current_date = start_date
     dates_to_query = []
+    err_tables = []
     while current_date <= end_date:
         tabledate = current_date.strftime('%Y%m%d')[0:]
         table_name = f"tab_test_{tabledate}"
+        err_table_name = f"tab_err_{tabledate}"
         if table_name in table_names:
             dates_to_query.append((current_date, table_name))
+            err_tables.append(err_table_name)
         current_date += timedelta(days=1)
     if not dates_to_query:
         print(f"没有可查询的表，时间范围: {start_date} 到 {end_date}")
@@ -937,7 +940,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
         fieldnames = ['日期', '料号', '批量号', '假点过滤率', '总点过滤率', 'AI漏失总数', '漏失率',
                            '总板数', 'AI跑板数', 'AVI缺陷总数', 'AVI缺陷总数T', 'AVI缺陷总数B', 'AVI真点总数', 'AVI真点总数T', 'AVI真点总数B',
                            'AI真点总数', 'AI真点总数T', 'AI真点总数B', 'AI假点总数', 'AI假点总数T', 'AI假点总数B', '平均报点', '平均报点T', '平均报点B', '平均AI报点', '平均AI报点T',
-                           '平均AI报点B', 'OK板总数', 'AI_OK板总数', 'OK板比例', 'AI_OK板比例', '膜面', '机台号']
+                           '平均AI报点B', 'OK板总数', 'AI_OK板总数', 'OK板比例', 'AI_OK板比例', '膜面', '机台号', '工单编号', '生产型号', '批次号']
     if len(machinecode) > 1:
         machinecodename = "多机台"
     else:
@@ -947,6 +950,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
         filter_conditions = ' OR '.join([f"ai_err_type = '{err_type}'" for err_type in true_point_filters])
     current_dir = os.path.dirname(sys.executable)
     # current_dir = os.path.dirname(os.path.realpath(__file__))
+        filter_conditions ='AND ' + ' OR '.join([f"ai_err_type = '{err_type}'" for err_type in true_point_filters])
     current_dir = os.path.join(current_dir, 'csvdata')
     print("当前文件的目录路径:", current_dir)
     if not os.path.exists(current_dir):
@@ -966,75 +970,160 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
             wb.create_sheet(title="All")
 
         result = []
+        loop_index = 0
         for date, table_name in dates_to_query:
-            sql_query = text(f"""
-                WITH board_info AS(
-                    SELECT test_machine_code, default_1, job_name, plno, pcbno, surface,default_7,default_8,default_9,
-                           SUM(errnum) AS err_num_sum,
-                           SUM(CASE WHEN is_top = 1 THEN errnum ELSE 0 END) AS err_num_sum_T,
-                           SUM(CASE WHEN is_top = 0 THEN errnum ELSE 0 END) AS err_num_sum_B,
-                           SUM(true_num) AS avi_true_num_sum,
-                           SUM(CASE WHEN true_num >= 0 AND is_top = 1 THEN true_num ELSE 0 END) AS avi_true_num_sum_T,
-                           SUM(CASE WHEN true_num >= 0 AND is_top = 0 THEN true_num ELSE 0 END) AS avi_true_num_sum_B,
-                           SUM(CASE WHEN ai_true_num >= 0 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum,
-                           SUM(CASE WHEN ai_true_num >= 0 AND is_top = 1 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum_T,
-                           SUM(CASE WHEN ai_true_num >= 0 AND is_top = 0 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum_B,
-                           SUM(ai_missing_num) AS ai_missing_num_sum,
-                           MAX(CASE WHEN ai_true_num >= 0 THEN 1 ELSE 0 END) AS has_ai
-                    FROM {table_name}
-                    WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
-                    AND test_machine_code in ({placeholders})
-                    GROUP BY default_1, job_name, plno, pcbno, surface, test_machine_code,default_7,default_8,default_9
-                ), main_result AS (
-                    SELECT 
-                           default_1 AS 日期,
-                           job_name AS 料号,
-                           plno AS 批量号,
-                           COUNT(*) AS 总板数,
-                           SUM(has_ai) AS AI跑板数,
-                           SUM(CASE WHEN err_num_sum_T = 0 AND err_num_sum_B = 0 THEN 1 ELSE 0 END) AS OK板总数,
-                           ROUND(CAST(SUM(CASE WHEN err_num_sum_T = 0 AND err_num_sum_B = 0 THEN 1 ELSE 0 END) AS REAL) /
-                                 CAST(COUNT(*) AS REAL) * 100, 2) AS OK板比例,
-                           SUM(CASE WHEN ai_true_num_sum_T = 0 AND ai_true_num_sum_B = 0 AND has_ai THEN 1 ELSE 0 END) AS AI_OK板总数,
-                           ROUND(CASE WHEN SUM(has_ai) > 0 THEN
-                                         CAST(SUM(CASE WHEN ai_true_num_sum_T = 0 AND ai_true_num_sum_B = 0 AND has_ai THEN 1 ELSE 0 END) AS REAL) /
-                                         CAST(SUM(has_ai) AS REAL) * 100
-                                       ELSE 0 END, 2) AS AI_OK板比例,
-                           SUM(CASE WHEN ai_missing_num_sum > 0 AND has_ai THEN 1 ELSE 0 END) AS 漏失板数,
-                           ROUND(CASE WHEN SUM(has_ai) > 0 THEN
-                                         CAST(SUM(CASE WHEN ai_missing_num_sum > 0 THEN 1 ELSE 0 END) AS REAL) /
-                                         CAST(SUM(has_ai) AS REAL) * 100
-                                       ELSE 0 END, 4) AS 漏失板比例,
-                           SUM(err_num_sum) AS AVI缺陷总数,
-                           SUM(err_num_sum_T) AS AVI缺陷总数T,
-                           SUM(err_num_sum_B) AS AVI缺陷总数B,
-                           SUM(avi_true_num_sum) AS AVI真点总数,
-                           SUM(avi_true_num_sum_T) AS AVI真点总数T,
-                           SUM(avi_true_num_sum_B) AS AVI真点总数B,
-                           SUM(ai_true_num_sum) AS AI真点总数,
-                           SUM(CASE WHEN has_ai THEN ai_missing_num_sum ELSE 0 END) AS AI漏失总数,
-                           ROUND(CAST(SUM(err_num_sum) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点,
-                           ROUND(CAST(SUM(err_num_sum_T) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点T,
-                           ROUND(CAST(SUM(err_num_sum_B) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点B,
-                           ROUND(CAST(SUM(ai_true_num_sum) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均AI报点,
-                           ROUND(CAST(SUM(ai_true_num_sum_T) AS REAL) /CAST(COUNT(*) AS REAL), 2)  AS 平均AI报点T,
-                           ROUND(CAST(SUM(ai_true_num_sum_B) AS REAL) / CAST(COUNT(*) AS REAL), 2)  AS 平均AI报点B,
-                           surface AS 膜面,
-                           test_machine_code AS 机台号,
-                           SUM(ai_true_num_sum_T) AS AI真点总数T,
-                           SUM(ai_true_num_sum_B) AS AI真点总数B,
-                           default_7 AS 工单编号,
-                           default_8 AS 生产型号,
-                           default_9 AS 批次号
-                    FROM board_info
-                    WHERE err_num_sum < 2000
-                    GROUP BY default_1, job_name, plno, surface, test_machine_code,default_7,default_8,default_9
-                )
-                SELECT *, AVI缺陷总数-AI真点总数 as AI假点总数, AVI缺陷总数T-AI真点总数T as AI假点总数T, AVI缺陷总数B-AI真点总数B as AI假点总数B
-                FROM main_result
-                WHERE 总板数 > {smallBatch}
-                AND AI真点总数 < {maxTrueNum}
-                """)
+            if true_point_filters:
+                err_table_name = err_tables[loop_index]
+                sql_query = text(f"""
+                    WITH delete_num AS(
+                        select default_1,default_2,SUM(is_ai) as specify_ai_true_num_sum,					 
+                                     SUM(CASE WHEN is_ai = 1 AND is_top = 1 THEN is_ai ELSE 0 END) AS specify_ai_true_num_sum_T,
+                                     SUM(CASE WHEN is_ai = 1 AND is_top = 0 THEN is_ai ELSE 0 END) AS specify_ai_true_num_sum_B
+                        FROM {err_table_name}
+                        WHERE is_ai = 1
+                        {filter_conditions}
+                        AND default_4 in ({placeholders})
+                        GROUP BY default_1,default_2
+                    ),board_info AS(
+                        SELECT test_machine_code, default_1, job_name, plno, pcbno, surface,default_7,default_8,default_9,
+                               SUM(errnum) AS err_num_sum,
+                               SUM(CASE WHEN is_top = 1 THEN errnum ELSE 0 END) AS err_num_sum_T,
+                               SUM(CASE WHEN is_top = 0 THEN errnum ELSE 0 END) AS err_num_sum_B,
+                               SUM(true_num) AS avi_true_num_sum,
+                               SUM(CASE WHEN true_num >= 0 AND is_top = 1 THEN true_num ELSE 0 END) AS avi_true_num_sum_T,
+                               SUM(CASE WHEN true_num >= 0 AND is_top = 0 THEN true_num ELSE 0 END) AS avi_true_num_sum_B,
+                               SUM(CASE WHEN ai_true_num >= 0 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum,
+                               SUM(CASE WHEN ai_true_num >= 0 AND is_top = 1 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum_T,
+                               SUM(CASE WHEN ai_true_num >= 0 AND is_top = 0 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum_B,
+                               SUM(ai_missing_num) AS ai_missing_num_sum,
+                               MAX(CASE WHEN ai_true_num >= 0 THEN 1 ELSE 0 END) AS has_ai
+                        FROM {table_name}
+                        WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
+                        AND test_machine_code in ({placeholders})
+                        GROUP BY default_1, job_name, plno, pcbno, surface, test_machine_code,default_7,default_8,default_9
+                    ), main_result AS (
+                        SELECT 
+                               a.default_1 AS 日期,
+                               job_name AS 料号,
+                               plno AS 批量号,
+                               COUNT(*) AS 总板数,
+                               SUM(has_ai) AS AI跑板数,
+                               SUM(CASE WHEN err_num_sum_T = 0 AND err_num_sum_B = 0 THEN 1 ELSE 0 END) AS OK板总数,
+                               ROUND(CAST(SUM(CASE WHEN err_num_sum_T = 0 AND err_num_sum_B = 0 THEN 1 ELSE 0 END) AS REAL) /
+                                     CAST(COUNT(*) AS REAL) * 100, 2) AS OK板比例,
+                               SUM(CASE WHEN ai_true_num_sum_T = 0 AND ai_true_num_sum_B = 0 AND has_ai THEN 1 ELSE 0 END) AS AI_OK板总数,
+                               ROUND(CASE WHEN SUM(has_ai) > 0 THEN
+                                             CAST(SUM(CASE WHEN ai_true_num_sum_T = 0 AND ai_true_num_sum_B = 0 AND has_ai THEN 1 ELSE 0 END) AS REAL) /
+                                             CAST(SUM(has_ai) AS REAL) * 100
+                                           ELSE 0 END, 2) AS AI_OK板比例,
+                               SUM(CASE WHEN ai_missing_num_sum > 0 AND has_ai THEN 1 ELSE 0 END) AS 漏失板数,
+                               ROUND(CASE WHEN SUM(has_ai) > 0 THEN
+                                             CAST(SUM(CASE WHEN ai_missing_num_sum > 0 THEN 1 ELSE 0 END) AS REAL) /
+                                             CAST(SUM(has_ai) AS REAL) * 100
+                                           ELSE 0 END, 4) AS 漏失板比例,
+                               SUM(err_num_sum)-specify_ai_true_num_sum AS AVI缺陷总数,
+                               SUM(err_num_sum_T)-specify_ai_true_num_sum_T AS AVI缺陷总数T,
+                               SUM(err_num_sum_B)-specify_ai_true_num_sum_B AS AVI缺陷总数B,
+                               SUM(avi_true_num_sum) AS AVI真点总数,
+                               SUM(avi_true_num_sum_T) AS AVI真点总数T,
+                               SUM(avi_true_num_sum_B) AS AVI真点总数B,
+                               SUM(ai_true_num_sum)-specify_ai_true_num_sum AS AI真点总数,
+                               SUM(CASE WHEN has_ai THEN ai_missing_num_sum ELSE 0 END) AS AI漏失总数,
+                               ROUND(CAST(SUM(err_num_sum)-specify_ai_true_num_sum AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点,
+                               ROUND(CAST(SUM(err_num_sum_T)-specify_ai_true_num_sum_T AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点T,
+                               ROUND(CAST(SUM(err_num_sum_B)-specify_ai_true_num_sum_B AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点B,
+                               ROUND(CAST(SUM(ai_true_num_sum)-specify_ai_true_num_sum AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均AI报点,
+                               ROUND(CAST(SUM(ai_true_num_sum_T)-specify_ai_true_num_sum_T AS REAL) /CAST(COUNT(*) AS REAL), 2)  AS 平均AI报点T,
+                               ROUND(CAST(SUM(ai_true_num_sum_B)-specify_ai_true_num_sum_B AS REAL) / CAST(COUNT(*) AS REAL), 2)  AS 平均AI报点B,
+                               surface AS 膜面,
+                               test_machine_code AS 机台号,
+                               SUM(ai_true_num_sum_T)-specify_ai_true_num_sum_T AS AI真点总数T,
+                               SUM(ai_true_num_sum_B)-specify_ai_true_num_sum_B AS AI真点总数B,
+                               default_7 AS 工单编号,
+                               default_8 AS 生产型号,
+                               default_9 AS 批次号
+                        FROM board_info a
+                        LEFT JOIN delete_num b
+                        ON a.job_name = b.default_1
+                        AND a.plno = b.default_2
+                        WHERE err_num_sum < 2000
+                        GROUP BY a.default_1, a.job_name, a.plno, a.surface, a.test_machine_code,a.default_7,a.default_8,a.default_9,specify_ai_true_num_sum,specify_ai_true_num_sum_T,specify_ai_true_num_sum_B
+                    )
+                    SELECT *, AVI缺陷总数-AI真点总数 as AI假点总数, AVI缺陷总数T-AI真点总数T as AI假点总数T, AVI缺陷总数B-AI真点总数B as AI假点总数B
+                    FROM main_result
+                    WHERE 总板数 > {smallBatch}
+                    AND AI真点总数 < {maxTrueNum}
+                    """)
+                loop_index += 1
+            else:
+                sql_query = text(f"""
+                    WITH board_info AS(
+                        SELECT test_machine_code, default_1, job_name, plno, pcbno, surface,default_7,default_8,default_9,
+                               SUM(errnum) AS err_num_sum,
+                               SUM(CASE WHEN is_top = 1 THEN errnum ELSE 0 END) AS err_num_sum_T,
+                               SUM(CASE WHEN is_top = 0 THEN errnum ELSE 0 END) AS err_num_sum_B,
+                               SUM(true_num) AS avi_true_num_sum,
+                               SUM(CASE WHEN true_num >= 0 AND is_top = 1 THEN true_num ELSE 0 END) AS avi_true_num_sum_T,
+                               SUM(CASE WHEN true_num >= 0 AND is_top = 0 THEN true_num ELSE 0 END) AS avi_true_num_sum_B,
+                               SUM(CASE WHEN ai_true_num >= 0 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum,
+                               SUM(CASE WHEN ai_true_num >= 0 AND is_top = 1 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum_T,
+                               SUM(CASE WHEN ai_true_num >= 0 AND is_top = 0 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum_B,
+                               SUM(ai_missing_num) AS ai_missing_num_sum,
+                               MAX(CASE WHEN ai_true_num >= 0 THEN 1 ELSE 0 END) AS has_ai
+                        FROM {table_name}
+                        WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
+                        AND test_machine_code in ({placeholders})
+                        GROUP BY default_1, job_name, plno, pcbno, surface, test_machine_code,default_7,default_8,default_9
+                    ), main_result AS (
+                        SELECT 
+                               default_1 AS 日期,
+                               job_name AS 料号,
+                               plno AS 批量号,
+                               COUNT(*) AS 总板数,
+                               SUM(has_ai) AS AI跑板数,
+                               SUM(CASE WHEN err_num_sum_T = 0 AND err_num_sum_B = 0 THEN 1 ELSE 0 END) AS OK板总数,
+                               ROUND(CAST(SUM(CASE WHEN err_num_sum_T = 0 AND err_num_sum_B = 0 THEN 1 ELSE 0 END) AS REAL) /
+                                     CAST(COUNT(*) AS REAL) * 100, 2) AS OK板比例,
+                               SUM(CASE WHEN ai_true_num_sum_T = 0 AND ai_true_num_sum_B = 0 AND has_ai THEN 1 ELSE 0 END) AS AI_OK板总数,
+                               ROUND(CASE WHEN SUM(has_ai) > 0 THEN
+                                             CAST(SUM(CASE WHEN ai_true_num_sum_T = 0 AND ai_true_num_sum_B = 0 AND has_ai THEN 1 ELSE 0 END) AS REAL) /
+                                             CAST(SUM(has_ai) AS REAL) * 100
+                                           ELSE 0 END, 2) AS AI_OK板比例,
+                               SUM(CASE WHEN ai_missing_num_sum > 0 AND has_ai THEN 1 ELSE 0 END) AS 漏失板数,
+                               ROUND(CASE WHEN SUM(has_ai) > 0 THEN
+                                             CAST(SUM(CASE WHEN ai_missing_num_sum > 0 THEN 1 ELSE 0 END) AS REAL) /
+                                             CAST(SUM(has_ai) AS REAL) * 100
+                                           ELSE 0 END, 4) AS 漏失板比例,
+                               SUM(err_num_sum) AS AVI缺陷总数,
+                               SUM(err_num_sum_T) AS AVI缺陷总数T,
+                               SUM(err_num_sum_B) AS AVI缺陷总数B,
+                               SUM(avi_true_num_sum) AS AVI真点总数,
+                               SUM(avi_true_num_sum_T) AS AVI真点总数T,
+                               SUM(avi_true_num_sum_B) AS AVI真点总数B,
+                               SUM(ai_true_num_sum) AS AI真点总数,
+                               SUM(CASE WHEN has_ai THEN ai_missing_num_sum ELSE 0 END) AS AI漏失总数,
+                               ROUND(CAST(SUM(err_num_sum) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点,
+                               ROUND(CAST(SUM(err_num_sum_T) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点T,
+                               ROUND(CAST(SUM(err_num_sum_B) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点B,
+                               ROUND(CAST(SUM(ai_true_num_sum) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均AI报点,
+                               ROUND(CAST(SUM(ai_true_num_sum_T) AS REAL) /CAST(COUNT(*) AS REAL), 2)  AS 平均AI报点T,
+                               ROUND(CAST(SUM(ai_true_num_sum_B) AS REAL) / CAST(COUNT(*) AS REAL), 2)  AS 平均AI报点B,
+                               surface AS 膜面,
+                               test_machine_code AS 机台号,
+                               SUM(ai_true_num_sum_T) AS AI真点总数T,
+                               SUM(ai_true_num_sum_B) AS AI真点总数B,
+                               default_7 AS 工单编号,
+                               default_8 AS 生产型号,
+                               default_9 AS 批次号
+                        FROM board_info
+                        WHERE err_num_sum < 2000
+                        GROUP BY default_1, job_name, plno, surface, test_machine_code,default_7,default_8,default_9
+                    )
+                    SELECT *, AVI缺陷总数-AI真点总数 as AI假点总数, AVI缺陷总数T-AI真点总数T as AI假点总数T, AVI缺陷总数B-AI真点总数B as AI假点总数B
+                    FROM main_result
+                    WHERE 总板数 > {smallBatch}
+                    AND AI真点总数 < {maxTrueNum}
+                    """)
             try:
                 resulttmp = session.execute(sql_query).fetchall()
                 for i in resulttmp:
@@ -1227,11 +1316,14 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
     end_datetime_str = f"{end_date} {end_time_hour}"
     current_date = start_date
     dates_to_query = []
+    err_tables = []
     while current_date <= end_date:
         tabledate = current_date.strftime('%Y%m%d')[0:]
         table_name = f"tab_test_{tabledate}"
+        err_table_name = f"tab_err_{tabledate}"
         if table_name in table_names:
             dates_to_query.append(table_name)
+            err_tables.append(err_table_name)
         current_date += timedelta(days=1)
     if not dates_to_query:
         print(f"没有可查询的表，时间范围: {start_date} 到 {end_date}")
@@ -1246,7 +1338,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
         fieldnames = ['日期', '料号', '假点过滤率', '总点过滤率', 'AI漏失总数', '漏失率',
                           '总板数', 'AI跑板数', 'AVI缺陷总数', 'AVI缺陷总数T', 'AVI缺陷总数B', 'AVI真点总数', 'AVI真点总数T', 'AVI真点总数B',
                           'AI真点总数', 'AI真点总数T', 'AI真点总数B', 'AI假点总数', 'AI假点总数T', 'AI假点总数B', '平均报点', '平均报点T', '平均报点B', '平均AI报点', '平均AI报点T',
-                          '平均AI报点B', 'OK板总数', 'AI_OK板总数', 'OK板比例', 'AI_OK板比例', '膜面', '机台号']
+                          '平均AI报点B', 'OK板总数', 'AI_OK板总数', 'OK板比例', 'AI_OK板比例', '膜面', '机台号', '工单编号', '生产型号', '批次号']
     if len(machinecode) > 1:
         machinecodename = "多机台"
     else:
@@ -1255,6 +1347,8 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
 
     current_dir = os.path.dirname(sys.executable)
     # current_dir = os.path.dirname(os.path.realpath(__file__))
+    if true_point_filters:
+        filter_conditions ='AND ' + ' OR '.join([f"ai_err_type = '{err_type}'" for err_type in true_point_filters])
     current_dir = os.path.join(current_dir, 'csvdata')
     print("当前文件的目录路径:", current_dir)
     if not os.path.exists(current_dir):
@@ -1273,73 +1367,155 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
         if not wb.sheetnames:
             wb.create_sheet(title="All")
         result = []
+        loop_index = 0
         for table_name in dates_to_query:
-            sql_query = text(f"""
-               WITH board_info AS(
-                    SELECT test_machine_code,default_1, job_name,plno, pcbno, surface,default_7,default_8,default_9,
-                           SUM(errnum) AS err_num_sum,
-                           SUM(CASE WHEN is_top = 1 THEN errnum ELSE 0 END) AS err_num_sum_T,
-                           SUM(CASE WHEN is_top = 0 THEN errnum ELSE 0 END) AS err_num_sum_B,
-                           SUM(true_num) AS avi_true_num_sum,
-                           SUM(CASE WHEN true_num >= 0 AND is_top = 1 THEN true_num ELSE 0 END) AS avi_true_num_sum_T,
-                           SUM(CASE WHEN true_num >= 0 AND is_top = 0 THEN true_num ELSE 0 END) AS avi_true_num_sum_B,
-                           SUM(CASE WHEN ai_true_num >= 0 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum,
-                           SUM(CASE WHEN ai_true_num >= 0 AND is_top = 1 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum_T,
-                           SUM(CASE WHEN ai_true_num >= 0 AND is_top = 0 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum_B,
-                           SUM(ai_missing_num) AS ai_missing_num_sum,
-                           MAX(CASE WHEN ai_true_num > 0 THEN 1 ELSE 0 END) AS has_ai
-                    FROM {table_name}
-                    WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
-                    AND test_machine_code in ({placeholders})
-                    GROUP BY default_1, job_name,plno,pcbno, surface, test_machine_code,default_7,default_8,default_9
-                ), main_result AS (
-                    SELECT default_1 AS 日期,
-                           job_name AS 料号,
-                           COUNT(*) AS 总板数,
-                           SUM(has_ai) AS AI跑板数,
-                           SUM(CASE WHEN err_num_sum_T = 0 AND err_num_sum_B = 0 THEN 1 ELSE 0 END) AS OK板总数,
-                           ROUND(CAST(SUM(CASE WHEN err_num_sum_T = 0 AND err_num_sum_B = 0 THEN 1 ELSE 0 END) AS REAL) /
-                                 CAST(COUNT(*) AS REAL) * 100, 2) AS OK板比例,
-                           SUM(CASE WHEN ai_true_num_sum_T = 0 AND ai_true_num_sum_B = 0 AND has_ai THEN 1 ELSE 0 END) AS AI_OK板总数,
-                           ROUND(CASE WHEN SUM(has_ai) > 0 THEN
-                                         CAST(SUM(CASE WHEN ai_true_num_sum_T = 0 AND ai_true_num_sum_B = 0 AND has_ai THEN 1 ELSE 0 END) AS REAL) /
-                                         CAST(SUM(has_ai) AS REAL) * 100
-                                       ELSE 0 END, 2) AS AI_OK板比例,
-                           SUM(CASE WHEN ai_missing_num_sum > 0 AND has_ai THEN 1 ELSE 0 END) AS 漏失板数,
-                           ROUND(CASE WHEN SUM(has_ai) > 0 THEN
-                                         CAST(SUM(CASE WHEN ai_missing_num_sum > 0 THEN 1 ELSE 0 END) AS REAL) /
-                                         CAST(SUM(has_ai) AS REAL) * 100
-                                       ELSE 0 END, 4) AS 漏失板比例,
-                           SUM(err_num_sum) AS AVI缺陷总数,
-                           SUM(err_num_sum_T) AS AVI缺陷总数T,
-                           SUM(err_num_sum_B) AS AVI缺陷总数B,
-                           SUM(avi_true_num_sum) AS AVI真点总数,
-                           SUM(avi_true_num_sum_T) AS AVI真点总数T,
-                           SUM(avi_true_num_sum_B) AS AVI真点总数B,
-                           SUM(ai_true_num_sum) AS AI真点总数,
-                           SUM(CASE WHEN has_ai THEN ai_missing_num_sum ELSE 0 END) AS AI漏失总数,
-                           ROUND(CAST(SUM(err_num_sum) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点,
-                           ROUND(CAST(SUM(err_num_sum_T) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点T,
-                           ROUND(CAST(SUM(err_num_sum_B) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点B,
-                           ROUND(CAST(SUM(ai_true_num_sum) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均AI报点,
-                           ROUND(CAST(SUM(ai_true_num_sum_T) AS REAL) /CAST(COUNT(*) AS REAL), 2)  AS 平均AI报点T,
-                           ROUND(CAST(SUM(ai_true_num_sum_B) AS REAL) / CAST(COUNT(*) AS REAL), 2)  AS 平均AI报点B,
-                           surface AS 膜面,
-                           test_machine_code AS 机台号,
-                           SUM(ai_true_num_sum_T) AS AI真点总数T,
-                           SUM(ai_true_num_sum_B) AS AI真点总数B,
-                           default_7 AS 工单编号,
-                           default_8 AS 生产型号,
-                           default_9 AS 批次号
-                    FROM board_info
-                    WHERE err_num_sum < 2000
-                    GROUP BY default_1, job_name, surface, test_machine_code,default_7,default_8,default_9
-                )
-                SELECT *, AVI缺陷总数-AI真点总数 as AI假点总数, AVI缺陷总数T-AI真点总数T as AI假点总数T, AVI缺陷总数B-AI真点总数B as AI假点总数B 
-                FROM main_result
-                WHERE 总板数 > {smallBatch}
-                AND AI真点总数 < {maxTrueNum}
-                """)
+            if true_point_filters:
+                err_table_name = err_tables[loop_index]
+                sql_query = text(f""" 
+                    WITH delete_num AS(
+                        select default_1,SUM(is_ai) as specify_ai_true_num_sum,					 
+                                SUM(CASE WHEN is_ai = 1 AND is_top = 1 THEN is_ai ELSE 0 END) AS specify_ai_true_num_sum_T,
+                                SUM(CASE WHEN is_ai = 1 AND is_top = 0 THEN is_ai ELSE 0 END) AS specify_ai_true_num_sum_B
+                        FROM {err_table_name}
+                        WHERE is_ai = 1
+                        {filter_conditions}
+                        AND default_4 in ({placeholders})
+                        GROUP BY default_1,default_2
+                    ),board_info AS(
+                            SELECT test_machine_code,default_1, job_name,plno, pcbno, surface,default_7,default_8,default_9,
+                                SUM(errnum) AS err_num_sum,
+                                SUM(CASE WHEN is_top = 1 THEN errnum ELSE 0 END) AS err_num_sum_T,
+                                SUM(CASE WHEN is_top = 0 THEN errnum ELSE 0 END) AS err_num_sum_B,
+                                SUM(true_num) AS avi_true_num_sum,
+                                SUM(CASE WHEN true_num >= 0 AND is_top = 1 THEN true_num ELSE 0 END) AS avi_true_num_sum_T,
+                                SUM(CASE WHEN true_num >= 0 AND is_top = 0 THEN true_num ELSE 0 END) AS avi_true_num_sum_B,
+                                SUM(CASE WHEN ai_true_num >= 0 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum,
+                                SUM(CASE WHEN ai_true_num >= 0 AND is_top = 1 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum_T,
+                                SUM(CASE WHEN ai_true_num >= 0 AND is_top = 0 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum_B,
+                                SUM(ai_missing_num) AS ai_missing_num_sum,
+                                MAX(CASE WHEN ai_true_num > 0 THEN 1 ELSE 0 END) AS has_ai
+                            FROM {table_name}
+                            WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
+                            AND test_machine_code in ({placeholders})
+                            GROUP BY default_1, job_name,plno,pcbno, surface, test_machine_code,default_7,default_8,default_9
+                        ), main_result AS (
+                            SELECT a.default_1 AS 日期,
+                                job_name AS 料号,
+                                COUNT(*) AS 总板数,
+                                SUM(has_ai) AS AI跑板数,
+                                SUM(CASE WHEN err_num_sum_T = 0 AND err_num_sum_B = 0 THEN 1 ELSE 0 END) AS OK板总数,
+                                ROUND(CAST(SUM(CASE WHEN err_num_sum_T = 0 AND err_num_sum_B = 0 THEN 1 ELSE 0 END) AS REAL) /
+                                        CAST(COUNT(*) AS REAL) * 100, 2) AS OK板比例,
+                                SUM(CASE WHEN ai_true_num_sum_T = 0 AND ai_true_num_sum_B = 0 AND has_ai THEN 1 ELSE 0 END) AS AI_OK板总数,
+                                ROUND(CASE WHEN SUM(has_ai) > 0 THEN
+                                                CAST(SUM(CASE WHEN ai_true_num_sum_T = 0 AND ai_true_num_sum_B = 0 AND has_ai THEN 1 ELSE 0 END) AS REAL) /
+                                                CAST(SUM(has_ai) AS REAL) * 100
+                                            ELSE 0 END, 2) AS AI_OK板比例,
+                                SUM(CASE WHEN ai_missing_num_sum > 0 AND has_ai THEN 1 ELSE 0 END) AS 漏失板数,
+                                ROUND(CASE WHEN SUM(has_ai) > 0 THEN
+                                                CAST(SUM(CASE WHEN ai_missing_num_sum > 0 THEN 1 ELSE 0 END) AS REAL) /
+                                                CAST(SUM(has_ai) AS REAL) * 100
+                                            ELSE 0 END, 4) AS 漏失板比例,
+                                SUM(err_num_sum)-specify_ai_true_num_sum AS AVI缺陷总数,
+                                SUM(err_num_sum_T)-specify_ai_true_num_sum_T AS AVI缺陷总数T,
+                                SUM(err_num_sum_B)-specify_ai_true_num_sum_B AS AVI缺陷总数B,
+                                SUM(avi_true_num_sum) AS AVI真点总数,
+                                SUM(avi_true_num_sum_T) AS AVI真点总数T,
+                                SUM(avi_true_num_sum_B) AS AVI真点总数B,
+                                SUM(ai_true_num_sum)-specify_ai_true_num_sum AS AI真点总数,
+                                SUM(CASE WHEN has_ai THEN ai_missing_num_sum ELSE 0 END) AS AI漏失总数,
+                                ROUND(CAST(SUM(err_num_sum)-specify_ai_true_num_sum AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点,
+                                ROUND(CAST(SUM(err_num_sum_T)-specify_ai_true_num_sum_T AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点T,
+                                ROUND(CAST(SUM(err_num_sum_B)-specify_ai_true_num_sum_B AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点B,
+                                ROUND(CAST(SUM(ai_true_num_sum)-specify_ai_true_num_sum AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均AI报点,
+                                ROUND(CAST(SUM(ai_true_num_sum_T)-specify_ai_true_num_sum_T AS REAL) /CAST(COUNT(*) AS REAL), 2)  AS 平均AI报点T,
+                                ROUND(CAST(SUM(ai_true_num_sum_B)-specify_ai_true_num_sum_B AS REAL) / CAST(COUNT(*) AS REAL), 2)  AS 平均AI报点B,
+                                surface AS 膜面,
+                                test_machine_code AS 机台号,
+                                SUM(ai_true_num_sum_T)-specify_ai_true_num_sum_T AS AI真点总数T,
+                                SUM(ai_true_num_sum_B)-specify_ai_true_num_sum_B AS AI真点总数B,
+                                default_7 AS 工单编号,
+                                default_8 AS 生产型号,
+                                default_9 AS 批次号
+                            FROM board_info a
+                            LEFT JOIN delete_num b
+                            ON a.job_name = b.default_1
+                            WHERE err_num_sum < 2000
+                            GROUP BY a.default_1, a.job_name, a.surface, a.test_machine_code,a.default_7,a.default_8,a.default_9,specify_ai_true_num_sum,specify_ai_true_num_sum_T,specify_ai_true_num_sum_B
+                        )
+                        SELECT *, AVI缺陷总数-AI真点总数 as AI假点总数, AVI缺陷总数T-AI真点总数T as AI假点总数T, AVI缺陷总数B-AI真点总数B as AI假点总数B 
+                        FROM main_result
+                        WHERE 总板数 > {smallBatch}
+                        AND AI真点总数 < {maxTrueNum}
+                        """)
+                loop_index += 1
+            else:
+                sql_query = text(f"""
+                   WITH board_info AS(
+                        SELECT test_machine_code,default_1, job_name,plno, pcbno, surface,default_7,default_8,default_9,
+                               SUM(errnum) AS err_num_sum,
+                               SUM(CASE WHEN is_top = 1 THEN errnum ELSE 0 END) AS err_num_sum_T,
+                               SUM(CASE WHEN is_top = 0 THEN errnum ELSE 0 END) AS err_num_sum_B,
+                               SUM(true_num) AS avi_true_num_sum,
+                               SUM(CASE WHEN true_num >= 0 AND is_top = 1 THEN true_num ELSE 0 END) AS avi_true_num_sum_T,
+                               SUM(CASE WHEN true_num >= 0 AND is_top = 0 THEN true_num ELSE 0 END) AS avi_true_num_sum_B,
+                               SUM(CASE WHEN ai_true_num >= 0 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum,
+                               SUM(CASE WHEN ai_true_num >= 0 AND is_top = 1 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum_T,
+                               SUM(CASE WHEN ai_true_num >= 0 AND is_top = 0 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum_B,
+                               SUM(ai_missing_num) AS ai_missing_num_sum,
+                               MAX(CASE WHEN ai_true_num > 0 THEN 1 ELSE 0 END) AS has_ai
+                        FROM {table_name}
+                        WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
+                        AND test_machine_code in ({placeholders})
+                        GROUP BY default_1, job_name,plno,pcbno, surface, test_machine_code,default_7,default_8,default_9
+                    ), main_result AS (
+                        SELECT default_1 AS 日期,
+                               job_name AS 料号,
+                               COUNT(*) AS 总板数,
+                               SUM(has_ai) AS AI跑板数,
+                               SUM(CASE WHEN err_num_sum_T = 0 AND err_num_sum_B = 0 THEN 1 ELSE 0 END) AS OK板总数,
+                               ROUND(CAST(SUM(CASE WHEN err_num_sum_T = 0 AND err_num_sum_B = 0 THEN 1 ELSE 0 END) AS REAL) /
+                                     CAST(COUNT(*) AS REAL) * 100, 2) AS OK板比例,
+                               SUM(CASE WHEN ai_true_num_sum_T = 0 AND ai_true_num_sum_B = 0 AND has_ai THEN 1 ELSE 0 END) AS AI_OK板总数,
+                               ROUND(CASE WHEN SUM(has_ai) > 0 THEN
+                                             CAST(SUM(CASE WHEN ai_true_num_sum_T = 0 AND ai_true_num_sum_B = 0 AND has_ai THEN 1 ELSE 0 END) AS REAL) /
+                                             CAST(SUM(has_ai) AS REAL) * 100
+                                           ELSE 0 END, 2) AS AI_OK板比例,
+                               SUM(CASE WHEN ai_missing_num_sum > 0 AND has_ai THEN 1 ELSE 0 END) AS 漏失板数,
+                               ROUND(CASE WHEN SUM(has_ai) > 0 THEN
+                                             CAST(SUM(CASE WHEN ai_missing_num_sum > 0 THEN 1 ELSE 0 END) AS REAL) /
+                                             CAST(SUM(has_ai) AS REAL) * 100
+                                           ELSE 0 END, 4) AS 漏失板比例,
+                               SUM(err_num_sum) AS AVI缺陷总数,
+                               SUM(err_num_sum_T) AS AVI缺陷总数T,
+                               SUM(err_num_sum_B) AS AVI缺陷总数B,
+                               SUM(avi_true_num_sum) AS AVI真点总数,
+                               SUM(avi_true_num_sum_T) AS AVI真点总数T,
+                               SUM(avi_true_num_sum_B) AS AVI真点总数B,
+                               SUM(ai_true_num_sum) AS AI真点总数,
+                               SUM(CASE WHEN has_ai THEN ai_missing_num_sum ELSE 0 END) AS AI漏失总数,
+                               ROUND(CAST(SUM(err_num_sum) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点,
+                               ROUND(CAST(SUM(err_num_sum_T) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点T,
+                               ROUND(CAST(SUM(err_num_sum_B) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均报点B,
+                               ROUND(CAST(SUM(ai_true_num_sum) AS REAL) / CAST(COUNT(*) AS REAL), 2) AS 平均AI报点,
+                               ROUND(CAST(SUM(ai_true_num_sum_T) AS REAL) /CAST(COUNT(*) AS REAL), 2)  AS 平均AI报点T,
+                               ROUND(CAST(SUM(ai_true_num_sum_B) AS REAL) / CAST(COUNT(*) AS REAL), 2)  AS 平均AI报点B,
+                               surface AS 膜面,
+                               test_machine_code AS 机台号,
+                               SUM(ai_true_num_sum_T) AS AI真点总数T,
+                               SUM(ai_true_num_sum_B) AS AI真点总数B,
+                               default_7 AS 工单编号,
+                               default_8 AS 生产型号,
+                               default_9 AS 批次号
+                        FROM board_info
+                        WHERE err_num_sum < 2000
+                        GROUP BY default_1, job_name, surface, test_machine_code,default_7,default_8,default_9
+                    )
+                    SELECT *, AVI缺陷总数-AI真点总数 as AI假点总数, AVI缺陷总数T-AI真点总数T as AI假点总数T, AVI缺陷总数B-AI真点总数B as AI假点总数B 
+                    FROM main_result
+                    WHERE 总板数 > {smallBatch}
+                    AND AI真点总数 < {maxTrueNum}
+                    """)
             try:
                 resulttmp = session.execute(sql_query).fetchall()
                 for i in resulttmp:
