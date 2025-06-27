@@ -1378,7 +1378,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                         WHERE is_ai = 1
                         {filter_conditions}
                         AND default_4 in ({placeholders})
-                        GROUP BY default_1,default_2
+                        GROUP BY default_1
                     ),board_info AS(
                             SELECT test_machine_code,default_1, job_name,plno, pcbno, surface,default_7,default_8,default_9,
                                 SUM(errnum) AS err_num_sum,
