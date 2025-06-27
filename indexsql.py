@@ -1461,7 +1461,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                                SUM(CASE WHEN ai_true_num >= 0 AND is_top = 1 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum_T,
                                SUM(CASE WHEN ai_true_num >= 0 AND is_top = 0 THEN ai_true_num ELSE 0 END) AS ai_true_num_sum_B,
                                SUM(ai_missing_num) AS ai_missing_num_sum,
-                               MAX(CASE WHEN ai_true_num > 0 THEN 1 ELSE 0 END) AS has_ai
+                               MAX(CASE WHEN ai_true_num >= 0 THEN 1 ELSE 0 END) AS has_ai
                         FROM {table_name}
                         WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
                         AND test_machine_code in ({placeholders})
