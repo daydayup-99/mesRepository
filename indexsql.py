@@ -633,18 +633,24 @@ def ReadJobSql(start_date, end_date,start_time_hour,end_time_hour, machinecode):
             fJobMeanAi =0.0
         if results['njoberrnum'] != 0:
             fJobAiPass=float(results['njoberrnum'] - results['njobainum']) / (float(results['njoberrnum']) - float(results['njoberrnum'])* t_ratio)
+            fJobAllPass = float(results['njoberrnum'] - results['njobainum']) / float(results['njoberrnum'])
         else:
             fJobAiPass=0.0
+            fJobAllPass = 0.0
         fJobMeanAll = round(fJobMeanAll, 2)
         fJobMeanAi = round(fJobMeanAi, 2)
         fJobAiPass = round(fJobAiPass*100,2)
+        fJobAllPass = round(fJobAllPass * 100, 2)
         if fJobAiPass > 99:
             fJobAiPass = 99
+        if fJobAllPass > 99:
+            fJobAllPass = 99
         job_data = {
             'jobname': jobname,
             'fJobMeanAll': fJobMeanAll,
             'fJobMeanAi': fJobMeanAi,
-            'fJobAiPass': fJobAiPass
+            'fJobAiPass': fJobAiPass,
+            'fJobAllPass':fJobAllPass
         }
         json_data.append(job_data)
     json_string = json.dumps(json_data)
