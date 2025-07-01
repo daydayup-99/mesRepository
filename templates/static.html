@@ -279,14 +279,16 @@
                     var fJobMeaAllData = [];
                     var fJobMeaAliData = [];
                     var fJobAiPassData = [];
+                    var fJobAllPassData = [];
                     for (var i = 0; i < Data.length; i++) {
                         jobnamedata.push(Data[i].jobname);
                         fJobMeaAllData.push(Data[i].fJobMeanAll);
                         fJobMeaAliData.push(Data[i].fJobMeanAi);
                         fJobAiPassData.push(Data[i].fJobAiPass);
+                        fJobAllPassData.push(Data[i].fJobAllPass);
                     }
                     generateJobMean(jobnamedata, fJobMeaAllData, fJobMeaAliData);
-                    generateJobAi(jobnamedata, fJobAiPassData);
+                    generateJobAi(jobnamedata, fJobAiPassData, fJobAllPassData);
                 })
             ];
             if (jobNum) {
