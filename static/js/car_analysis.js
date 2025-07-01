@@ -504,7 +504,7 @@ function generateJobMean(jobname,fJObMeanAll,fJObMeanAi){
     });
 }
 
-function generateJobAi(jobnameData,fJobAiData){
+function generateJobAi(jobnameData,fJobAiData,fJobAllPassData){
     var myChart = echarts.init($("#container6")[0]);
     var option = {
         tooltip: {
@@ -514,7 +514,7 @@ function generateJobAi(jobnameData,fJobAiData){
             }
         },
         legend: {
-            data: ['料号过滤率'],
+            data: ['料号过滤率', '总过滤率'],
             textStyle: {
                 color: '#333'
             }
@@ -541,7 +541,7 @@ function generateJobAi(jobnameData,fJobAiData){
         yAxis: [
             {
                 type: 'value',
-                name: '料号过滤率',
+                name: '过滤率',
                 max: 100,  // 设置最大值为 100
                 interval: 10,
                 axisLabel: {
@@ -589,7 +589,35 @@ function generateJobAi(jobnameData,fJobAiData){
                         restore: {},  // 还原工具
                         saveAsImage: {}  // 保存为图片工具
                     }
+                }
+            },
+            {
+                name: '总过滤率',
+                type: 'line',
+                max: 100,
+                data: fJobAllPassData,
+                itemStyle: {
+                    color: '#FF5722'
                 },
+                label: {
+                    show: true,
+                    formatter: '{c}%' // 显示百分比
+                },
+                toolbox: {
+                    feature: {
+                        dataZoom: {  // 数据区域缩放工具
+                            yAxisIndex: false  // 不允许对纵坐标轴进行缩放
+                        },
+                        dataView: {  // 数据视图工具
+                            readOnly: true  // 设置为只读，用户无法编辑数据视图
+                        },
+                        magicType: {  // 图表类型切换工具
+                            type: ['line', 'bar']  // 设置支持切换的图表类型
+                        },
+                        restore: {},  // 还原工具
+                        saveAsImage: {}  // 保存为图片工具
+                    }
+                }
             }
         ]
     };
