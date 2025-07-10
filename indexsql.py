@@ -946,7 +946,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
         fieldnames = ['日期', '料号', '批量号', '假点过滤率', '总点过滤率', 'AI漏失总数', '漏失率',
                            '总板数', 'AI跑板数', 'AVI缺陷总数', 'AVI缺陷总数T', 'AVI缺陷总数B', 'AVI真点总数', 'AVI真点总数T', 'AVI真点总数B',
                            'AI真点总数', 'AI真点总数T', 'AI真点总数B', 'AI假点总数', 'AI假点总数T', 'AI假点总数B', '平均报点', '平均报点T', '平均报点B', '平均AI报点', '平均AI报点T',
-                           '平均AI报点B', 'OK板总数', 'AI_OK板总数', 'OK板比例', 'AI_OK板比例', '膜面', '机台号', '工单编号', '生产型号', '批次号']
+                           '平均AI报点B', 'OK板总数', 'AI_OK板总数', 'OK板比例', 'AI_OK板比例', '膜面', '机台号', '工单编号', '生产型号', '批次号', '工号', '产品等级']
     if len(machinecode) > 1:
         machinecodename = "多机台"
     else:
@@ -990,7 +990,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                         AND default_4 in ({placeholders})
                         GROUP BY default_1,default_2
                     ),board_info AS(
-                        SELECT test_machine_code, default_1, job_name, plno, pcbno, surface,default_7,default_8,default_9,
+                        SELECT test_machine_code, default_1, job_name, plno, pcbno, surface,default_7,default_8,default_9,default_10,default_11,
                                SUM(errnum) AS err_num_sum,
                                SUM(CASE WHEN is_top = 1 THEN errnum ELSE 0 END) AS err_num_sum_T,
                                SUM(CASE WHEN is_top = 0 THEN errnum ELSE 0 END) AS err_num_sum_B,
@@ -1005,7 +1005,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                         FROM {table_name}
                         WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
                         AND test_machine_code in ({placeholders})
-                        GROUP BY default_1, job_name, plno, pcbno, surface, test_machine_code,default_7,default_8,default_9
+                        GROUP BY default_1, job_name, plno, pcbno, surface, test_machine_code,default_7,default_8,default_9,default_10,default_11
                     ), main_result AS (
                         SELECT 
                                a.default_1 AS 日期,
@@ -1046,13 +1046,15 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                                SUM(ai_true_num_sum_B)-COALESCE(specify_ai_true_num_sum_B, 0) AS AI真点总数B,
                                default_7 AS 工单编号,
                                default_8 AS 生产型号,
-                               default_9 AS 批次号
+                               default_9 AS 批次号,
+                               default_10 AS 工号,
+                               default_11 AS 产品等级
                         FROM board_info a
                         LEFT JOIN delete_num b
                         ON a.job_name = b.default_1
                         AND a.plno = b.default_2
                         WHERE err_num_sum < 2000
-                        GROUP BY a.default_1, a.job_name, a.plno, a.surface, a.test_machine_code,a.default_7,a.default_8,a.default_9,specify_ai_true_num_sum,specify_ai_true_num_sum_T,specify_ai_true_num_sum_B
+                        GROUP BY a.default_1, a.job_name, a.plno, a.surface, a.test_machine_code,a.default_7,a.default_8,a.default_9,specify_ai_true_num_sum,specify_ai_true_num_sum_T,specify_ai_true_num_sum_B,default_10,default_11
                     )
                     SELECT *, AVI缺陷总数-AI真点总数 as AI假点总数, AVI缺陷总数T-AI真点总数T as AI假点总数T, AVI缺陷总数B-AI真点总数B as AI假点总数B
                     FROM main_result
@@ -1063,7 +1065,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
             else:
                 sql_query = text(f"""
                     WITH board_info AS(
-                        SELECT test_machine_code, default_1, job_name, plno, pcbno, surface,default_7,default_8,default_9,
+                        SELECT test_machine_code, default_1, job_name, plno, pcbno, surface,default_7,default_8,default_9,default_10,default_11,
                                SUM(errnum) AS err_num_sum,
                                SUM(CASE WHEN is_top = 1 THEN errnum ELSE 0 END) AS err_num_sum_T,
                                SUM(CASE WHEN is_top = 0 THEN errnum ELSE 0 END) AS err_num_sum_B,
@@ -1078,7 +1080,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                         FROM {table_name}
                         WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
                         AND test_machine_code in ({placeholders})
-                        GROUP BY default_1, job_name, plno, pcbno, surface, test_machine_code,default_7,default_8,default_9
+                        GROUP BY default_1, job_name, plno, pcbno, surface, test_machine_code,default_7,default_8,default_9,default_10,default_11
                     ), main_result AS (
                         SELECT 
                                default_1 AS 日期,
@@ -1119,10 +1121,12 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                                SUM(ai_true_num_sum_B) AS AI真点总数B,
                                default_7 AS 工单编号,
                                default_8 AS 生产型号,
-                               default_9 AS 批次号
+                               default_9 AS 批次号,
+                               default_10 AS 工号,
+                               default_11 AS 产品等级
                         FROM board_info
                         WHERE err_num_sum < 2000
-                        GROUP BY default_1, job_name, plno, surface, test_machine_code,default_7,default_8,default_9
+                        GROUP BY default_1, job_name, plno, surface, test_machine_code,default_7,default_8,default_9,default_10,default_11
                     )
                     SELECT *, AVI缺陷总数-AI真点总数 as AI假点总数, AVI缺陷总数T-AI真点总数T as AI假点总数T, AVI缺陷总数B-AI真点总数B as AI假点总数B
                     FROM main_result
@@ -1177,11 +1181,11 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                          'AI漏失总数': i[14], '漏失率': round(fAiFalseRatio*100, 2), '总板数': i[3],
                          'AI跑板数': i[4], 'AVI缺陷总数': i[11],'AVI缺陷总数T': i[12],'AVI缺陷总数B': i[13],
                          'AVI真点总数': nAviNum,'AVI真点总数T': nAviNumT,'AVI真点总数B': nAviNumB, 'AI真点总数': i[17],'AI真点总数T': i[27],'AI真点总数B': i[28],
-                         'AI假点总数': i[32],'AI假点总数T': i[33],'AI假点总数B': i[34], '平均报点': i[19], '平均报点T': i[20], '平均报点B': i[21],
+                         'AI假点总数': i[34],'AI假点总数T': i[35],'AI假点总数B': i[36], '平均报点': i[19], '平均报点T': i[20], '平均报点B': i[21],
                          '平均AI报点': i[22],'平均AI报点T': i[23],'平均AI报点B': i[24],
                          'OK板总数': i[5], 'AI_OK板总数': i[7],
                          'OK板比例': i[6], 'AI_OK板比例': i[8],
-                         '膜面': surface_dict[str(i[25])], '机台号': i[26], '工单编号': i[29], '生产型号': i[30], '批次号': i[31]}
+                         '膜面': surface_dict[str(i[25])], '机台号': i[26], '工单编号': i[29], '生产型号': i[30], '批次号': i[31], '工号': i[32], '产品等级': i[33]}
                 if value['总点过滤率'] > allFilterRate:
                     statisticdata.append(value)
             # 根据机台号分组
@@ -1343,7 +1347,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
         fieldnames = ['日期', '料号', '假点过滤率', '总点过滤率', 'AI漏失总数', '漏失率',
                           '总板数', 'AI跑板数', 'AVI缺陷总数', 'AVI缺陷总数T', 'AVI缺陷总数B', 'AVI真点总数', 'AVI真点总数T', 'AVI真点总数B',
                           'AI真点总数', 'AI真点总数T', 'AI真点总数B', 'AI假点总数', 'AI假点总数T', 'AI假点总数B', '平均报点', '平均报点T', '平均报点B', '平均AI报点', '平均AI报点T',
-                          '平均AI报点B', 'OK板总数', 'AI_OK板总数', 'OK板比例', 'AI_OK板比例', '膜面', '机台号', '工单编号', '生产型号', '批次号']
+                          '平均AI报点B', 'OK板总数', 'AI_OK板总数', 'OK板比例', 'AI_OK板比例', '膜面', '机台号', '工单编号', '生产型号', '批次号', '工号', '产品等级']
     if len(machinecode) > 1:
         machinecodename = "多机台"
     else:
@@ -1386,7 +1390,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                         AND default_4 in ({placeholders})
                         GROUP BY default_1
                     ),board_info AS(
-                            SELECT test_machine_code,default_1, job_name,plno, pcbno, surface,default_7,default_8,default_9,
+                            SELECT test_machine_code,default_1, job_name,plno, pcbno, surface,default_7,default_8,default_9,default_10,default_11,
                                 SUM(errnum) AS err_num_sum,
                                 SUM(CASE WHEN is_top = 1 THEN errnum ELSE 0 END) AS err_num_sum_T,
                                 SUM(CASE WHEN is_top = 0 THEN errnum ELSE 0 END) AS err_num_sum_B,
@@ -1401,7 +1405,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                             FROM {table_name}
                             WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
                             AND test_machine_code in ({placeholders})
-                            GROUP BY default_1, job_name,plno,pcbno, surface, test_machine_code,default_7,default_8,default_9
+                            GROUP BY default_1, job_name,plno,pcbno, surface, test_machine_code,default_7,default_8,default_9,default_10,default_11
                         ), main_result AS (
                             SELECT a.default_1 AS 日期,
                                 job_name AS 料号,
@@ -1440,12 +1444,14 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                                 SUM(ai_true_num_sum_B)-COALESCE(specify_ai_true_num_sum_B, 0) AS AI真点总数B,
                                 default_7 AS 工单编号,
                                 default_8 AS 生产型号,
-                                default_9 AS 批次号
+                                default_9 AS 批次号,
+                                default_10 AS 工号,
+                                default_11 AS 产品等级
                             FROM board_info a
                             LEFT JOIN delete_num b
                             ON a.job_name = b.default_1
                             WHERE err_num_sum < 2000
-                            GROUP BY a.default_1, a.job_name, a.surface, a.test_machine_code,a.default_7,a.default_8,a.default_9,specify_ai_true_num_sum,specify_ai_true_num_sum_T,specify_ai_true_num_sum_B
+                            GROUP BY a.default_1, a.job_name, a.surface, a.test_machine_code,a.default_7,a.default_8,a.default_9,specify_ai_true_num_sum,specify_ai_true_num_sum_T,specify_ai_true_num_sum_B,default_10,default_11
                         )
                         SELECT *, AVI缺陷总数-AI真点总数 as AI假点总数, AVI缺陷总数T-AI真点总数T as AI假点总数T, AVI缺陷总数B-AI真点总数B as AI假点总数B 
                         FROM main_result
@@ -1456,7 +1462,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
             else:
                 sql_query = text(f"""
                    WITH board_info AS(
-                        SELECT test_machine_code,default_1, job_name,plno, pcbno, surface,default_7,default_8,default_9,
+                        SELECT test_machine_code,default_1, job_name,plno, pcbno, surface,default_7,default_8,default_9,default_10,default_11,
                                SUM(errnum) AS err_num_sum,
                                SUM(CASE WHEN is_top = 1 THEN errnum ELSE 0 END) AS err_num_sum_T,
                                SUM(CASE WHEN is_top = 0 THEN errnum ELSE 0 END) AS err_num_sum_B,
@@ -1471,7 +1477,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                         FROM {table_name}
                         WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
                         AND test_machine_code in ({placeholders})
-                        GROUP BY default_1, job_name,plno,pcbno, surface, test_machine_code,default_7,default_8,default_9
+                        GROUP BY default_1, job_name,plno,pcbno, surface, test_machine_code,default_7,default_8,default_9,default_10,default_11
                     ), main_result AS (
                         SELECT default_1 AS 日期,
                                job_name AS 料号,
@@ -1510,10 +1516,12 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                                SUM(ai_true_num_sum_B) AS AI真点总数B,
                                default_7 AS 工单编号,
                                default_8 AS 生产型号,
-                               default_9 AS 批次号
+                               default_9 AS 批次号,
+                               default_10 AS 工号,
+                               default_11 AS 产品等级
                         FROM board_info
                         WHERE err_num_sum < 2000
-                        GROUP BY default_1, job_name, surface, test_machine_code,default_7,default_8,default_9
+                        GROUP BY default_1, job_name, surface, test_machine_code,default_7,default_8,default_9,default_10,default_11
                     )
                     SELECT *, AVI缺陷总数-AI真点总数 as AI假点总数, AVI缺陷总数T-AI真点总数T as AI假点总数T, AVI缺陷总数B-AI真点总数B as AI假点总数B 
                     FROM main_result
@@ -1568,12 +1576,12 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                          'AI跑板数': i[3], 'AVI缺陷总数': i[10],'AVI缺陷总数T': i[11],'AVI缺陷总数B': i[12],
                          'AVI真点总数': nAviNum,'AVI真点总数T': nAviNumT,'AVI真点总数B': nAviNumB,
                          'AI真点总数': i[16], 'AI真点总数T': i[26], 'AI真点总数B': i[27],
-                         'AI假点总数': i[31], 'AI假点总数T': i[32], 'AI假点总数B': i[33],
+                         'AI假点总数': i[33], 'AI假点总数T': i[34], 'AI假点总数B': i[35],
                          '平均报点': i[18], '平均报点T': i[19], '平均报点B': i[20],
                          '平均AI报点': i[21],'平均AI报点T': i[22],'平均AI报点B': i[23],
                          'OK板总数': i[4], 'AI_OK板总数': i[6],
                          'OK板比例': i[5], 'AI_OK板比例': i[7],
-                         '膜面': surface_dict[str(i[24])], '机台号': i[25], '工单编号': i[28], '生产型号': i[29], '批次号': i[30]}
+                         '膜面': surface_dict[str(i[24])], '机台号': i[25], '工单编号': i[28], '生产型号': i[29], '批次号': i[30], '工号': i[31], '产品等级': i[32]}
                 if value['总点过滤率'] >= allFilterRate:
                     statisticdata.append(value)
             grouped = {}
