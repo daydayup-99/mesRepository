@@ -983,12 +983,13 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                     WITH delete_num AS(
                         select default_1,default_2,SUM(is_ai) as specify_ai_true_num_sum,					 
                                      SUM(CASE WHEN is_ai = 1 AND is_top = 1 THEN is_ai ELSE 0 END) AS specify_ai_true_num_sum_T,
-                                     SUM(CASE WHEN is_ai = 1 AND is_top = 0 THEN is_ai ELSE 0 END) AS specify_ai_true_num_sum_B
+                                     SUM(CASE WHEN is_ai = 1 AND is_top = 0 THEN is_ai ELSE 0 END) AS specify_ai_true_num_sum_B,
+                                     default_4
                         FROM {err_table_name}
                         WHERE is_ai = 1
                         {filter_conditions}
                         AND default_4 in ({placeholders})
-                        GROUP BY default_1,default_2
+                        GROUP BY default_1,default_2,default_4
                     ),board_info AS(
                         SELECT test_machine_code, default_1, job_name, plno, pcbno, surface,default_7,default_8,default_9,default_10,default_11,
                                SUM(errnum) AS err_num_sum,
@@ -1055,6 +1056,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                         LEFT JOIN delete_num b
                         ON a.job_name = b.default_1
                         AND a.plno = b.default_2
+                        AND a.test_machine_code = b.default_4
                         WHERE err_num_sum < 2000
                         GROUP BY a.default_1, a.job_name, a.plno, a.surface, a.test_machine_code,a.default_7,a.default_8,a.default_9,specify_ai_true_num_sum,specify_ai_true_num_sum_T,specify_ai_true_num_sum_B,default_10,default_11,unique_id
                     )
@@ -1387,12 +1389,13 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                     WITH delete_num AS(
                         select default_1,SUM(is_ai) as specify_ai_true_num_sum,					 
                                 SUM(CASE WHEN is_ai = 1 AND is_top = 1 THEN is_ai ELSE 0 END) AS specify_ai_true_num_sum_T,
-                                SUM(CASE WHEN is_ai = 1 AND is_top = 0 THEN is_ai ELSE 0 END) AS specify_ai_true_num_sum_B
+                                SUM(CASE WHEN is_ai = 1 AND is_top = 0 THEN is_ai ELSE 0 END) AS specify_ai_true_num_sum_B,
+                                default_4
                         FROM {err_table_name}
                         WHERE is_ai = 1
                         {filter_conditions}
                         AND default_4 in ({placeholders})
-                        GROUP BY default_1
+                        GROUP BY default_1,default_4
                     ),board_info AS(
                             SELECT test_machine_code,default_1, job_name,plno, pcbno, surface,default_7,default_8,default_9,default_10,default_11,
                                 SUM(errnum) AS err_num_sum,
@@ -1453,7 +1456,8 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                                 default_11 AS 产品等级
                             FROM board_info a
                             LEFT JOIN delete_num b
-                            ON a.job_name = b.default_1
+                            ON a.job_name = b.default_1 
+                            AND a.test_machine_code = b.default_4
                             WHERE err_num_sum < 2000
                             GROUP BY a.default_1, a.job_name, a.surface, a.test_machine_code,a.default_7,a.default_8,a.default_9,specify_ai_true_num_sum,specify_ai_true_num_sum_T,specify_ai_true_num_sum_B,default_10,default_11
                         )
