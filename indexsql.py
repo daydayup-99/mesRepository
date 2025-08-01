@@ -1192,7 +1192,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                          'OK板总数': i[5], 'AI_OK板总数': i[7],
                          'OK板比例': i[6], 'AI_OK板比例': i[8],
                          '膜面': surface_dict[str(i[25])], '机台号': i[26], '工单编号': i[29], '生产型号': i[30], '批次号': i[31], '工号': i[32], '产品等级': i[33], '唯一ID': i[34]}
-                if value['总点过滤率'] > allFilterRate:
+                if value['总点过滤率'] >= allFilterRate:
                     statisticdata.append(value)
             # 根据机台号分组
             grouped = {}
