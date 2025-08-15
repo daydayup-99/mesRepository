@@ -236,8 +236,8 @@ function generateOKPass(dates,fPassData,nAllBoardData) {
                 type: 'value',
                 name: '跑板数',
                 min: 0,
-                max: nAllBoardData,
-                interval: Math.ceil(nAllBoardData / 5),
+                max: Math.max(...nAllBoardData),
+                interval: Math.ceil(Math.max(...nAllBoardData) / 5),
                 axisLabel: {
                     show: true,
                     textStyle: {
@@ -296,6 +296,13 @@ function generateOKPass(dates,fPassData,nAllBoardData) {
                 data: nAllBoardData,
                 itemStyle: {
                     color: '#4ab0ee'
+                },
+                label: {
+                    show: true,
+                    position: 'top',
+                    formatter: '{c}',
+                    fontSize: 12,
+                    color: '#333'
                 }
             }
         ]
