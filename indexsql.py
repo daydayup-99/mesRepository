@@ -331,11 +331,11 @@ def getAllErrRateSql(start_date, end_date, machinecode):
             table_name = f"tab_err_{current_date.strftime('%Y%m%d')[0:]}"
             if table_name in table_names:
                 sql_query = text(f"""
-                                  SELECT ai_err_type, COUNT(is_ai), default_4, COUNT(default_4)
+                                  SELECT ai_err_type, COUNT(is_ai), default_4, COUNT(default_4),default_1, COUNT(default_1)
                                   FROM {table_name}
                                   WHERE ({like_conditions})
                                   AND is_ai = 1
-                                  GROUP BY ai_err_type, default_4
+                                  GROUP BY ai_err_type, default_4,default_1
                                     """)
                 sql_all_query = text(f"""
                                   SELECT COUNT(*)
@@ -347,11 +347,12 @@ def getAllErrRateSql(start_date, end_date, machinecode):
                 for row in resultErrAllNum:
                     JobErrAllNum = JobErrAllNum + int(row[0])
                 for row in result:
-                    JobErrType, JobTypeNum, MachineId, MachineNum = row;
+                    JobErrType, JobTypeNum, MachineId, MachineNum, JobName, JobNameNum = row;
                     if JobErrType not in JobTypeCounts:
                         JobTypeCounts[JobErrType] = {
                             'total': JobTypeNum,
-                            'machines': {MachineId: MachineNum}
+                            'machines': {MachineId: MachineNum},
+                            'job_names': {JobName: JobNameNum}
                         }
                     else:
                         JobTypeCounts[JobErrType]['total'] += JobTypeNum
@@ -359,6 +360,11 @@ def getAllErrRateSql(start_date, end_date, machinecode):
                             JobTypeCounts[JobErrType]['machines'][MachineId] += MachineNum
                         else:
                             JobTypeCounts[JobErrType]['machines'][MachineId] = MachineNum
+                        if JobName and JobName.strip():  # 确保料号名不为空
+                            if JobName in JobTypeCounts[JobErrType]['job_names']:
+                                JobTypeCounts[JobErrType]['job_names'][JobName] += JobNameNum
+                            else:
+                                JobTypeCounts[JobErrType]['job_names'][JobName] = JobNameNum
             current_date += timedelta(days=1)
         sorted_counts = sorted(JobTypeCounts.items(), key=lambda x: x[1]['total'], reverse=True)
         for JobErrType, data in sorted_counts:
@@ -366,8 +372,10 @@ def getAllErrRateSql(start_date, end_date, machinecode):
             JobTypeRate = round((JobTypeNum / JobErrAllNum) * 100, 2) if JobErrAllNum else 0.0
             sorted_machines = sorted(data['machines'].items(), key=lambda x: x[1], reverse=True)
             sorted_machine_ids = [machine[0] for machine in sorted_machines]
+            sorted_job_names = sorted(data['job_names'].items(), key=lambda x: x[1], reverse=True)
+            sorted_job_names_ids = [jobName[0] for jobName in sorted_job_names]
             data_point = {'errtype': JobErrType, 'JobTypeNum': JobTypeNum, 'JobTypeRate': JobTypeRate,
-                          'errAllNum': JobErrAllNum, 'jobname': "All",'sorted_machines': sorted_machine_ids[0:5]}
+                          'errAllNum': JobErrAllNum, 'jobname': "All",'sorted_machines': sorted_machine_ids[0:5],'sorted_job_names': sorted_job_names_ids[0:5]}
             json_data.append(data_point)
     json_data = json.dumps(json_data, ensure_ascii=False)
     session.close()

@@ -212,6 +212,7 @@
                     var errAllNumData = [];
                     var errPlnoNameData = [];
                     var machineIdData = [];
+                    var jobNameDate = [];
                     for (var i = 0; i < Data.length; i++) {
                         errJobtypedata.push(Data[i].errtype);
                         errJobNumData.push(Data[i].JobTypeNum);
@@ -219,12 +220,13 @@
                         errAllNumData.push(Data[i].errAllNum);
                         errPlnoNameData.push(Data[i].jobname);
                         machineIdData.push(Data[i].sorted_machines);
+                        jobNameDate.push(Data[i].sorted_job_names)
                     }
                     console.log("machineIdData:", machineIdData.length);
                     if(!jobNum)
                     {
                         $('#PLNum').empty();
-                        generateJobErr(start_time, end_time, errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0], machineIdData);
+                        generateJobErr(start_time, end_time, errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0], machineIdData, jobNameDate);
                         $('#jobname').html('料号: ' + errPlnoNameData[0]);
                     }
                 }),
@@ -352,7 +354,7 @@
                             errAllNumData.push(Data[i].errAllNum);
                             errPlnoNameData.push((Data[i].jobname));
                         }
-                        generateJobErr(start_time, end_time, errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0], []);
+                        generateJobErr(start_time, end_time, errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0], [], []);
                         $('#jobname').html('料号: ' + errPlnoNameData[0] + ',膜面: ' + Data[0].surface);
                     })
                 );
@@ -421,6 +423,8 @@
                     var errJobRateData = [];
                     var errAllNumData = [];
                     var errPlnoNameData = [];
+                    var machineIdData = [];
+                    var jobNameData = [];
                     for (var i = 0; i < Data.length; i++) {
                         errJobtypedata.push(Data[i].errtype);
                         errJobNumData.push(Data[i].JobTypeNum);
@@ -428,8 +432,9 @@
                         errAllNumData.push(Data[i].errAllNum);
                         errPlnoNameData.push((Data[i].jobname));
                         machineIdData.push(Data[i].sorted_machines);
+                        jobNameData.push(Data[i].sorted_job_names);
                     }
-                    generateJobErr(start_time, end_time, errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0], machineIdData)
+                    generateJobErr(start_time, end_time, errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0], machineIdData, jobNameData)
                     $('#jobname').html('料号: ' + errPlnoNameData[0]);
                 },
                 error: function (xhr, status, error) {

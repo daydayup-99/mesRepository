@@ -634,7 +634,7 @@ function generateJobAi(jobnameData,fJobAiData,fJobAllPassData){
     });
 }
 
- function generateJobErr(start_time, end_time, errJobtypedata, errJobNumData, errJobRateData, errAllNum, errPlnoNameData, machineIdData) {
+ function generateJobErr(start_time, end_time, errJobtypedata, errJobNumData, errJobRateData, errAllNum, errPlnoNameData, machineIdData, jobNameData) {
     console.log(errAllNum);
     var myChart = echarts.init($("#container7")[0]);
     var option = {
@@ -736,14 +736,14 @@ function generateJobAi(jobnameData,fJobAiData,fJobAllPassData){
 
         // 添加导出按钮点击事件
     $('#exportButton').off('click').click(function() {
-        exportToCSV(start_time, end_time, errJobtypedata, errJobNumData, errJobRateData, errPlnoNameData, machineIdData);
+        exportToCSV(start_time, end_time, errJobtypedata, errJobNumData, errJobRateData, errPlnoNameData, machineIdData, jobNameData);
     });
 }
 // 导出为 CSV 的函数
-function exportToCSV(start_time, end_time, types, numbers, rates, errPlnoNameData, machineIdData) {
+function exportToCSV(start_time, end_time, types, numbers, rates, errPlnoNameData, machineIdData, jobNameData) {
     var csvContent = "\uFEFF";
     console.log(machineIdData.length);
-    csvContent += "缺陷名,数量,占比,机台号\n"; 
+    csvContent += "缺陷名,数量,占比,机台号,料号\n";
     for (var i = 0; i < types.length; i++) {
         let item = machineIdData[i];
         let machineStr = '';
@@ -754,11 +754,18 @@ function exportToCSV(start_time, end_time, types, numbers, rates, errPlnoNameDat
         } else {
             machineStr = String(item).replace(/#/g, '');
         }
+        let jobNameStr = '';
+        if (jobNameData && jobNameData[i] && Array.isArray(jobNameData[i])) {
+            jobNameStr = jobNameData[i].join(';');
+        } else if (jobNameData && jobNameData[i]) {
+            jobNameStr = String(jobNameData[i]);
+        }
         var row = [
             csvSafe(types[i]),
             csvSafe(numbers[i]),
             csvSafe(rates[i] + "%"),
-            csvSafe(machineStr)
+            csvSafe(machineStr),
+            csvSafe(jobNameStr)
         ].join(",");
         csvContent += row + "\n";
     }
