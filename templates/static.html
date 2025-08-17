@@ -256,12 +256,14 @@
                         fMeaAiData.push(Data.data[i].fMeaAi);
                         nAllBoardData.push(Data.data[i].nAllBoard);
                     }
+                    var fPassAverage = fPassData.length > 0 ? fPassData.reduce((sum, value) => sum + value, 0) / fPassData.length : 0;
                     generateAi(dates, fAiData);
                     generateAllAi(dates, fAllAiData, fAiData);
                     generateOKPass(dates, fPassData, nAllBoardData);
                     generateMean(dates, fMeaAllData, fMeaAiData);
                     $('#fTotalAi').html('假点过滤率: ' + Data.fTotalAi);
                     $('#fTotalAllAi').html('总过滤率: ' + Data.fTotalAllAi);
+                    $('#fOnePass').html('一次pass率: ' + fPassAverage.toFixed(2));
                 }),
                 $.ajax({
                     url: '/LiaohualvSubmit',
@@ -463,12 +465,14 @@
                         fMeaAiData.push(Data.data[i].fMeaAi)
                         nAllBoardData.push(Data.data[i].nAllBoard)
                     }
+                    var fPassAverage = fPassData.length > 0 ? fPassData.reduce((sum, value) => sum + value, 0) / fPassData.length : 0;
                     generateAi(dates, fAiData)
                     generateAllAi(dates, fAllAiData,fAiData)
                     generateOKPass(dates, fPassData,nAllBoardData)
                     generateMean(dates, fMeaAllData, fMeaAiData)
                     $('#fTotalAi').html('假点过滤率: ' + Data.fTotalAi);
                     $('#fTotalAllAi').html('总过滤率: ' + Data.fTotalAllAi);
+                    $('#fOnePass').html('一次pass率: ' + fPassAverage.toFixed(2));
                 },
                 error: function (xhr, status, error) {
                     console.error(error);
@@ -912,7 +916,7 @@
 
             <div class="e_chart">
                 <div class="charts l_left">
-                    <p class="charts_p">一次pass率</p>
+                    <p class="charts_p" id="fOnePass">一次pass率</p>
                     <div id="container3" style="height:300px;width: 100%;"></div>
                     <div style="width: 100%;margin-top: 0px">
                     </div>
