@@ -1192,7 +1192,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                     nAviNumB = i[16]
                 value = {'日期': i[0], '料号': i[1], '批量号': i[2],
                          '假点过滤率': round(fAi*100, 2), '总点过滤率': round(fAll*100, 2),
-                         'AI漏失总数': i[14], '漏失率': round(fAiFalseRatio*100, 2), '总板数': i[3],
+                         'AI漏失总数': i[9], '漏失率': round(fAiFalseRatio*100, 2), '总板数': i[3],
                          'AI跑板数': i[4], 'AVI缺陷总数': i[11],'AVI缺陷总数T': i[12],'AVI缺陷总数B': i[13],
                          'AVI真点总数': nAviNum,'AVI真点总数T': nAviNumT,'AVI真点总数B': nAviNumB, 'AI真点总数': i[17],'AI真点总数T': i[27],'AI真点总数B': i[28],
                          'AI假点总数': i[35],'AI假点总数T': i[36],'AI假点总数B': i[37], '平均报点': i[19], '平均报点T': i[20], '平均报点B': i[21],
@@ -1588,7 +1588,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                     nAviNumB = i[15]
                 value = {'日期': i[0], '料号': i[1],
                          '假点过滤率': round(fAi*100, 2), '总点过滤率': round(fAll*100, 2),
-                         'AI漏失总数': i[13],'漏失率': round(fAiFalseRatio*100, 2), '总板数': i[2],
+                         'AI漏失总数': i[8],'漏失率': round(fAiFalseRatio*100, 2), '总板数': i[2],
                          'AI跑板数': i[3], 'AVI缺陷总数': i[10],'AVI缺陷总数T': i[11],'AVI缺陷总数B': i[12],
                          'AVI真点总数': nAviNum,'AVI真点总数T': nAviNumT,'AVI真点总数B': nAviNumB,
                          'AI真点总数': i[16], 'AI真点总数T': i[26], 'AI真点总数B': i[27],
