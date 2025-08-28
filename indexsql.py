@@ -1160,17 +1160,17 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                 nALLNumT = float(i[12])
                 nALLNumB = float(i[13])
                 nAiNum = float(i[17])
-                nAiFalseRatio = float(i[18])
+                nAiMissingNum = float(i[18])
 
                 if nALLNum != 0:
                     fAi = (nALLNum - nAiNum) / (nALLNum - (nALLNum * t_ratio))
                     fAll = (nALLNum - nAiNum) / nALLNum
-                    fAiFalseRatio = nAiFalseRatio / nALLNum
+                    nAiMissingRatio = nAiMissingNum / nALLNum
 
                 else:
                     fAi = 0.0
                     fAll = 0.0
-                    fAiFalseRatio = 0.0
+                    nAiMissingRatio = 0.0
 
                 if fAi > 1.0 and isOptimizeFRate == 1:
                     lowerBound = float(nALLNum - nAiNum)
@@ -1192,7 +1192,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                     nAviNumB = i[16]
                 value = {'日期': i[0], '料号': i[1], '批量号': i[2],
                          '假点过滤率': round(fAi*100, 2), '总点过滤率': round(fAll*100, 2),
-                         'AI漏失总数': i[9], '漏失率': round(fAiFalseRatio*100, 2), '总板数': i[3],
+                         'AI漏失总数': i[9], '漏失率': round(nAiMissingRatio*100, 2), '总板数': i[3],
                          'AI跑板数': i[4], 'AVI缺陷总数': i[11],'AVI缺陷总数T': i[12],'AVI缺陷总数B': i[13],
                          'AVI真点总数': nAviNum,'AVI真点总数T': nAviNumT,'AVI真点总数B': nAviNumB, 'AI真点总数': i[17],'AI真点总数T': i[27],'AI真点总数B': i[28],
                          'AI假点总数': i[35],'AI假点总数T': i[36],'AI假点总数B': i[37], '平均报点': i[19], '平均报点T': i[20], '平均报点B': i[21],
@@ -1218,7 +1218,10 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
             all_data_df['AI漏失总数'] = all_data_df['AI漏失总数'].astype(float)
 
             resAR = float((all_data_df['AVI缺陷总数'].sum() - all_data_df['AI真点总数'].sum()) / all_data_df['AVI缺陷总数'].sum())
-            resFR = float((all_data_df['AVI缺陷总数'].sum() - all_data_df['AI真点总数'].sum()) / (all_data_df['AVI缺陷总数'].sum() - (all_data_df['AVI缺陷总数'].sum() * t_ratio)))
+            if t_ratio < 0:
+                resFR = float((all_data_df['AVI缺陷总数'].sum() - all_data_df['AI真点总数'].sum()) / (all_data_df['AVI缺陷总数'].sum() - all_data_df['AVI真点总数'] - all_data_df['AI漏失总数']))
+            else:
+                resFR = float((all_data_df['AVI缺陷总数'].sum() - all_data_df['AI真点总数'].sum()) / (all_data_df['AVI缺陷总数'].sum() - (all_data_df['AVI缺陷总数'].sum() * t_ratio)))
             if resFR > 1.0 and isOptimizeFRate == 1:
                 lowerBound = float(all_data_df['AVI缺陷总数'].sum() - all_data_df['AI漏失总数'].sum() - all_data_df['AI真点总数'].sum())
                 upperBound = min(
@@ -1278,7 +1281,14 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                 machine_df_all['AI漏失总数'] = machine_df_all['AI漏失总数'].astype(float)
 
                 machine_resAR = float((machine_df_all['AVI缺陷总数'].sum() - machine_df_all['AI真点总数'].sum()) / machine_df_all['AVI缺陷总数'].sum())
-                machine_resFR = float((machine_df_all['AVI缺陷总数'].sum() - machine_df_all['AI真点总数'].sum()) / (machine_df_all['AVI缺陷总数'].sum() - (machine_df_all['AVI缺陷总数'].sum() * t_ratio)))
+                if t_ratio < 0:
+                    machine_resFR = float((machine_df_all['AVI缺陷总数'].sum() - machine_df_all['AI真点总数'].sum()) / (
+                                machine_df_all['AVI缺陷总数'].sum() - machine_df_all['AVI真点总数'] - machine_df_all[
+                            'AI漏失总数']))
+                else:
+                    machine_resFR = float((machine_df_all['AVI缺陷总数'].sum() - machine_df_all['AI真点总数'].sum()) / (
+                                machine_df_all['AVI缺陷总数'].sum() - (machine_df_all['AVI缺陷总数'].sum() * t_ratio)))
+
 
                 if machine_resFR > 1.0 and isOptimizeFRate == 1:
                     lowerBound = float(machine_df_all['AVI缺陷总数'].sum() - machine_df_all['AI漏失总数'].sum() - machine_df_all['AI真点总数'].sum())
@@ -1557,16 +1567,28 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                 nALLNumT = float(i[11])
                 nALLNumB = float(i[12])
                 nAiNum = float(i[16])
-                nAiFalseRatio = float(i[17])
+                nAiMissingNum = float(i[17])
+
+                if t_ratio > 0.0:
+                    nAviNum = int(nALLNum * t_ratio)
+                    nAviNumT = int(nALLNumT * t_ratio)
+                    nAviNumB = int(nALLNumB * t_ratio)
+                else:
+                    nAviNum = i[13]
+                    nAviNumT = i[14]
+                    nAviNumB = i[15]
 
                 if nALLNum != 0:
-                    fAi = (nALLNum - nAiNum) / (nALLNum - (nALLNum * t_ratio))
+                    if t_ratio < 0:
+                        fAi = (nALLNum - nAiNum) / (nALLNum - nAviNum - nAiMissingNum)
+                    else:
+                        fAi = (nALLNum - nAiNum) / (nALLNum - (nALLNum * t_ratio))
                     fAll = (nALLNum - nAiNum) / nALLNum
-                    fAiFalseRatio = nAiFalseRatio / nALLNum
+                    nAiMissingRatio = nAiMissingNum / nALLNum
                 else:
                     fAi = 0.0
                     fAll = 0.0
-                    fAiFalseRatio = 0.0
+                    nAiMissingRatio = 0.0
 
                 if fAi > 1.0 and isOptimizeFRate == 1:
                     lowerBound = float(nALLNum - nAiNum)
@@ -1578,17 +1600,10 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                     fAi = float(nALLNum - nAiNum) / (float(nAviFalse) + 1e-6)
                 if fAll > 0.99:
                     fAll = 0.98
-                if t_ratio > 0.0:
-                    nAviNum = int(nALLNum * t_ratio)
-                    nAviNumT = int(nALLNumT * t_ratio)
-                    nAviNumB = int(nALLNumB * t_ratio)
-                else:
-                    nAviNum = i[13]
-                    nAviNumT = i[14]
-                    nAviNumB = i[15]
+
                 value = {'日期': i[0], '料号': i[1],
                          '假点过滤率': round(fAi*100, 2), '总点过滤率': round(fAll*100, 2),
-                         'AI漏失总数': i[8],'漏失率': round(fAiFalseRatio*100, 2), '总板数': i[2],
+                         'AI漏失总数': i[8],'漏失率': round(nAiMissingRatio*100, 2), '总板数': i[2],
                          'AI跑板数': i[3], 'AVI缺陷总数': i[10],'AVI缺陷总数T': i[11],'AVI缺陷总数B': i[12],
                          'AVI真点总数': nAviNum,'AVI真点总数T': nAviNumT,'AVI真点总数B': nAviNumB,
                          'AI真点总数': i[16], 'AI真点总数T': i[26], 'AI真点总数B': i[27],
@@ -1615,7 +1630,11 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
             all_data_df['AI漏失总数'] = all_data_df['AI漏失总数'].astype(float)
 
             resAR = float((all_data_df['AVI缺陷总数'].sum() - all_data_df['AI真点总数'].sum()) / all_data_df['AVI缺陷总数'].sum())
-            resFR = float((all_data_df['AVI缺陷总数'].sum() - all_data_df['AI真点总数'].sum()) / (all_data_df['AVI缺陷总数'].sum() - (all_data_df['AVI缺陷总数'].sum() * t_ratio)))
+            if t_ratio < 0:
+                resFR = float((all_data_df['AVI缺陷总数'].sum() - all_data_df['AI真点总数'].sum()) / (all_data_df['AVI缺陷总数'].sum() - all_data_df['AVI真点总数'] - all_data_df['AI漏失总数']))
+            else:
+                resFR = float((all_data_df['AVI缺陷总数'].sum() - all_data_df['AI真点总数'].sum()) / (all_data_df['AVI缺陷总数'].sum() - (all_data_df['AVI缺陷总数'].sum() * t_ratio)))
+
 
             if resFR > 1.0 and isOptimizeFRate == 1:
                 lowerBound = float(all_data_df['AVI缺陷总数'].sum() - all_data_df['AI漏失总数'].sum() - all_data_df['AI真点总数'].sum())
@@ -1674,8 +1693,17 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                 machine_df['AI漏失总数'] = machine_df['AI漏失总数'].astype(float)
 
                 machine_resAR = float((machine_df['AVI缺陷总数'].sum() - machine_df['AI真点总数'].sum()) / machine_df['AVI缺陷总数'].sum())
-                machine_resFR = float((machine_df['AVI缺陷总数'].sum() - machine_df['AI真点总数'].sum()) / (
-                            machine_df['AVI缺陷总数'].sum() - (machine_df['AVI缺陷总数'].sum() * t_ratio)))
+                if t_ratio < 0:
+                    machine_resFR = float(
+                        (machine_df['AVI缺陷总数'].sum() - machine_df['AI真点总数'].sum()) / (
+                                machine_df['AVI缺陷总数'].sum() - machine_df['AVI真点总数'] -
+                                machine_df[
+                                    'AI漏失总数']))
+                else:
+                    machine_resFR = float(
+                        (machine_df['AVI缺陷总数'].sum() - machine_df['AI真点总数'].sum()) / (
+                                machine_df['AVI缺陷总数'].sum() - (
+                                    machine_df['AVI缺陷总数'].sum() * t_ratio)))
                 if machine_resFR > 1.0 and isOptimizeFRate == 1:
                     lowerBound = float(machine_df['AVI缺陷总数'].sum() - machine_df['AI漏失总数'].sum() - machine_df['AI真点总数'].sum())
                     upperBound = min(
