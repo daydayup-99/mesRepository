@@ -25,18 +25,21 @@ def restart_mysql_service():
     """
     重启 MySQL 服务以应用配置
     """
-    service_name = "MySQL80"  # 确保这里写的是正确的服务名称
+    possible_services = ["MySQL80", "MySQL"]  # 确保这里写的是正确的服务名称
     if not pyuac.isUserAdmin():
         pyuac.runAsAdmin()
         return
-    try:
-        # 停止服务
-        subprocess.run(["net", "stop", service_name], check=True)
-        # 启动服务
-        subprocess.run(["net", "start", service_name], check=True)
-        print(f"MySQL 服务 {service_name} 已成功重启。")
-    except subprocess.CalledProcessError as e:
-        print(f"无法重启 MySQL 服务，请检查服务名称或权限: {e}")
+    for service_name in possible_services:
+        try:
+            # 停止服务
+            subprocess.run(["net", "stop", service_name], check=True)
+            # 启动服务
+            subprocess.run(["net", "start", service_name], check=True)
+            print(f"MySQL 服务 {service_name} 已成功重启。")
+            return
+        except subprocess.CalledProcessError:
+            continue  # 尝试下一个服务名
+    print("无法重启 MySQL 服务，请检查服务名称或权限。")
 
 def main():
     print("开始配置 MySQL 服务器...")
