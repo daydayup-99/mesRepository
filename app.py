@@ -215,7 +215,8 @@ def AnalyzeUpdateReportEcharts():
 @app.route('/ExportSql', methods=['POST'])
 def exportcsv():
     start_time, end_time, start_time_hour, end_time_hour, MacNum = getRequestData(request)
-    result = exportallcsv(start_time, end_time, start_time_hour, end_time_hour, MacNum)
+    jobName = request.form.get('jobNum', '')
+    result = exportallcsv(start_time, end_time, start_time_hour, end_time_hour, MacNum, jobName)
     if result is None:
         data = {'message': '没有可查询的表，请检查时间范围或数据库连接'}
         return jsonify(data), 404
@@ -225,7 +226,8 @@ def exportcsv():
 @app.route('/ExportLiaoSql', methods=['POST'])
 def exportliaocsv():
     start_time, end_time, start_time_hour, end_time_hour, MacNum = getRequestData(request)
-    result = exportcsvbyjob(start_time, end_time, start_time_hour, end_time_hour, MacNum)
+    jobName = request.form.get('jobNum', '')
+    result = exportcsvbyjob(start_time, end_time, start_time_hour, end_time_hour, MacNum, jobName)
     if result is None:
         data = {'message': '没有可查询的表，请检查时间范围或数据库连接'}
         return jsonify(data), 404

@@ -923,7 +923,7 @@ def getLayersql(start_date,end_date,machinecode,jobname):
     session.close()
     return json_string
 
-def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
+def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode,jobName):
     inspector = inspect(engine)
     table_names = inspector.get_table_names()
 
@@ -997,6 +997,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                         WHERE is_ai = 1
                         {filter_conditions}
                         AND default_4 in ({placeholders})
+                        {('AND default_1 = :jobName' if jobName else '')}
                         GROUP BY default_1,default_2,default_4
                     ),board_info AS(
                         SELECT test_machine_code, default_1, job_name, plno, pcbno, surface,default_7,default_8,default_9,default_10,default_11,
@@ -1016,6 +1017,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                         FROM {table_name}
                         WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
                         AND test_machine_code in ({placeholders})
+                        {('AND job_name = :jobName' if jobName else '')}
                         GROUP BY default_1, job_name, plno, pcbno, surface, test_machine_code,default_7,default_8,default_9,default_10,default_11
                     ), main_result AS (
                         SELECT 
@@ -1096,6 +1098,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                         FROM {table_name}
                         WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
                         AND test_machine_code in ({placeholders})
+                        {('AND job_name = :jobName' if jobName else '')}
                         GROUP BY default_1, job_name, plno, pcbno, surface, test_machine_code,default_7,default_8,default_9,default_10,default_11
                     ), main_result AS (
                         SELECT 
@@ -1152,7 +1155,10 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
                     AND AI真点总数 < {maxTrueNum}
                     """)
             try:
-                resulttmp = session.execute(sql_query).fetchall()
+                params = {}
+                if jobName:
+                    params['jobName'] = jobName
+                resulttmp = session.execute(sql_query, params).fetchall()
                 for i in resulttmp:
                     result.append(i)
             except Exception as e:
@@ -1356,7 +1362,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode):
         session.close()
     return job_file if os.path.exists(job_file) else None
 
-def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode):
+def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode,jobName):
     inspector = inspect(engine)
     table_names = inspector.get_table_names()
     start_datetime_str = f"{start_date} {start_time_hour}"
@@ -1427,6 +1433,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                         WHERE is_ai = 1
                         {filter_conditions}
                         AND default_4 in ({placeholders})
+                        {('AND default_1 = :jobName' if jobName else '')}
                         GROUP BY default_1,default_4
                     ),board_info AS(
                             SELECT test_machine_code,default_1, job_name,plno, pcbno, surface,default_7,default_8,default_9,default_10,default_11,
@@ -1445,6 +1452,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                             FROM {table_name}
                             WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
                             AND test_machine_code in ({placeholders})
+                            {('AND job_name = :jobName' if jobName else '')}
                             GROUP BY default_1, job_name,plno,pcbno, surface, test_machine_code,default_7,default_8,default_9,default_10,default_11
                         ), main_result AS (
                             SELECT a.default_1 AS 日期,
@@ -1520,6 +1528,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                         FROM {table_name}
                         WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
                         AND test_machine_code in ({placeholders})
+                        {('AND job_name = :jobName' if jobName else '')}
                         GROUP BY default_1, job_name,plno,pcbno, surface, test_machine_code,default_7,default_8,default_9,default_10,default_11
                     ), main_result AS (
                         SELECT default_1 AS 日期,
@@ -1573,7 +1582,10 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                     AND AI真点总数 < {maxTrueNum}
                     """)
             try:
-                resulttmp = session.execute(sql_query).fetchall()
+                params = {}
+                if jobName:
+                    params['jobName'] = jobName
+                resulttmp = session.execute(sql_query, params).fetchall()
                 for i in resulttmp:
                     result.append(i)
             except Exception as e:
