@@ -57,7 +57,7 @@ def main():
 
     file_names = ['Interface.dll', 'EtData.dll', 'DetectDll.dll', 'AIBaseTool.dll', 'AIBaseUI.dll', 'AIDataManage.exe',
                   'AIErrDataDll.dll', 'AIStatistic.exe', f'AISystem-YMZ-Entire-v{version}-rc.exe', 'AIVerify.dll', 'AllPostSettingWin.dll',
-                  'Config.dll', 'DDADDetector.dll', 'BaseTool.dll', 'DCodeManagerModule.dll', 'DrawGerber-2024-latest.dll', 'ImageLib.dll',
+                  'Config.dll', 'DDADDetector.dll', 'BaseTool.dll', 'DCodeManagerModule.dll', 'DrawGerber.dll', 'ImageLib.dll',
                   'libcrypto-1_1-x64.dll', 'libmysql.dll', 'libssl-1_1-x64.dll', 'libEGL.dll', 'libEGLd.dll', 'libGLESV2.dll', 'libiomp5md.dll',
                   'libiompstubs5md.dll', 'AIMes.dll', 'opencv_world460.dll', 'Daemon.ini']
     # file_names = [f'AISystem-YMZ-Entire-v{version}-rc.exe', 'libssl-1_1-x64.dll']
