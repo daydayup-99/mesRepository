@@ -1218,6 +1218,98 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode,j
                          '批次号': i[31], '工号': i[32], '产品等级': i[33], '唯一ID': i[34], '严重缺陷数量':i[35]}
                 if value['总点过滤率'] >= allFilterRate:
                     statisticdata.append(value)
+            # 按日期分组，但都写在一个"date"工作表中
+            daily_grouped = {}
+            for item in statisticdata:
+                date_key = item['日期']
+                if date_key not in daily_grouped:
+                    daily_grouped[date_key] = []
+                daily_grouped[date_key].append(item)
+            daily_total_rows = []
+            for date, daily_data in daily_grouped.items():
+                daily_df = pd.DataFrame(daily_data)
+                daily_df['平均AI报点T'] = daily_df['平均AI报点T'].astype(float)
+                daily_df['AI跑板数'] = daily_df['AI跑板数'].astype(float)
+                daily_df['AI真点总数'] = daily_df['AI真点总数'].astype(float)
+                daily_df['AVI缺陷总数'] = daily_df['AVI缺陷总数'].astype(float)
+                daily_df['AI漏失总数'] = daily_df['AI漏失总数'].astype(float)
+                daily_df['AVI真点总数'] = daily_df['AVI真点总数'].astype(float)
+
+                daily_resAR = float(
+                    (daily_df['AVI缺陷总数'].sum() - daily_df['AI真点总数'].sum()) / daily_df['AVI缺陷总数'].sum()) if daily_df['AVI缺陷总数'].sum() > 0 else 0
+                if t_ratio < 0:
+                    daily_resFR = float((daily_df['AVI缺陷总数'].sum() - daily_df['AI真点总数'].sum()) / (daily_df['AVI缺陷总数'].sum() - daily_df['AVI真点总数'].sum() - daily_df['AI漏失总数'].sum()))
+                else:
+                    daily_resFR = float((daily_df['AVI缺陷总数'].sum() - daily_df['AI真点总数'].sum()) / (daily_df['AVI缺陷总数'].sum() - (daily_df['AVI缺陷总数'].sum() * t_ratio)))
+
+                if daily_resFR > 1.0 and isOptimizeFRate == 1:
+                    lowerBound = float( daily_df['AVI缺陷总数'].sum() - daily_df['AI漏失总数'].sum() - daily_df['AI真点总数'].sum())
+                    upperBound = min(
+                        float(daily_df['AVI缺陷总数'].sum() - daily_df['AI漏失总数'].sum()),
+                        float(daily_df['AVI缺陷总数'].sum() - daily_df['AI漏失总数'].sum() - daily_df['AI真点总数'].sum()) / 0.96
+                    )
+                    if upperBound <= lowerBound:
+                        upperBound += 0.1
+                    random.seed(123456789)
+                    nAviFalse = int(random.uniform(lowerBound, upperBound - 0.01))
+                    daily_resFR = (float(daily_df['AVI缺陷总数'].sum() - daily_df['AI真点总数'].sum() - daily_df['AI漏失总数'].sum()) / (float(nAviFalse) + 1e-6))
+
+                daily_total_row = {
+                    '日期': date,
+                    '料号': '总计',
+                    '批量号': len(daily_df),
+                    '假点过滤率': round(daily_resFR * 100, 2),
+                    '总点过滤率': round(daily_resAR * 100, 2),
+                    'AI漏失总数': daily_df['AI漏失总数'].sum(),
+                    '漏失率': round(daily_df['漏失率'].mean(), 2),
+                    '总板数': daily_df['总板数'].sum(),
+                    'AI跑板数': daily_df['AI跑板数'].sum(),
+                    'AVI缺陷总数': daily_df['AVI缺陷总数'].sum(),
+                    'AVI缺陷总数T': daily_df['AVI缺陷总数T'].sum(),
+                    'AVI缺陷总数B': daily_df['AVI缺陷总数B'].sum(),
+                    'AVI真点总数': daily_df['AVI真点总数'].sum(),
+                    'AVI真点总数T': daily_df['AVI真点总数T'].sum(),
+                    'AVI真点总数B': daily_df['AVI真点总数B'].sum(),
+                    'AI真点总数': daily_df['AI真点总数'].sum(),
+                    'AI真点总数T': daily_df['AI真点总数T'].sum(),
+                    'AI真点总数B': daily_df['AI真点总数B'].sum(),
+                    'AI假点总数': daily_df['AI假点总数'].sum(),
+                    'AI假点总数T': daily_df['AI假点总数T'].sum(),
+                    'AI假点总数B': daily_df['AI假点总数B'].sum(),
+                    '平均报点': round(daily_df['AVI缺陷总数'].sum() / daily_df['总板数'].sum(), 2) if daily_df[
+                                                                                                          '总板数'].sum() > 0 else 0,
+                    '平均报点T': round((daily_df['平均报点T'] * daily_df['总板数']).sum() / daily_df['总板数'].sum(),
+                                       2) if daily_df['总板数'].sum() > 0 else 0,
+                    '平均报点B': round((daily_df['平均报点B'] * daily_df['总板数']).sum() / daily_df['总板数'].sum(),
+                                       2) if daily_df['总板数'].sum() > 0 else 0,
+                    '平均AI报点': round(daily_df['AI真点总数'].sum() / daily_df['总板数'].sum(), 2) if daily_df[
+                                                                                                           '总板数'].sum() > 0 else 0,
+                    '平均AI报点T': round(
+                        (daily_df['平均AI报点T'] * daily_df['总板数']).sum() / daily_df['总板数'].sum(), 2) if daily_df[
+                                                                                                                   '总板数'].sum() > 0 else 0,
+                    '平均AI报点B': round(
+                        (daily_df['平均AI报点B'] * daily_df['总板数']).sum() / daily_df['总板数'].sum(), 2) if daily_df[
+                                                                                                                   '总板数'].sum() > 0 else 0,
+                    'OK板总数': daily_df['OK板总数'].sum(),
+                    'AI_OK板总数': daily_df['AI_OK板总数'].sum(),
+                    'OK板比例': round((daily_df['OK板比例'] * daily_df['总板数']).sum() / daily_df['总板数'].sum(),
+                                      2) if daily_df['总板数'].sum() > 0 else 0,
+                    'AI_OK板比例': round(
+                        (daily_df['AI_OK板比例'] * daily_df['AI跑板数']).sum() / daily_df['总板数'].sum(), 2) if
+                    daily_df['总板数'].sum() > 0 else 0,
+                    '严重缺陷数量': daily_df['严重缺陷数量'].sum()
+                }
+
+                # 将该日期的数据和总计添加到总列表中
+                daily_total_rows.append(daily_total_row)
+
+            # 将所有日期的数据合并到一个DataFrame中
+            if daily_total_rows:
+                daily_totals_df = pd.DataFrame(daily_total_rows)
+                selected_columns = [col for col in fieldnames if col in daily_totals_df.columns]
+                daily_totals_df_to_export = daily_totals_df[selected_columns]
+                daily_totals_df_to_export.to_excel(w, sheet_name="date", index=False)
+
             # 根据机台号分组
             grouped = {}
             for item in statisticdata:
@@ -1646,6 +1738,95 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                          '批次号': i[30], '工号': i[31], '产品等级': i[32], '严重缺陷数量': i[33]}
                 if value['总点过滤率'] >= allFilterRate:
                     statisticdata.append(value)
+
+            daily_grouped = {}
+            for item in statisticdata:
+                date_key = item['日期']
+                if date_key not in daily_grouped:
+                    daily_grouped[date_key] = []
+                daily_grouped[date_key].append(item)
+            daily_total_rows = []
+            for date, daily_data in daily_grouped.items():
+                daily_df = pd.DataFrame(daily_data)
+                daily_df['平均AI报点T'] = daily_df['平均AI报点T'].astype(float)
+                daily_df['AI跑板数'] = daily_df['AI跑板数'].astype(float)
+                daily_df['AI真点总数'] = daily_df['AI真点总数'].astype(float)
+                daily_df['AVI缺陷总数'] = daily_df['AVI缺陷总数'].astype(float)
+                daily_df['AI漏失总数'] = daily_df['AI漏失总数'].astype(float)
+                daily_df['AVI真点总数'] = daily_df['AVI真点总数'].astype(float)
+                daily_resAR = float(
+                    (daily_df['AVI缺陷总数'].sum() - daily_df['AI真点总数'].sum()) / daily_df['AVI缺陷总数'].sum()) if \
+                daily_df['AVI缺陷总数'].sum() > 0 else 0
+                if t_ratio < 0:
+                    daily_resFR = float((daily_df['AVI缺陷总数'].sum() - daily_df['AI真点总数'].sum()) / (daily_df['AVI缺陷总数'].sum() - daily_df['AVI真点总数'].sum() - daily_df['AI漏失总数'].sum()))
+                else:
+                    daily_resFR = float((daily_df['AVI缺陷总数'].sum() - daily_df['AI真点总数'].sum()) / (daily_df['AVI缺陷总数'].sum() - (daily_df['AVI缺陷总数'].sum() * t_ratio)))
+
+                if daily_resFR > 1.0 and isOptimizeFRate == 1:
+                    lowerBound = float(
+                        daily_df['AVI缺陷总数'].sum() - daily_df['AI漏失总数'].sum() - daily_df['AI真点总数'].sum())
+                    upperBound = min(
+                        float(daily_df['AVI缺陷总数'].sum() - daily_df['AI漏失总数'].sum()),
+                        float(daily_df['AVI缺陷总数'].sum() - daily_df['AI漏失总数'].sum() - daily_df[
+                            'AI真点总数'].sum()) / 0.96
+                    )
+                    if upperBound <= lowerBound:
+                        upperBound += 0.1
+                    random.seed(123456789)
+                    nAviFalse = int(random.uniform(lowerBound, upperBound - 0.01))
+                    daily_resFR = (float(
+                        daily_df['AVI缺陷总数'].sum() - daily_df['AI真点总数'].sum() - daily_df['AI漏失总数'].sum()) / (float(nAviFalse) + 1e-6))
+                daily_total_row = {
+                    '日期': date,
+                    '料号': '总计',
+                    '假点过滤率': round(daily_resFR * 100, 2),
+                    '总点过滤率': round(daily_resAR * 100, 2),
+                    'AI漏失总数': daily_df['AI漏失总数'].sum(),
+                    '漏失率': round(daily_df['漏失率'].mean(), 2),
+                    '总板数': daily_df['总板数'].sum(),
+                    'AI跑板数': daily_df['AI跑板数'].sum(),
+                    'AVI缺陷总数': daily_df['AVI缺陷总数'].sum(),
+                    'AVI缺陷总数T': daily_df['AVI缺陷总数T'].sum(),
+                    'AVI缺陷总数B': daily_df['AVI缺陷总数B'].sum(),
+                    'AVI真点总数': daily_df['AVI真点总数'].sum(),
+                    'AVI真点总数T': daily_df['AVI真点总数T'].sum(),
+                    'AVI真点总数B': daily_df['AVI真点总数B'].sum(),
+                    'AI真点总数': daily_df['AI真点总数'].sum(),
+                    'AI真点总数T': daily_df['AI真点总数T'].sum(),
+                    'AI真点总数B': daily_df['AI真点总数B'].sum(),
+                    'AI假点总数': daily_df['AI假点总数'].sum(),
+                    'AI假点总数T': daily_df['AI假点总数T'].sum(),
+                    'AI假点总数B': daily_df['AI假点总数B'].sum(),
+                    '平均报点': round(daily_df['AVI缺陷总数'].sum() / daily_df['总板数'].sum(), 2) if daily_df[
+                                                                                                          '总板数'].sum() > 0 else 0,
+                    '平均报点T': round((daily_df['平均报点T'] * daily_df['总板数']).sum() / daily_df['总板数'].sum(),
+                                       2) if daily_df['总板数'].sum() > 0 else 0,
+                    '平均报点B': round((daily_df['平均报点B'] * daily_df['总板数']).sum() / daily_df['总板数'].sum(),
+                                       2) if daily_df['总板数'].sum() > 0 else 0,
+                    '平均AI报点': round(daily_df['AI真点总数'].sum() / daily_df['总板数'].sum(), 2) if daily_df[
+                                                                                                           '总板数'].sum() > 0 else 0,
+                    '平均AI报点T': round(
+                        (daily_df['平均AI报点T'] * daily_df['总板数']).sum() / daily_df['总板数'].sum(), 2) if daily_df[
+                                                                                                                   '总板数'].sum() > 0 else 0,
+                    '平均AI报点B': round(
+                        (daily_df['平均AI报点B'] * daily_df['总板数']).sum() / daily_df['总板数'].sum(), 2) if daily_df[
+                                                                                                                   '总板数'].sum() > 0 else 0,
+                    'OK板总数': daily_df['OK板总数'].sum(),
+                    'AI_OK板总数': daily_df['AI_OK板总数'].sum(),
+                    'OK板比例': round((daily_df['OK板比例'] * daily_df['总板数']).sum() / daily_df['总板数'].sum(),
+                                      2) if daily_df['总板数'].sum() > 0 else 0,
+                    'AI_OK板比例': round(
+                        (daily_df['AI_OK板比例'] * daily_df['AI跑板数']).sum() / daily_df['总板数'].sum(), 2) if
+                    daily_df['总板数'].sum() > 0 else 0,
+                    '严重缺陷数量': daily_df['严重缺陷数量'].sum()
+                }
+                daily_total_rows.append(daily_total_row)
+            if daily_total_rows:
+                daily_totals_df = pd.DataFrame(daily_total_rows)
+                selected_columns = [col for col in fieldnames if col in daily_totals_df.columns]
+                daily_totals_df_to_export = daily_totals_df[selected_columns]
+                daily_totals_df_to_export.to_excel(w, sheet_name="date", index=False)
+
             grouped = {}
             for item in statisticdata:
                 machine_code = item['机台号']
@@ -1956,7 +2137,7 @@ def selectTopNHighRatioJob(start_date,end_date,start_time_hour,end_time_hour,rat
 def analyzeData(start_time, end_time, start_time_hour, end_time_hour, MacNum):
     res = {'allJobNum': 0, 'allPcbNum': 0, 'allFilter': 0, 'fateFilter': 0, 'allErrNum': 0,
             'alltrueNum': 0, 'allAiTrueNum': 0, 'avgPoint': 0, 'avgAiPoint': 0, 'top_job_data': [], 'top_job_err_rate': {}}
-    filePath = exportcsvbyjob(start_time, end_time, start_time_hour, end_time_hour, MacNum)
+    filePath = exportcsvbyjob(start_time, end_time, start_time_hour, end_time_hour, MacNum,'')
     like_conditions = ' OR '.join([f"default_4 = '{code}'" for code in MacNum])
     if filePath and os.path.exists(filePath):
         if filePath.lower().endswith('.xlsx'):
@@ -2088,7 +2269,7 @@ def updateAnalyzeData(start_date, end_date, start_time_hour, end_time_hour, MacN
         else:
             period_end_date = period_end
 
-        filePath = exportcsvbyjob(period_start_date, period_end_date, start_time_hour, end_time_hour, MacNum)
+        filePath = exportcsvbyjob(period_start_date, period_end_date, start_time_hour, end_time_hour, MacNum,'')
 
         if filePath and os.path.exists(filePath):
             if filePath.lower().endswith('.xlsx'):
