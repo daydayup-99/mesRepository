@@ -11,6 +11,10 @@ import json
 import os
 from collections import defaultdict
 import configparser
+import psutil
+import re
+import subprocess
+
 global MacTrueRate
 
 surface_dict = {'1': '金',
@@ -32,10 +36,13 @@ host = config['database']['Host']
 port = config['database']['Port']
 dbname = config['database']['DbName']
 charset = config['database']['Charset']
-smallBatch = config['log']['smallBatch']
-maxTrueNum = int(config['log']['maxTrueNum'])
-allFilterRate = float(config['log']['allFilterRate'])
-isOptimizeFRate = int(config['log']['isOptimizeFRate'])
+
+t_ratio = float(config['log'].get('t_ratio', 0.3))
+smallBatch = config['log'].get('smallBatch', 0)
+maxTrueNum = int(config['log'].get('maxTrueNum', 1000000000))
+allFilterRate = float(config['log'].get('allFilterRate', 0.0))
+isOptimizeFRate = int(config['log'].get('isOptimizeFRate', 1))
+deleteDays = int(config['log'].get('deleteDays', 30))
 
 if allFilterRate < 0:
     allFilterRate = 0.0
@@ -70,6 +77,108 @@ except SQLAlchemyError as e:
 Base = declarative_base()
 
 Session = sessionmaker(bind=engine)
+
+def max_free_space_storage():
+    """
+    获取所有挂载的存储设备，找到可用空间最大的本地驱动器
+    返回: (最大可用空间的路径, 可用空间字节数)
+    """
+    s_max_free_path = ""
+    max_free = 0
+    # 获取所有磁盘分区
+    for partition in psutil.disk_partitions():
+        try:
+            # 检查分区是否就绪
+            if not partition.fstype:
+                continue
+            # 获取磁盘使用情况
+            usage = psutil.disk_usage(partition.mountpoint)
+            # 检查是否为网络文件系统
+            file_system = partition.fstype.lower()
+            if file_system in ['cifs', 'nfs', 'smbfs']:
+                # print("This is a remote network drive.")
+                continue
+            else:
+                ipv4_regex = r'\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b'
+                if re.search(ipv4_regex, partition.device):
+                    continue
+            bytes_free = usage.free
+            if bytes_free > max_free:
+                max_free = bytes_free
+                s_max_free_path = partition.mountpoint
+        except (PermissionError, OSError) as e:
+            # 跳过无权限访问或无法访问的驱动器
+            print(f"Cannot access {partition.mountpoint}: {e}")
+            continue
+    return s_max_free_path
+
+backup_dir = max_free_space_storage() + 'backup';
+os.makedirs(backup_dir, exist_ok=True)
+today = datetime.now().date()
+cutoff_date = today - timedelta(days=deleteDays)
+inspector = inspect(engine)
+all_tables = inspector.get_table_names()
+tables_to_delete = []
+for table_name in all_tables:
+    if table_name.startswith('tab_test_') or table_name.startswith('tab_err_'):
+        try:
+            date_str = table_name.split('_')[-1]
+            if len(date_str) == 8 and date_str.isdigit():
+                table_date = datetime.strptime(date_str, '%Y%m%d').date()
+                if table_date < cutoff_date:
+                    tables_to_delete.append(table_name)
+        except ValueError:
+            continue
+if tables_to_delete:
+    print(f"找到 {len(tables_to_delete)} 个需要删除的表:")
+    confirm_delete = True
+    if confirm_delete:
+        session = Session()
+        try:
+            print("开始备份表...")
+            for table_name in tables_to_delete:
+                try:
+                    # 使用 mysqldump 备份单个表
+                    backup_file = os.path.join(backup_dir, f"{table_name}.sql")
+                    # 构建 mysqldump 命令
+                    dump_cmd = [
+                        'mysqldump',
+                        f'--host={host}',
+                        f'--port={port}',
+                        f'--user={user}',
+                        f'--password={password}',
+                        '--single-transaction',
+                        '--routines',
+                        '--triggers',
+                        dbname,
+                        table_name
+                    ]
+                    # 执行备份
+                    with open(backup_file, 'w', encoding='utf-8') as f:
+                        result = subprocess.run(dump_cmd, stdout=f, stderr=subprocess.PIPE, text=True)
+                    if result.returncode == 0:
+                        print(f"已备份表: {table_name} -> {backup_file}")
+                    else:
+                        print(f"备份表 {table_name} 失败: {result.stderr}")
+                        continue
+                except Exception as backup_error:
+                    print(f"备份表 {table_name} 时出错: {backup_error}")
+                    continue
+            for table_name in tables_to_delete:
+                drop_sql = text(f"DROP TABLE IF EXISTS `{table_name}`")
+                session.execute(drop_sql)
+                print(f"已删除表: {table_name}")
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            print(f"删除表时出错: {e}")
+        finally:
+            session.close()
+    else:
+        print("删除操作已取消")
+else:
+    print("没有找到需要删除的表")
+
 
 curent_date = datetime.now()
 # curent_date = datetime(2024, 6, 25)
