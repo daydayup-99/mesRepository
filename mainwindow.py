@@ -13,6 +13,14 @@ config_dir = os.path.dirname(sys.executable)
 config_path = os.path.join(config_dir, 'config.ini')
 config.read(config_path)
 
+def show_backup_dir(icon=None, item=None):
+    """显示备份目录信息"""
+    try:
+        from indexsql import backup_dir
+        messagebox.showinfo("备份目录", f"数据库备份目录:\n{backup_dir}")
+    except ImportError:
+        messagebox.showinfo("备份目录", "无法获取备份目录信息")
+
 def save_headers_config(selected_headers):
     if 'export' not in config:
         config.add_section('export')
@@ -359,6 +367,7 @@ def minimize_to_tray():
         MenuItem("显示窗口", on_show_window),
         MenuItem("配置导出表头", show_headers_config),
         MenuItem("配置过滤真点类型", show_true_point_filters),
+        MenuItem("备份目录", show_backup_dir),
         MenuItem("退出", on_closing)
     ]
     icon_instance = Icon("test", create_image(), menu=Menu(*menu_items))
