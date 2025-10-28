@@ -743,7 +743,8 @@ function generateJobAi(jobnameData,fJobAiData,fJobAllPassData){
 function exportToCSV(start_time, end_time, types, numbers, rates, errPlnoNameData, machineIdData, jobNameData) {
     var csvContent = "\uFEFF";
     console.log(machineIdData.length);
-    csvContent += "缺陷名,数量,占比,机台号,料号\n";
+    console.log(types.length);
+    csvContent += "缺陷名,数量,占比,机台号,料号\r\n";
     for (var i = 0; i < types.length; i++) {
         let item = machineIdData[i];
         let machineStr = '';
@@ -767,19 +768,22 @@ function exportToCSV(start_time, end_time, types, numbers, rates, errPlnoNameDat
             csvSafe(machineStr),
             csvSafe(jobNameStr)
         ].join(",");
-        csvContent += row + "\n";
+        csvContent += row + "\r\n";
     }
+    console.log(csvContent);
     var startDate = start_time.replace(/-/g, '');
     var endDate = end_time.replace(/-/g, '');
     var dateString = startDate === endDate ? startDate : startDate + "_" + endDate;
-    var encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvContent);
+    
+    var blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    var url = URL.createObjectURL(blob);
     var link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
+    link.setAttribute("href", url);
     link.setAttribute("download", errPlnoNameData + "_" + dateString + "_ErrTypeData.csv");
-    document.body.appendChild(link); // 需要将链接加入到 DOM 中才能点击
-
+    document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link); // 点击后移除该链接
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
 function csvSafe(str) {
