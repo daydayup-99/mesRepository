@@ -604,7 +604,7 @@ def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machi
 
             inner_query = session.query(func.count()).filter(table.c.test_machine_code.in_(machinecode),table.c.test_time >= start_datetime_str,
             table.c.test_time <= end_datetime_str).group_by(
-                table.c.job_name, table.c.plno, table.c.pcbno).having(func.sum(func.ifnull(table.c.errnum, -3000))).subquery()
+                table.c.job_name, table.c.test_machine_code, table.c.plno, table.c.pcbno).having(func.sum(func.ifnull(table.c.errnum, -3000))).subquery()
             result = session.query(func.count()).select_from(inner_query).all()
             for row in result:
                 nTolBoard = row[0]
