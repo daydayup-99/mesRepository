@@ -432,7 +432,11 @@ def getAllErrRateSql(start_date, end_date, machinecode):
     JobErrAllNum = 0
     JobTypeCounts = {}
     json_data = []
-    like_conditions = ' OR '.join([f"default_4 = '{code}'" for code in machinecode])
+    if machinecode:
+        placeholders = ", ".join([f"'{code}'" for code in machinecode])
+        like_conditions = f"default_4 IN ({placeholders})"
+    else:
+        like_conditions = "1=0"
     inspector = inspect(engine)
     table_names = inspector.get_table_names()
     if like_conditions != '':
@@ -578,15 +582,14 @@ def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machi
                                 AND test_time between '{start_datetime_str}' and '{end_datetime_str}';
                                 """)
             result = session.execute(sql_query).fetchall()
-            table = Table(table_name, Base.metadata, autoload_with=engine)
             for row in result:
                 nALLNum,nAiNum = row
-            inner_query = session.query(func.count()).filter(table.c.test_machine_code.in_(machinecode),table.c.test_time >= start_datetime_str,
-            table.c.test_time <= end_datetime_str).group_by(table.c.job_name, table.c.plno, table.c.pcbno).having(func.sum(func.ifnull(table.c.errnum, -3000)),func.sum(func.ifnull(table.c.errnum, -3000)) >= 0).subquery()
+            table = Table(table_name, Base.metadata, autoload_with=engine)
+            inner_query = (session.query(func.count()).filter(table.c.test_machine_code.in_(machinecode),table.c.test_time >= start_datetime_str,
+            table.c.test_time <= end_datetime_str).group_by(table.c.job_name, table.c.plno, table.c.pcbno).subquery())
             result = session.query(func.count()).select_from(inner_query).all()
             for row in result:
-                nAllBoard = row[0]
-
+                nAllBoard = row[0] or 0
             sql_query = text(f"""
                                 SELECT count(*)
                                 FROM(
@@ -600,33 +603,22 @@ def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machi
                                 """)
             result = session.execute(sql_query).fetchall()
             for row in result:
-                nOkBoard = row[0]
-
+                nOkBoard = row[0] or 0
             inner_query = session.query(func.count()).filter(table.c.test_machine_code.in_(machinecode),table.c.test_time >= start_datetime_str,
-            table.c.test_time <= end_datetime_str).group_by(
-                table.c.job_name, table.c.test_machine_code, table.c.plno, table.c.pcbno).having(func.sum(func.ifnull(table.c.errnum, -3000))).subquery()
+            table.c.test_time <= end_datetime_str).group_by(table.c.job_name, table.c.test_machine_code, table.c.plno, table.c.pcbno).subquery()
             result = session.query(func.count()).select_from(inner_query).all()
             for row in result:
-                nTolBoard = row[0]
+                nTolBoard = row[0] or 0
 
             if nALLNum is None:
                 nALLNum = 0
             if nAiNum is None:
                 nAiNum = 0
-            # if nCheckTrueNum is None:
-            #     nCheckTrueNum = 0
-            if nAllBoard is None:
-                nAllBoard = 0
-            if nTolBoard is None:
-                nTolBoard = 0
-            if nOkBoard is None:
-                nOkBoard =0
 
             nALLNum = float(nALLNum)
             nAiNum = float(nAiNum)
             nTotalErrNum += nALLNum
             nTotalAiNum += nAiNum
-            # nCheckTrueNum = float(nCheckTrueNum)
             nAllBoard = float(nAllBoard)
             nOkBoard = float(nOkBoard)
             if nAllBoard != 0:
@@ -705,37 +697,30 @@ def ReadJobSql(start_date, end_date,start_time_hour,end_time_hour, machinecode):
         table_name = f"tab_test_{current_date.strftime('%Y%m%d')[0:]}"
         if table_name in table_names:
             sql_query = text(f"""
-                            select job_name, sum(errnum), sum(ai_true_num)
-                            FROM {table_name}
-                            WHERE test_machine_code in {machineCode}
-                            AND test_time between '{start_datetime_str}' and '{end_datetime_str}'
-                            GROUP BY job_name;
-                            """)
+                WITH job_stats AS (
+                    SELECT 
+                        job_name,
+                        SUM(errnum) as total_errnum,
+                        SUM(ai_true_num) as total_ai_true_num,
+                        COUNT(DISTINCT CONCAT(plno, '|', pcbno)) as unique_plno_pcbno_count
+                    FROM {table_name}
+                    WHERE test_machine_code IN {machineCode}
+                    AND test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
+                    GROUP BY job_name
+                )
+                SELECT 
+                    job_name,
+                    total_errnum,
+                    total_ai_true_num,
+                    unique_plno_pcbno_count
+                FROM job_stats
+            """)
             result = session.execute(sql_query).fetchall()
             for row in result:
                 jobname=row[0]
-                sql_query = text(f"""
-                                with a as(
-                                    SELECT job_name,plno, pcbno 
-                                    FROM {table_name}
-                                    WHERE test_machine_code in {machineCode}
-                                    AND job_name = '{jobname}'
-                                    AND test_time between '{start_datetime_str}' and '{end_datetime_str}'
-                                    GROUP BY plno, pcbno
-                                )
-                                SELECT count(*)
-                                FROM a
-                                """)
-                res = session.execute(sql_query).fetchall()
-                njoball=res[0][0]
-                njoberrnum=row[1]
-                njobainum=row[2]
-                if njoball is None:
-                    njoball=0.0
-                if njoberrnum is None:
-                    njoberrnum=0.0
-                if njobainum is None:
-                    njobainum=0.0
+                njoberrnum = row[1] or 0
+                njobainum = row[2] or 0
+                njoball = row[3] or 0
 
                 jobname_results[jobname]['njoball'] += njoball
                 jobname_results[jobname]['njoberrnum'] += njoberrnum
@@ -781,7 +766,11 @@ def getJobErrRate(start_date,end_date,machinecode,jobname):
     JobErrAllNum = 0
     JobTypeCounts = {}
     json_data = []
-    like_conditions = ' OR '.join([f"default_4 = '{code}'" for code in machinecode])
+    if machinecode:
+        placeholders = ", ".join([f"'{code}'" for code in machinecode])
+        like_conditions = f"default_4 IN ({placeholders})"
+    else:
+        like_conditions = "1=0"
     inspector = inspect(engine)
     table_names = inspector.get_table_names()
     while current_date <= end_date:
@@ -841,7 +830,11 @@ def getPlnoErrRate(start_date,end_date,machinecode,jobname,plno):
     current_date = start_date
     PlnoErrAllNum = 0
     PlnoTypeCounts = {}
-    like_conditions = ' OR '.join([f"default_4 = '{code}'" for code in machinecode])
+    if machinecode:
+        placeholders = ", ".join([f"'{code}'" for code in machinecode])
+        like_conditions = f"default_4 IN ({placeholders})"
+    else:
+        like_conditions = "1=0"
     while current_date <= end_date:
         inspector = inspect(engine)
         table_names = inspector.get_table_names()
@@ -1073,6 +1066,10 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode,j
         filter_conditions ='AND ' + ' OR '.join([f"ai_err_type = '{err_type}'" for err_type in true_point_filters])
     current_dir = os.path.dirname(sys.executable)
     # current_dir = os.path.dirname(os.path.realpath(__file__))
+        placeholders = ", ".join([f"'{err_type}'" for err_type in true_point_filters])
+        filter_conditions = f"AND ai_err_type IN ({placeholders})"
+    else:
+        filter_conditions = ""
     current_dir = os.path.join(current_dir, 'csvdata')
     print("当前文件的目录路径:", current_dir)
     if not os.path.exists(current_dir):
@@ -1103,9 +1100,9 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode,j
                                      SUM(CASE WHEN is_ai = 1 AND is_top = 0 THEN is_ai ELSE 0 END) AS specify_ai_true_num_sum_B,
                                      default_4
                         FROM {err_table_name}
-                        WHERE is_ai = 1
+                        WHERE default_4 in ({placeholders})
+                        AND is_ai = 1
                         {filter_conditions}
-                        AND default_4 in ({placeholders})
                         {('AND default_1 = :jobName' if jobName else '')}
                         GROUP BY default_1,default_2,default_4
                     ),board_info AS(
@@ -1602,6 +1599,10 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
         filter_conditions ='AND ' + ' OR '.join([f"ai_err_type = '{err_type}'" for err_type in true_point_filters])
     current_dir = os.path.dirname(sys.executable)
     # current_dir = os.path.dirname(os.path.realpath(__file__))
+        placeholders = ", ".join([f"'{err_type}'" for err_type in true_point_filters])
+        filter_conditions = f"AND ai_err_type IN ({placeholders})"
+    else:
+        filter_conditions = ""
     current_dir = os.path.join(current_dir, 'csvdata')
     print("当前文件的目录路径:", current_dir)
     if not os.path.exists(current_dir):
@@ -1631,9 +1632,9 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                                 SUM(CASE WHEN is_ai = 1 AND is_top = 0 THEN is_ai ELSE 0 END) AS specify_ai_true_num_sum_B,
                                 default_4
                         FROM {err_table_name}
-                        WHERE is_ai = 1
+                        WHERE default_4 in ({placeholders})
+                        AND is_ai = 1
                         {filter_conditions}
-                        AND default_4 in ({placeholders})
                         {('AND default_1 = :jobName' if jobName else '')}
                         GROUP BY default_1,default_4
                     ),board_info AS(
@@ -2247,7 +2248,11 @@ def analyzeData(start_time, end_time, start_time_hour, end_time_hour, MacNum):
     res = {'allJobNum': 0, 'allPcbNum': 0, 'allFilter': 0, 'fateFilter': 0, 'allErrNum': 0,
             'alltrueNum': 0, 'allAiTrueNum': 0, 'avgPoint': 0, 'avgAiPoint': 0, 'top_job_data': [], 'top_job_err_rate': {}}
     filePath = exportcsvbyjob(start_time, end_time, start_time_hour, end_time_hour, MacNum,'')
-    like_conditions = ' OR '.join([f"default_4 = '{code}'" for code in MacNum])
+    if MacNum:
+        placeholders = ", ".join([f"'{code}'" for code in MacNum])
+        like_conditions = f"default_4 IN ({placeholders})"
+    else:
+        like_conditions = "1=0"
     if filePath and os.path.exists(filePath):
         if filePath.lower().endswith('.xlsx'):
             df = pd.read_excel(filePath, engine='openpyxl')
