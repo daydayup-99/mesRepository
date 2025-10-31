@@ -29,7 +29,6 @@ config = configparser.ConfigParser()
 config_dir = os.path.dirname(sys.executable)
 config_dir = os.path.join(config_dir, 'config.ini')
 config.read(config_dir)
-t_ratio = float(config['log']['t_ratio'])
 user = config['database']['User']
 password = config['database']['Password']
 host = config['database']['Host']
@@ -1063,9 +1062,6 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode,j
         machinecodename = machinecode[0]
     placeholders = ', '.join([f"'{code}'" for code in machinecode])
     if true_point_filters:
-        filter_conditions ='AND ' + ' OR '.join([f"ai_err_type = '{err_type}'" for err_type in true_point_filters])
-    current_dir = os.path.dirname(sys.executable)
-    # current_dir = os.path.dirname(os.path.realpath(__file__))
         placeholders = ", ".join([f"'{err_type}'" for err_type in true_point_filters])
         filter_conditions = f"AND ai_err_type IN ({placeholders})"
     else:
