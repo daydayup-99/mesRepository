@@ -856,6 +856,83 @@
             });
         }
     </script>
+    <script>
+        // 初始化：加载缺陷类型下拉（可选，如后端提供列表）TODO
+        function loadConfErrTypes() {
+            var start_time = $('#start_time').val().split('T')[0];
+            var start_time_hour = $('#start_time').val().split('T')[1];
+            var end_time = $('#end_time').val().split('T')[0];
+            var end_time_hour = $('#end_time').val().split('T')[1];
+            var MacNum = $('#MacNum').val();
+
+            $.ajax({
+                url: '/GetErrTypes',    // 后端返回该时间段&机台的缺陷类型数组: { data: ['连焊','少锡', ...] }
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    start_time: start_time,
+                    end_time: end_time,
+                    start_time_hour: start_time_hour,
+                    end_time_hour: end_time_hour,
+                    MacNum: MacNum
+                }
+            }).done(function(resp){
+                var $sel = $('#errTypeSelect_conf');
+                $sel.find('option:not(:first)').remove();
+                var arr = (resp && Array.isArray(resp.data)) ? resp.data : [];
+                var set = new Set();
+                arr.forEach(function(t){ if(t){ set.add(String(t)); }});
+                Array.from(set).forEach(function(t){
+                    $sel.append($('<option/>').val(t).text(t));
+                });
+            }).fail(function(e){
+                console.warn('GetErrTypes failed', e);
+            });
+        }
+
+        $(function () {
+            function fetchAndRenderConf() {
+                var start_time = $('#start_time').val().split('T')[0];
+                var start_time_hour = $('#start_time').val().split('T')[1];
+                var end_time = $('#end_time').val().split('T')[0];
+                var end_time_hour = $('#end_time').val().split('T')[1];
+                var MacNum = $('#MacNum').val();
+                var jobNum = ($('#jobInput').val() || '').trim();
+                var PLNum = $('#PLNum').val();
+                var frame = ($('#frameSelect_conf').val() || '1').trim();
+                console.log("The current frame: " + frame)
+<!--                var errType = $('#errTypeSelect_conf').val() || '';-->
+
+                $.ajax({
+                    url: '/ConfDist',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        start_time: start_time,
+                        end_time: end_time,
+                        start_time_hour: start_time_hour,
+                        end_time_hour: end_time_hour,
+                        MacNum: MacNum,
+                        jobNum: jobNum,
+                        PLNum: PLNum,
+                        frame: frame
+<!--                        errType: errType-->
+                    }
+                }).done(function(resp){
+                    var list = resp.data || [];
+                    console.log("The current frame conf list: " + list)
+                    generateFrameConf(list);
+                }).fail(function(e){
+                    console.error('ConfDist failed', e);
+                    generateFrameConf([]); // 渲染空数据
+                });
+            }
+
+            $('#frameSelect_conf, #errTypeSelect_conf').off('change').on('change', fetchAndRenderConf);
+            // 首次绘制
+            $('#frameSelect_conf').trigger('change');
+        });
+</script>
 </head>
 
 <main class="main">
@@ -977,6 +1054,25 @@
             <div class="clear"></div>
         </div>
 
+        <div class="e_chart">
+            <div class="charts l_left">
+                <p class="charts_p" id="conf">置信度分布</p>
+                <div class="filters" style="margin: 6px 0 10px 0;">
+                    <label for="frameSelect_conf">帧数：</label>
+                    <select id="frameSelect_conf" style="min-width:50px;">
+                      <option value="">1</option>
+                      <option>2</option>
+                      <option>3</option>
+                    </select>
+                  
+                    <label for="errTypeSelect_conf" style="margin-left:12px;">缺陷类型：</label>
+                    <select id="errTypeSelect_conf" style="min-width:150px;">
+                      <option value="">功能开发中...</option>
+                    </select>
+                  </div>
+                <div id="container9" style="height:300px;width: 100%;"></div>
+            </div>
+            <div class="clear"></div>
         </div>
 
     </section>

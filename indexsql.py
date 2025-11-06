@@ -435,7 +435,7 @@ def getAllErrRateSql(start_date, end_date, machinecode):
         placeholders = ", ".join([f"'{code}'" for code in machinecode])
         like_conditions = f"default_4 IN ({placeholders})"
     else:
-        like_conditions = "1=0"
+        like_conditions = "1=1"
     inspector = inspect(engine)
     table_names = inspector.get_table_names()
     if like_conditions != '':
@@ -769,7 +769,7 @@ def getJobErrRate(start_date,end_date,machinecode,jobname):
         placeholders = ", ".join([f"'{code}'" for code in machinecode])
         like_conditions = f"default_4 IN ({placeholders})"
     else:
-        like_conditions = "1=0"
+        like_conditions = "1=1"
     inspector = inspect(engine)
     table_names = inspector.get_table_names()
     while current_date <= end_date:
@@ -833,7 +833,7 @@ def getPlnoErrRate(start_date,end_date,machinecode,jobname,plno):
         placeholders = ", ".join([f"'{code}'" for code in machinecode])
         like_conditions = f"default_4 IN ({placeholders})"
     else:
-        like_conditions = "1=0"
+        like_conditions = "1=1"
     while current_date <= end_date:
         inspector = inspect(engine)
         table_names = inspector.get_table_names()
@@ -1060,12 +1060,14 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode,j
         machinecodename = "多机台"
     else:
         machinecodename = machinecode[0]
-    placeholders = ', '.join([f"'{code}'" for code in machinecode])
+    machinecodelist = ', '.join([f"'{code}'" for code in machinecode])
     if true_point_filters:
         placeholders = ", ".join([f"'{err_type}'" for err_type in true_point_filters])
         filter_conditions = f"AND ai_err_type IN ({placeholders})"
     else:
         filter_conditions = ""
+    current_dir = os.path.dirname(sys.executable)
+    # current_dir = os.path.dirname(os.path.realpath(__file__))
     current_dir = os.path.join(current_dir, 'csvdata')
     print("当前文件的目录路径:", current_dir)
     if not os.path.exists(current_dir):
@@ -1096,7 +1098,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode,j
                                      SUM(CASE WHEN is_ai = 1 AND is_top = 0 THEN is_ai ELSE 0 END) AS specify_ai_true_num_sum_B,
                                      default_4
                         FROM {err_table_name}
-                        WHERE default_4 in ({placeholders})
+                        WHERE default_4 in ({machinecodelist})
                         AND is_ai = 1
                         {filter_conditions}
                         {('AND default_1 = :jobName' if jobName else '')}
@@ -1118,7 +1120,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode,j
                                SUM(default_12) AS serious_defect
                         FROM {table_name}
                         WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
-                        AND test_machine_code in ({placeholders})
+                        AND test_machine_code in ({machinecodelist})
                         {('AND job_name = :jobName' if jobName else '')}
                         GROUP BY default_1, job_name, plno, pcbno, surface, test_machine_code,default_7,default_8,default_9,default_10,default_11
                     ), main_result AS (
@@ -1199,7 +1201,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode,j
                                SUM(default_12) AS serious_defect
                         FROM {table_name}
                         WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
-                        AND test_machine_code in ({placeholders})
+                        AND test_machine_code in ({machinecodelist})
                         {('AND job_name = :jobName' if jobName else '')}
                         GROUP BY default_1, job_name, plno, pcbno, surface, test_machine_code,default_7,default_8,default_9,default_10,default_11
                     ), main_result AS (
@@ -1590,15 +1592,14 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
         machinecodename = "多机台"
     else:
         machinecodename = machinecode[0]
-    placeholders = ', '.join([f"'{code}'" for code in machinecode])
+    machinecodelist= ', '.join([f"'{code}'" for code in machinecode])
     if true_point_filters:
-        filter_conditions ='AND ' + ' OR '.join([f"ai_err_type = '{err_type}'" for err_type in true_point_filters])
-    current_dir = os.path.dirname(sys.executable)
-    # current_dir = os.path.dirname(os.path.realpath(__file__))
         placeholders = ", ".join([f"'{err_type}'" for err_type in true_point_filters])
         filter_conditions = f"AND ai_err_type IN ({placeholders})"
     else:
         filter_conditions = ""
+    current_dir = os.path.dirname(sys.executable)
+    # current_dir = os.path.dirname(os.path.realpath(__file__))
     current_dir = os.path.join(current_dir, 'csvdata')
     print("当前文件的目录路径:", current_dir)
     if not os.path.exists(current_dir):
@@ -1628,7 +1629,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                                 SUM(CASE WHEN is_ai = 1 AND is_top = 0 THEN is_ai ELSE 0 END) AS specify_ai_true_num_sum_B,
                                 default_4
                         FROM {err_table_name}
-                        WHERE default_4 in ({placeholders})
+                        WHERE default_4 in ({machinecodelist})
                         AND is_ai = 1
                         {filter_conditions}
                         {('AND default_1 = :jobName' if jobName else '')}
@@ -1649,7 +1650,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                                 SUM(default_12) AS serious_defect
                             FROM {table_name}
                             WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
-                            AND test_machine_code in ({placeholders})
+                            AND test_machine_code in ({machinecodelist})
                             {('AND job_name = :jobName' if jobName else '')}
                             GROUP BY default_1, job_name,plno,pcbno, surface, test_machine_code,default_7,default_8,default_9,default_10,default_11
                         ), main_result AS (
@@ -1725,7 +1726,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                                SUM(default_12) AS serious_defect
                         FROM {table_name}
                         WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
-                        AND test_machine_code in ({placeholders})
+                        AND test_machine_code in ({machinecodelist})
                         {('AND job_name = :jobName' if jobName else '')}
                         GROUP BY default_1, job_name,plno,pcbno, surface, test_machine_code,default_7,default_8,default_9,default_10,default_11
                     ), main_result AS (
@@ -2248,7 +2249,7 @@ def analyzeData(start_time, end_time, start_time_hour, end_time_hour, MacNum):
         placeholders = ", ".join([f"'{code}'" for code in MacNum])
         like_conditions = f"default_4 IN ({placeholders})"
     else:
-        like_conditions = "1=0"
+        like_conditions = "1=1"
     if filePath and os.path.exists(filePath):
         if filePath.lower().endswith('.xlsx'):
             df = pd.read_excel(filePath, engine='openpyxl')
@@ -2434,3 +2435,51 @@ def updateAnalyzeData(start_date, end_date, start_time_hour, end_time_hour, MacN
         "chart4Data": chart4Data,
         "chart5Data": chart5Data
     }
+def getconflist(start_time, end_time, start_time_hour, end_time_hour, MacNum, jobName, PLNum, frame):
+    if frame == '1':
+        frame_no = "default_12"
+    elif frame == '2':
+        frame_no = "default_13"
+    elif frame == '3':
+        frame_no = "default_14"
+    session = Session()
+    inspector = inspect(engine)
+    table_names = inspector.get_table_names()
+    start_datetime_str = f"{start_time} {start_time_hour}"
+    end_datetime_str = f"{end_time} {end_time_hour}"
+    dates_to_query = []
+    all_values = []
+    if MacNum:
+        placeholders = ", ".join([f"'{code}'" for code in MacNum])
+        like_conditions = f"default_4 IN ({placeholders})"
+    else:
+        like_conditions = "1=1"
+    current_date = start_time
+    while current_date <= start_time:
+        tabledate = current_date.strftime('%Y%m%d')[0:]
+        table_name = f"tab_err_{tabledate}"
+        if table_name in table_names:
+            dates_to_query.append(table_name)
+        current_date += timedelta(days=1)
+    if not dates_to_query:
+        print(f"没有可查询的表，时间范围: {start_time} 到 {end_time}")
+        return None
+    for table_name in dates_to_query:
+        sql_query = text(f"""
+                        select {frame_no}
+                        from {table_name}
+                        WHERE ({like_conditions})
+                        {('AND job_name = :jobName' if jobName else '')}
+                        {('AND PLNum = :PLNum' if PLNum else '')}
+                    """)
+        results = session.execute(sql_query).fetchall()
+        for r in results:
+            v = r[0]
+            if v is not None:
+                try:
+                    all_values.append(float(v))
+                except (TypeError, ValueError):
+                    pass
+    json_data = json.dumps({'data': all_values}, ensure_ascii=False)
+    session.close()
+    return json_data
