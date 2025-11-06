@@ -2469,6 +2469,7 @@ def getconflist(start_time, end_time, start_time_hour, end_time_hour, MacNum, jo
                         select {frame_no}
                         from {table_name}
                         WHERE ({like_conditions})
+                        AND {frame_no} <> 0
                         {('AND job_name = :jobName' if jobName else '')}
                         {('AND PLNum = :PLNum' if PLNum else '')}
                     """)
