@@ -892,3 +892,91 @@ function csvSafe(str) {
     });
 }
 
+ function generateFrameConf(frameConfNum) {
+        // 将置信度数据按0.1区间分组统计
+        var intervals = [];
+        var counts = [];
+        
+        // 初始化10个区间（0-0.1, 0.1-0.2, ..., 0.9-1.0）
+        for (var i = 0; i < 10; i++) {
+            intervals.push((i * 0.1).toFixed(1) + '-' + ((i + 1) * 0.1).toFixed(1));
+            counts.push(0);
+        }
+        
+        // 统计每个区间的数量
+        if (Array.isArray(frameConfNum)) {
+            frameConfNum.forEach(function(conf) {
+                var confValue = parseFloat(conf);
+                if (!isNaN(confValue) && confValue >= 0 && confValue <= 1) {
+                    // 计算属于哪个区间
+                    var index = Math.floor(confValue * 10);
+                    // 处理边界情况：1.0应该归到最后一个区间（索引9）
+                    if (index >= 10) index = 9;
+                    counts[index]++;
+                }
+            });
+        }
+    var myChart = echarts.init($("#container9")[0]);
+    var option = {
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: {
+                type: 'shadow'
+            },
+            formatter: function(params) {
+                var param = params[0];
+                return param.name + '<br/>数量: ' + param.value;
+            }
+        },
+        grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            containLabel: true
+        },
+         xAxis: {
+            type: 'category',
+            name: 'conf',
+            data: intervals,
+            axisLabel: {
+                show: true,
+                textStyle: {
+                    color: '#333',
+
+                },
+                rotate: 45 
+            }
+        },
+        yAxis: 
+            {
+                type: 'value',
+                name: '数量',
+                axisLabel: {
+                    show: true,
+                    textStyle: {
+                        color: '#333'
+                    }
+                }
+            },
+        series: [
+            {
+                name: '数量',
+                type: 'bar',
+                barWidth: '60%',
+                data: counts,
+                itemStyle: {
+                    color: '#4ab0ee'
+                },
+                label: {
+                    show: true,
+                    position: 'top'
+                }
+            }
+        ]
+    };
+    myChart.setOption(option);
+    window.addEventListener("resize", (event) => {
+        myChart.resize()
+    });
+}
+
