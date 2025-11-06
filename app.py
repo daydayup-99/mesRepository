@@ -6,7 +6,7 @@ from flask import Flask, render_template, request, jsonify
 from indexsql import selectJob, selectMachine, getRateFilterTotal, ReadJobSql, getJobErrRate, selectPlno, \
     getPlnoErrRate, SelectAiPass, getErrRate, getLayersql, selectMacRate, \
     exportcsvbyjob, exportallcsv, getAllErrRateSql, getErrJob, getAllMachineNumSql, selectTopNHighRatioJob, \
-    selectLowRatioJob, analyzeData, updateAnalyzeData
+    selectLowRatioJob, analyzeData, updateAnalyzeData, getconflist
 from datetime import datetime, timedelta, time
 import win32file
 import win32con
@@ -233,6 +233,15 @@ def exportliaocsv():
         return jsonify(data), 404
     data = {'message': '数据导出成功'}
     return jsonify(data)
+
+@app.route('/ConfDist', methods=['POST'])
+def GetConfDist():
+    start_time, end_time, start_time_hour, end_time_hour, MacNum = getRequestData(request)
+    jobName = request.form.get('jobNum', '')
+    PLNum = request.form.get('PLNum', '')
+    frame = request.form.get('frame', '')
+    result = getconflist(start_time, end_time, start_time_hour, end_time_hour, MacNum, jobName, PLNum, frame)
+    return result
 
 @app.route('/GetTopNHighRatioJob',methods=['POST'])
 def getTopNHighRatioJob():
