@@ -2435,7 +2435,7 @@ def updateAnalyzeData(start_date, end_date, start_time_hour, end_time_hour, MacN
         "chart4Data": chart4Data,
         "chart5Data": chart5Data
     }
-def getconflist(start_time, end_time, start_time_hour, end_time_hour, MacNum, jobName, PLNum, frame):
+def getconflist(start_time, end_time, start_time_hour, end_time_hour, MacNum, jobName, PLNum, frame, errType):
     if frame == '1':
         frame_no = "default_12"
     elif frame == '2':
@@ -2470,10 +2470,18 @@ def getconflist(start_time, end_time, start_time_hour, end_time_hour, MacNum, jo
                         from {table_name}
                         WHERE ({like_conditions})
                         AND {frame_no} <> 0
+                        {('AND ai_err_type = :errType' if errType else '')}
                         {('AND job_name = :jobName' if jobName else '')}
                         {('AND PLNum = :PLNum' if PLNum else '')}
                     """)
-        results = session.execute(sql_query).fetchall()
+        params = {}
+        if errType:
+            params["errType"] = errType
+        if jobName:
+            params["jobName"] = jobName
+        if PLNum:
+            params["PLNum"] = PLNum
+        results = session.execute(sql_query, params).fetchall()
         for r in results:
             v = r[0]
             if v is not None:

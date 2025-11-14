@@ -434,6 +434,11 @@
                         machineIdData.push(Data[i].sorted_machines);
                         jobNameData.push(Data[i].sorted_job_names);
                     }
+                    $('#errTypeSelect_conf').empty();
+                    $('#errTypeSelect_conf').append('<option value="">全部</option>');
+                    for (var j = 0; j < errJobtypedata.length; j++) {
+                        $('#errTypeSelect_conf').append('<option value="' + errJobtypedata[j] + '">' + errJobtypedata[j] + '</option>');
+                    }
                     generateJobErr(start_time, end_time, errJobtypedata, errJobNumData, errJobRateData, errAllNumData[0], errPlnoNameData[0], machineIdData, jobNameData)
                     $('#jobname').html('料号: ' + errPlnoNameData[0]);
                 },
@@ -857,39 +862,6 @@
         }
     </script>
     <script>
-        // 初始化：加载缺陷类型下拉（可选，如后端提供列表）TODO
-        function loadConfErrTypes() {
-            var start_time = $('#start_time').val().split('T')[0];
-            var start_time_hour = $('#start_time').val().split('T')[1];
-            var end_time = $('#end_time').val().split('T')[0];
-            var end_time_hour = $('#end_time').val().split('T')[1];
-            var MacNum = $('#MacNum').val();
-
-            $.ajax({
-                url: '/GetErrTypes',    // 后端返回该时间段&机台的缺陷类型数组: { data: ['连焊','少锡', ...] }
-                type: 'POST',
-                dataType: 'json',
-                data: {
-                    start_time: start_time,
-                    end_time: end_time,
-                    start_time_hour: start_time_hour,
-                    end_time_hour: end_time_hour,
-                    MacNum: MacNum
-                }
-            }).done(function(resp){
-                var $sel = $('#errTypeSelect_conf');
-                $sel.find('option:not(:first)').remove();
-                var arr = (resp && Array.isArray(resp.data)) ? resp.data : [];
-                var set = new Set();
-                arr.forEach(function(t){ if(t){ set.add(String(t)); }});
-                Array.from(set).forEach(function(t){
-                    $sel.append($('<option/>').val(t).text(t));
-                });
-            }).fail(function(e){
-                console.warn('GetErrTypes failed', e);
-            });
-        }
-
         $(function () {
             function fetchAndRenderConf() {
                 var start_time = $('#start_time').val().split('T')[0];
@@ -900,8 +872,8 @@
                 var jobNum = ($('#jobInput').val() || '').trim();
                 var PLNum = $('#PLNum').val();
                 var frame = ($('#frameSelect_conf').val() || '1').trim();
-                console.log("The current frame: " + frame)
-<!--                var errType = $('#errTypeSelect_conf').val() || '';-->
+                var errType = $('#errTypeSelect_conf').val() || '';
+                console.log("The current errType: " + errType)
 
                 $.ajax({
                     url: '/ConfDist',
@@ -915,8 +887,8 @@
                         MacNum: MacNum,
                         jobNum: jobNum,
                         PLNum: PLNum,
-                        frame: frame
-<!--                        errType: errType-->
+                        frame: frame,
+                        errType: errType
                     }
                 }).done(function(resp){
                     var list = resp.data || [];
@@ -1067,7 +1039,6 @@
                   
                     <label for="errTypeSelect_conf" style="margin-left:12px;">缺陷类型：</label>
                     <select id="errTypeSelect_conf" style="min-width:150px;">
-                      <option value="">功能开发中...</option>
                     </select>
                   </div>
                 <div id="container9" style="height:300px;width: 100%;"></div>

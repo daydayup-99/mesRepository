@@ -240,7 +240,8 @@ def GetConfDist():
     jobName = request.form.get('jobNum', '')
     PLNum = request.form.get('PLNum', '')
     frame = request.form.get('frame', '')
-    result = getconflist(start_time, end_time, start_time_hour, end_time_hour, MacNum, jobName, PLNum, frame)
+    errType = request.form.get('errType', '')
+    result = getconflist(start_time, end_time, start_time_hour, end_time_hour, MacNum, jobName, PLNum, frame, errType)
     return result
 
 @app.route('/GetTopNHighRatioJob',methods=['POST'])
