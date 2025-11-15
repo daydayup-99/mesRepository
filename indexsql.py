@@ -1034,14 +1034,21 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode,j
     current_date = start_date
     dates_to_query = []
     err_tables = []
-    while current_date <= end_date:
-        tabledate = current_date.strftime('%Y%m%d')[0:]
-        table_name = f"tab_test_{tabledate}"
-        err_table_name = f"tab_err_{tabledate}"
-        if table_name in table_names:
-            dates_to_query.append((current_date, table_name))
-            err_tables.append(err_table_name)
-        current_date += timedelta(days=1)
+    with engine.connect() as connection:
+        while current_date <= end_date:
+            tabledate = current_date.strftime('%Y%m%d')[0:]
+            table_name = f"tab_test_{tabledate}"
+            err_table_name = f"tab_err_{tabledate}"
+            if table_name in table_names:
+                # 过滤空表
+                result_test = connection.execute(text(f"SELECT EXISTS(SELECT 1 FROM {table_name} LIMIT 1)"))
+                result_err = connection.execute(text(f"SELECT EXISTS(SELECT 1 FROM {err_table_name} LIMIT 1)"))
+                test_has_data = result_test.scalar()
+                err_has_data = result_err.scalar()
+                if test_has_data and err_has_data:
+                    dates_to_query.append((current_date, table_name))
+                    err_tables.append(err_table_name)
+            current_date += timedelta(days=1)
     if not dates_to_query:
         print(f"没有可查询的表，时间范围: {start_date} 到 {end_date}")
         return None
@@ -1566,14 +1573,21 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
     current_date = start_date
     dates_to_query = []
     err_tables = []
-    while current_date <= end_date:
-        tabledate = current_date.strftime('%Y%m%d')[0:]
-        table_name = f"tab_test_{tabledate}"
-        err_table_name = f"tab_err_{tabledate}"
-        if table_name in table_names:
-            dates_to_query.append(table_name)
-            err_tables.append(err_table_name)
-        current_date += timedelta(days=1)
+    with engine.connect() as connection:
+        while current_date <= end_date:
+            tabledate = current_date.strftime('%Y%m%d')[0:]
+            table_name = f"tab_test_{tabledate}"
+            err_table_name = f"tab_err_{tabledate}"
+            if table_name in table_names:
+                # 过滤空表
+                result_test = connection.execute(text(f"SELECT EXISTS(SELECT 1 FROM {table_name} LIMIT 1)"))
+                result_err = connection.execute(text(f"SELECT EXISTS(SELECT 1 FROM {err_table_name} LIMIT 1)"))
+                test_has_data = result_test.scalar()
+                err_has_data = result_err.scalar()
+                if test_has_data and err_has_data:
+                    dates_to_query.append((current_date, table_name))
+                    err_tables.append(err_table_name)
+            current_date += timedelta(days=1)
     if not dates_to_query:
         print(f"没有可查询的表，时间范围: {start_date} 到 {end_date}")
         return None
@@ -2020,8 +2034,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                         (machine_df['AVI缺陷总数'].sum() - machine_df['AI真点总数'].sum()) / (
                                 machine_df['AVI缺陷总数'].sum() - machine_df['AVI真点总数'].sum() -machine_df['AI漏失总数'].sum()))
                 else:
-                    machine_resFR = float(
-                        (machine_df['AVI缺陷总数'].sum() - machine_df['AI真点总数'].sum()) / (
+                    machine_resFR = float((machine_df['AVI缺陷总数'].sum() - machine_df['AI真点总数'].sum()) / (
                                 machine_df['AVI缺陷总数'].sum() - (machine_df['AVI缺陷总数'].sum() * t_ratio)))
                 if machine_resFR > 1.0 and isOptimizeFRate == 1:
                     lowerBound = float(machine_df['AVI缺陷总数'].sum() - machine_df['AI漏失总数'].sum() - machine_df['AI真点总数'].sum())
@@ -2435,7 +2448,7 @@ def updateAnalyzeData(start_date, end_date, start_time_hour, end_time_hour, MacN
         "chart4Data": chart4Data,
         "chart5Data": chart5Data
     }
-def getconflist(start_time, end_time, start_time_hour, end_time_hour, MacNum, jobName, PLNum, frame, errType):
+def getconflist(start_time, end_time, start_time_hour, end_time_hour, MacNum, jobName, PLNum, frame, errType, confThreshold):
     if frame == '1':
         frame_no = "default_12"
     elif frame == '2':
@@ -2455,7 +2468,7 @@ def getconflist(start_time, end_time, start_time_hour, end_time_hour, MacNum, jo
     else:
         like_conditions = "1=1"
     current_date = start_time
-    while current_date <= start_time:
+    while current_date <= end_time:
         tabledate = current_date.strftime('%Y%m%d')[0:]
         table_name = f"tab_err_{tabledate}"
         if table_name in table_names:
@@ -2492,3 +2505,122 @@ def getconflist(start_time, end_time, start_time_hour, end_time_hour, MacNum, jo
     json_data = json.dumps({'data': all_values}, ensure_ascii=False)
     session.close()
     return json_data
+
+def exportConfExcel(start_date, end_date, start_time_hour, end_time_hour, machinecode, jobName, PLNum, frame, confThreshold):
+    """
+    导出置信度统计Excel
+    统计每个缺陷类型中小于和大于置信度阈值的占比
+    """
+    if frame == '1':
+        frame_no = "default_12"
+    elif frame == '2':
+        frame_no = "default_13"
+    elif frame == '3':
+        frame_no = "default_14"
+    else:
+        frame_no = "default_12"
+    try:
+        threshold = float(confThreshold) if confThreshold else 0.5
+    except (ValueError, TypeError):
+        threshold = 0.5
+    session = Session()
+    inspector = inspect(engine)
+    table_names = inspector.get_table_names()
+    if machinecode:
+        placeholders = ", ".join([f"'{code}'" for code in machinecode])
+        like_conditions = f"default_4 IN ({placeholders})"
+    else:
+        like_conditions = "1=1"
+
+    result_dict = {}
+    current_date = start_date
+    while current_date <= end_date:
+        table_name = f"tab_err_{current_date.strftime('%Y%m%d')[0:]}"
+        if table_name in table_names:
+            # 一次性查询所有缺陷类型的置信度统计
+            sql_query = text(f"""
+                SELECT 
+                    ai_err_type,
+                    COUNT(*) as total_count,
+                    SUM(CASE WHEN CAST({frame_no} AS DECIMAL(10,4)) < :threshold THEN 1 ELSE 0 END) as below_count,
+                    SUM(CASE WHEN CAST({frame_no} AS DECIMAL(10,4)) >= :threshold THEN 1 ELSE 0 END) as above_count
+                FROM {table_name}
+                WHERE ({like_conditions})
+                AND is_ai = 1
+                AND ai_err_type <> ''
+                AND {frame_no} <> 0
+                AND {frame_no} IS NOT NULL
+                {('AND default_1 = :jobName' if jobName else '')}
+                {('AND default_2 = :PLNum' if PLNum else '')}
+                GROUP BY ai_err_type
+            """)
+            params = {'threshold': threshold}
+            if jobName:
+                params['jobName'] = jobName
+            if PLNum:
+                params['PLNum'] = PLNum
+            results = session.execute(sql_query, params).fetchall()
+            for row in results:
+                err_type = row[0]
+                total_count = row[1] or 0
+                below_count = row[2] or 0
+                above_count = row[3] or 0
+                if err_type and total_count > 0:
+                    if err_type in result_dict:
+                        result_dict[err_type]['总数'] += total_count
+                        result_dict[err_type]['小于阈值数量'] += below_count
+                        result_dict[err_type]['大于阈值数量'] += above_count
+                    else:
+                        result_dict[err_type] = {
+                            '缺陷名': err_type,
+                            '总数': total_count,
+                            '小于阈值数量': below_count,
+                            '大于阈值数量': above_count
+                        }
+        current_date += timedelta(days=1)
+    session.close()
+
+    result_data = []
+    for err_type, data in result_dict.items():
+        total = data['总数']
+        if total > 0:
+            below_ratio = round((data['小于阈值数量'] / total) * 100, 2)
+            above_ratio = round((data['大于阈值数量'] / total) * 100, 2)
+            result_data.append({
+                '缺陷名': data['缺陷名'],
+                '总数': total,
+                '小于阈值数量': data['小于阈值数量'],
+                '大于阈值数量': data['大于阈值数量'],
+                '小于阈值占比': below_ratio,
+                '大于阈值占比': above_ratio
+            })
+    if not result_data:
+        return None
+    export_data = []
+    for item in result_data:
+        export_data.append({
+            '缺陷名': item['缺陷名'],
+            '总数': item['总数'],
+            '小于阈值数量': item['小于阈值数量'],
+            '大于阈值数量': item['大于阈值数量'],
+            '小于阈值占比': item['小于阈值占比'],
+            '大于阈值占比': item['大于阈值占比']
+        })
+    df = pd.DataFrame(export_data)
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    current_dir = os.path.join(current_dir, 'csvdata')
+    if not os.path.exists(current_dir):
+        os.makedirs(current_dir)
+    start_time_hour_str = start_time_hour.strftime("%H_%M_%S") if hasattr(start_time_hour, 'strftime') else str(start_time_hour).replace(":", "_")
+    end_time_hour_str = end_time_hour.strftime("%H_%M_%S") if hasattr(end_time_hour, 'strftime') else str(end_time_hour).replace(":", "_")
+    if len(machinecode) > 1:
+        machinecodename = "多机台"
+    else:
+        machinecodename = machinecode[0] if machinecode else "全部"
+    excel_file = os.path.join(current_dir, 
+        f"{start_date.strftime('%Y%m%d')}-{end_date.strftime('%Y%m%d')}_置信度统计_{machinecodename}({start_time_hour_str}~{end_time_hour_str})_阈值{threshold}.xlsx")
+    if os.path.exists(excel_file):
+        os.remove(excel_file)
+
+    df.to_excel(excel_file, index=False, engine='openpyxl')
+    return excel_file if os.path.exists(excel_file) else None

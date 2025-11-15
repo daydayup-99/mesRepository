@@ -47,6 +47,12 @@
             0% { transform: rotate(0deg); } /* 动画开始时，旋转 0 度 */
             100% { transform: rotate(360deg); } /* 动画结束时，旋转 360 度 */
         }
+        button:disabled,
+        a.btn:disabled {
+            opacity: 0.6 !important;
+            cursor: not-allowed !important;
+            pointer-events: none;
+        }
     </style>
 
     <script>
@@ -595,6 +601,9 @@
             });
 
             $("#exportExcel").click(function(){
+                var $btn = $(this);
+                // 禁用按钮
+                $btn.prop('disabled', true).css('opacity', '0.6').css('cursor', 'not-allowed');
                 var start_time = $('#start_time').val().split('T')[0];
                 var start_time_hour = $('#start_time').val().split('T')[1];
                 var end_time = $('#end_time').val().split('T')[0];
@@ -614,6 +623,7 @@
                         jobNum: jobNum
                     },
                     success: function (response, status, xhr) {
+                        $btn.prop('disabled', false).css('opacity', '1').css('cursor', 'pointer');
                         if (xhr.status === 404) {
                             layer.alert(response.message, {
                                 icon: 2,
@@ -627,6 +637,7 @@
                         }
                     },
                     error: function () {
+                        $btn.prop('disabled', false).css('opacity', '1').css('cursor', 'pointer');
                         layer.alert('导出失败，请重试。', {
                             icon: 2,
                             title: '错误'
@@ -636,6 +647,8 @@
             });
 
             $("#exportJobExcel").click(function(){
+                var $btn = $(this);
+                $btn.prop('disabled', true).css('opacity', '0.6').css('cursor', 'not-allowed');
                 var start_time = $('#start_time').val().split('T')[0];
                 var start_time_hour = $('#start_time').val().split('T')[1];
                 var end_time = $('#end_time').val().split('T')[0];
@@ -655,6 +668,7 @@
                         jobNum: jobNum
                     },
                     success: function (response, status, xhr) {
+                        $btn.prop('disabled', false).css('opacity', '1').css('cursor', 'pointer');
                         if (xhr.status === 404) {
                             layer.alert(response.message, {
                                 icon: 2,
@@ -668,6 +682,7 @@
                         }
                     },
                     error: function () {
+                        $btn.prop('disabled', false).css('opacity', '1').css('cursor', 'pointer');
                         layer.alert('导出失败，请重试。', {
                             icon: 2,
                             title: '错误'
@@ -873,7 +888,7 @@
                 var PLNum = $('#PLNum').val();
                 var frame = ($('#frameSelect_conf').val() || '1').trim();
                 var errType = $('#errTypeSelect_conf').val() || '';
-                console.log("The current errType: " + errType)
+                var confThreshold = ($('#confThreshold').val() || '0.4').trim();
 
                 $.ajax({
                     url: '/ConfDist',
@@ -888,7 +903,8 @@
                         jobNum: jobNum,
                         PLNum: PLNum,
                         frame: frame,
-                        errType: errType
+                        errType: errType,
+                        confThreshold: confThreshold
                     }
                 }).done(function(resp){
                     var list = resp.data || [];
@@ -899,7 +915,59 @@
                     generateFrameConf([]); // 渲染空数据
                 });
             }
-
+            function exportConfToCSV() {
+                var $btn = $('#confExportButton');
+                $btn.prop('disabled', true).css('opacity', '0.6').css('cursor', 'not-allowed');
+                var start_time = $('#start_time').val().split('T')[0];
+                var start_time_hour = $('#start_time').val().split('T')[1];
+                var end_time = $('#end_time').val().split('T')[0];
+                var end_time_hour = $('#end_time').val().split('T')[1];
+                var MacNum = $('#MacNum').val();
+                var jobNum = ($('#jobInput').val() || '').trim();
+                var PLNum = $('#PLNum').val();
+                var frame = ($('#frameSelect_conf').val() || '1').trim();
+                var confThreshold = ($('#confThreshold').val() || '0.5').trim();
+                
+                $.ajax({
+                    url: '/ExportConfExcel',
+                    type: 'POST',
+                    data: {
+                        start_time: start_time,
+                        end_time: end_time,
+                        start_time_hour: start_time_hour,
+                        end_time_hour: end_time_hour,
+                        MacNum: MacNum,
+                        jobNum: jobNum,
+                        PLNum: PLNum,
+                        frame: frame,
+                        confThreshold: confThreshold
+                    },
+                    success: function (response, status, xhr) {
+                        $btn.prop('disabled', false).css('opacity', '1').css('cursor', 'pointer');
+                        if (xhr.status === 404) {
+                            layer.alert(response.message, {
+                                icon: 2,
+                                title: '错误'
+                            });
+                        } else {
+                            layer.alert('导出成功！', {
+                                icon: 1,
+                                title: '提示'
+                            });
+                        }
+                    },
+                    error: function () {
+                        $btn.prop('disabled', false).css('opacity', '1').css('cursor', 'pointer');
+                        layer.alert('导出失败，请重试。', {
+                            icon: 2,
+                            title: '错误'
+                        });
+                    }
+                });
+            }
+            $('#confExportButton').off('click').click(function() {
+                exportConfToCSV();
+            });
             $('#frameSelect_conf, #errTypeSelect_conf').off('change').on('change', fetchAndRenderConf);
             // 首次绘制
             $('#frameSelect_conf').trigger('change');
@@ -1038,10 +1106,24 @@
                     </select>
                   
                     <label for="errTypeSelect_conf" style="margin-left:12px;">缺陷类型：</label>
-                    <select id="errTypeSelect_conf" style="min-width:150px;">
+                    <select id="errTypeSelect_conf" style="min-width:100px;">
+                    </select>
+
+                    <label for="confThreshold" style="margin-left:12px;">置信度阈值：</label>
+                    <select id="confThreshold" style="min-width:50px;">
+                      <option value="">0.1</option>
+                      <option>0.2</option>
+                      <option>0.3</option>
+                      <option>0.4</option>
+                      <option>0.5</option>
+                      <option>0.6</option>
+                      <option>0.7</option>
+                      <option>0.8</option>
+                      <option>0.9</option>
                     </select>
                   </div>
                 <div id="container9" style="height:300px;width: 100%;"></div>
+                <button id="confExportButton" style="margin-top: 10px;">导出</button>
             </div>
             <div class="clear"></div>
         </div>

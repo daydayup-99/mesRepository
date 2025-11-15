@@ -6,7 +6,7 @@ from flask import Flask, render_template, request, jsonify
 from indexsql import selectJob, selectMachine, getRateFilterTotal, ReadJobSql, getJobErrRate, selectPlno, \
     getPlnoErrRate, SelectAiPass, getErrRate, getLayersql, selectMacRate, \
     exportcsvbyjob, exportallcsv, getAllErrRateSql, getErrJob, getAllMachineNumSql, selectTopNHighRatioJob, \
-    selectLowRatioJob, analyzeData, updateAnalyzeData, getconflist
+    selectLowRatioJob, analyzeData, updateAnalyzeData, getconflist, exportConfExcel
 from datetime import datetime, timedelta, time
 import win32file
 import win32con
@@ -241,7 +241,8 @@ def GetConfDist():
     PLNum = request.form.get('PLNum', '')
     frame = request.form.get('frame', '')
     errType = request.form.get('errType', '')
-    result = getconflist(start_time, end_time, start_time_hour, end_time_hour, MacNum, jobName, PLNum, frame, errType)
+    confThreshold = request.form.get('confThreshold', '')
+    result = getconflist(start_time, end_time, start_time_hour, end_time_hour, MacNum, jobName, PLNum, frame, errType, confThreshold)
     return result
 
 @app.route('/GetTopNHighRatioJob',methods=['POST'])
@@ -257,6 +258,20 @@ def getLowRatioJob():
     jobnameData = selectLowRatioJob(start_time,end_time,start_time_hour,end_time_hour,ratio, MacNum)
     response = jsonify(data=jobnameData)
     return response
+
+@app.route('/ExportConfExcel', methods=['POST'])
+def ExportConfExcel():
+    start_time, end_time, start_time_hour, end_time_hour, MacNum = getRequestData(request)
+    jobName = request.form.get('jobNum', '')
+    PLNum = request.form.get('PLNum', '')
+    frame = request.form.get('frame', '1')
+    confThreshold = request.form.get('confThreshold', '0.5')
+    result = exportConfExcel(start_time, end_time, start_time_hour, end_time_hour, MacNum, jobName, PLNum, frame, confThreshold)
+    if result is None:
+        data = {'message': '没有可查询的数据，请检查时间范围或数据库连接'}
+        return jsonify(data), 404
+    data = {'message': '数据导出成功', 'file_path': result}
+    return jsonify(data)
 
 def getLowRatioJobRequestData(request):
     start_time_str = request.json['start_time']
