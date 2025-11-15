@@ -734,12 +734,11 @@ function generateJobAi(jobnameData,fJobAiData,fJobAllPassData){
         myChart.resize()
     });
 
-        // 添加导出按钮点击事件
     $('#exportButton').off('click').click(function() {
         exportToCSV(start_time, end_time, errJobtypedata, errJobNumData, errJobRateData, errPlnoNameData, machineIdData, jobNameData);
     });
 }
-// 导出为 CSV 的函数
+
 function exportToCSV(start_time, end_time, types, numbers, rates, errPlnoNameData, machineIdData, jobNameData) {
     var csvContent = "\uFEFF";
     console.log(machineIdData.length);
@@ -979,4 +978,3 @@ function csvSafe(str) {
         myChart.resize()
     });
 }
-
