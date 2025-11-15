@@ -2607,7 +2607,8 @@ def exportConfExcel(start_date, end_date, start_time_hour, end_time_hour, machin
             '大于阈值占比': item['大于阈值占比']
         })
     df = pd.DataFrame(export_data)
-    current_dir = os.path.dirname(os.path.realpath(__file__))
+    # current_dir = os.path.dirname(os.path.realpath(__file__))
+    current_dir = os.path.dirname(sys.executable)
     current_dir = os.path.join(current_dir, 'csvdata')
     if not os.path.exists(current_dir):
         os.makedirs(current_dir)
