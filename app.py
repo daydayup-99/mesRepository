@@ -4,7 +4,7 @@ import sys
 import threading
 from flask import Flask, render_template, request, jsonify
 from indexsql import selectJob, selectMachine, getRateFilterTotal, ReadJobSql, getJobErrRate, selectPlno, \
-    getPlnoErrRate, SelectAiPass, getErrRate, getLayersql, selectMacRate, \
+    getPlnoErrRate, SelectAiPass, getErrRate, getLayersql,  \
     exportcsvbyjob, exportallcsv, getAllErrRateSql, getErrJob, getAllMachineNumSql, selectTopNHighRatioJob, \
     selectLowRatioJob, analyzeData, updateAnalyzeData, getconflist, exportConfExcel
 from datetime import datetime, timedelta, time
@@ -135,16 +135,6 @@ def getMacineName():
     MachineData = selectMachine()
     response = jsonify(data=MachineData)
     return response
-
-#获取真点率,和 最大点数
-@app.route('/getTrueRate',methods=['POST'])
-def getMacTrueRate():
-    start_time, end_time, start_time_hour, end_time_hour, MacNum = getRequestData(request)
-    # maxnum = request.form['MaxNum']
-    # selectMacRate(MacNum,maxnum)
-    selectMacRate(MacNum)
-    data = {'message': 'True Rate get successfully'}
-    return jsonify(data)
 
 @app.route('/staticSubmit', methods=['POST'])
 def handle_ajax_request():

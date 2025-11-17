@@ -327,18 +327,6 @@ def SelectAiPass():
     session.close()
     return json_data
 
-#获取真点率
-def selectMacRate(machinecode):
-    global MacTrueRate
-    # global MaxNum
-    # MaxNum = int(maxnum)
-    session = Session()
-    query_result = session.query(MachineCode.true_rate).filter(MachineCode.test_machine_code.in_(machinecode)).all()
-    for row in query_result:
-        MacTrueRate = float(row[0])
-    session.close()
-    return MacTrueRate
-
 #获取所有缺陷类型
 def getErrRate():
     session = Session()
@@ -1277,6 +1265,9 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode,j
                 continue
         if len(result) > 0:
             for i in result:
+                if str(i[25]) not in surface_dict:
+                    continue
+
                 nALLNum = float(i[11])
                 nALLNumT = float(i[12])
                 nALLNumB = float(i[13])
@@ -1806,6 +1797,8 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                 continue
         if len(result) > 0:
             for i in result:
+                if str(i[24]) not in surface_dict:
+                    continue
                 nALLNum = float(i[10])
                 nALLNumT = float(i[11])
                 nALLNumB = float(i[12])
