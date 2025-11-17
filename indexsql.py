@@ -1034,7 +1034,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode,j
                 test_has_data = result_test.scalar()
                 err_has_data = result_err.scalar()
                 if test_has_data and err_has_data:
-                    dates_to_query.append((current_date, table_name))
+                    dates_to_query.append(table_name)
                     err_tables.append(err_table_name)
             current_date += timedelta(days=1)
     if not dates_to_query:
@@ -1576,7 +1576,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                 test_has_data = result_test.scalar()
                 err_has_data = result_err.scalar()
                 if test_has_data and err_has_data:
-                    dates_to_query.append((current_date, table_name))
+                    dates_to_query.append(table_name)
                     err_tables.append(err_table_name)
             current_date += timedelta(days=1)
     if not dates_to_query:
