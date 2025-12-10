@@ -562,21 +562,21 @@ def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machi
         table_date = current_date.strftime('%Y%m%d')[0:]
         table_name = f"tab_test_{table_date}"
         if table_name in table_names:
+            table = Table(table_name, Base.metadata, autoload_with=engine)
             sql_query = text(f"""
-                                select sum(errnum), sum(ai_num)
-                                FROM {table_name}
-                                WHERE test_machine_code in {machineCode}
-                                AND test_time between '{start_datetime_str}' and '{end_datetime_str}';
+                                SELECT count(*),sum(total_errnum), sum(total_ai_num)
+                                FROM(
+                                    SELECT DISTINCT job_name, plno, pcbno, SUM(errnum) as total_errnum, SUM(ai_num) as total_ai_num
+                                    FROM {table_name}
+                                    WHERE test_machine_code in {machineCode}
+                                    AND test_time between '{start_datetime_str}' AND '{end_datetime_str}'
+                                    AND surface > 0
+                                    GROUP BY job_name, plno, pcbno
+                                ) AS subquery_result;
                                 """)
             result = session.execute(sql_query).fetchall()
             for row in result:
-                nALLNum,nAiNum = row
-            table = Table(table_name, Base.metadata, autoload_with=engine)
-            inner_query = (session.query(func.count()).filter(table.c.test_machine_code.in_(machinecode),table.c.test_time >= start_datetime_str,
-            table.c.test_time <= end_datetime_str).group_by(table.c.job_name, table.c.plno, table.c.pcbno).subquery())
-            result = session.query(func.count()).select_from(inner_query).all()
-            for row in result:
-                nAllBoard = row[0] or 0
+                nAllBoard,nALLNum,nAiNum = row
             sql_query = text(f"""
                                 SELECT count(*)
                                 FROM(
@@ -693,6 +693,7 @@ def ReadJobSql(start_date, end_date,start_time_hour,end_time_hour, machinecode):
                     FROM {table_name}
                     WHERE test_machine_code IN {machineCode}
                     AND test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
+                    AND surface > 0
                     GROUP BY job_name
                 )
                 SELECT 
@@ -1083,7 +1084,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode,j
 
         result = []
         loop_index = 0
-        for date, table_name in dates_to_query:
+        for table_name in dates_to_query:
             if true_point_filters:
                 err_table_name = err_tables[loop_index]
                 sql_query = text(f"""
@@ -1115,6 +1116,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode,j
                                SUM(default_12) AS serious_defect
                         FROM {table_name}
                         WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
+                        AND surface > 0
                         AND test_machine_code in ({machinecodelist})
                         {('AND job_name = :jobName' if jobName else '')}
                         GROUP BY default_1, job_name, plno, pcbno, surface, test_machine_code,default_7,default_8,default_9,default_10,default_11
@@ -1168,7 +1170,6 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode,j
                         ON a.job_name = b.default_1
                         AND a.plno = b.default_2
                         AND a.test_machine_code = b.default_4
-                        WHERE err_num_sum < 2000
                         GROUP BY a.default_1, a.job_name, a.plno, a.surface, a.test_machine_code,a.default_7,a.default_8,a.default_9,specify_ai_true_num_sum,specify_ai_true_num_sum_T,specify_ai_true_num_sum_B,default_10,default_11,unique_id
                     )
                     SELECT *, AVI缺陷总数-AI真点总数 as AI假点总数, AVI缺陷总数T-AI真点总数T as AI假点总数T, AVI缺陷总数B-AI真点总数B as AI假点总数B
@@ -1197,6 +1198,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode,j
                         FROM {table_name}
                         WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
                         AND test_machine_code in ({machinecodelist})
+                        AND surface > 0
                         {('AND job_name = :jobName' if jobName else '')}
                         GROUP BY default_1, job_name, plno, pcbno, surface, test_machine_code,default_7,default_8,default_9,default_10,default_11
                     ), main_result AS (
@@ -1245,7 +1247,6 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode,j
                                unique_id AS 唯一ID,
                                SUM(serious_defect) AS 严重缺陷数量
                         FROM board_info
-                        WHERE err_num_sum < 2000
                         GROUP BY default_1, job_name, plno, surface, test_machine_code,default_7,default_8,default_9,default_10,default_11,unique_id
                     )
                     SELECT *, AVI缺陷总数-AI真点总数 as AI假点总数, AVI缺陷总数T-AI真点总数T as AI假点总数T, AVI缺陷总数B-AI真点总数B as AI假点总数B
@@ -1656,6 +1657,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                             FROM {table_name}
                             WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
                             AND test_machine_code in ({machinecodelist})
+                            AND surface > 0
                             {('AND job_name = :jobName' if jobName else '')}
                             GROUP BY default_1, job_name,plno,pcbno, surface, test_machine_code,default_7,default_8,default_9,default_10,default_11
                         ), main_result AS (
@@ -1704,7 +1706,6 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                             LEFT JOIN delete_num b
                             ON a.job_name = b.default_1 
                             AND a.test_machine_code = b.default_4
-                            WHERE err_num_sum < 2000
                             GROUP BY a.default_1, a.job_name, a.surface, a.test_machine_code,a.default_7,a.default_8,a.default_9,specify_ai_true_num_sum,specify_ai_true_num_sum_T,specify_ai_true_num_sum_B,default_10,default_11
                         )
                         SELECT *, AVI缺陷总数-AI真点总数 as AI假点总数, AVI缺陷总数T-AI真点总数T as AI假点总数T, AVI缺陷总数B-AI真点总数B as AI假点总数B 
@@ -1732,6 +1733,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                         FROM {table_name}
                         WHERE test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
                         AND test_machine_code in ({machinecodelist})
+                        AND surface > 0
                         {('AND job_name = :jobName' if jobName else '')}
                         GROUP BY default_1, job_name,plno,pcbno, surface, test_machine_code,default_7,default_8,default_9,default_10,default_11
                     ), main_result AS (
@@ -1777,7 +1779,6 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                                default_11 AS 产品等级,
                                SUM(serious_defect) AS 严重缺陷数量
                         FROM board_info
-                        WHERE err_num_sum < 2000
                         GROUP BY default_1, job_name, surface, test_machine_code,default_7,default_8,default_9,default_10,default_11
                     )
                     SELECT *, AVI缺陷总数-AI真点总数 as AI假点总数, AVI缺陷总数T-AI真点总数T as AI假点总数T, AVI缺陷总数B-AI真点总数B as AI假点总数B 
