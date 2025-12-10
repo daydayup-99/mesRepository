@@ -1028,7 +1028,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode,j
             tabledate = current_date.strftime('%Y%m%d')[0:]
             table_name = f"tab_test_{tabledate}"
             err_table_name = f"tab_err_{tabledate}"
-            if table_name in table_names:
+            if table_name and err_table_name in table_names:
                 # 过滤空表
                 result_test = connection.execute(text(f"SELECT EXISTS(SELECT 1 FROM {table_name} LIMIT 1)"))
                 result_err = connection.execute(text(f"SELECT EXISTS(SELECT 1 FROM {err_table_name} LIMIT 1)"))
@@ -1570,7 +1570,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
             tabledate = current_date.strftime('%Y%m%d')[0:]
             table_name = f"tab_test_{tabledate}"
             err_table_name = f"tab_err_{tabledate}"
-            if table_name in table_names:
+            if table_name and err_table_name in table_names:
                 # 过滤空表
                 result_test = connection.execute(text(f"SELECT EXISTS(SELECT 1 FROM {table_name} LIMIT 1)"))
                 result_err = connection.execute(text(f"SELECT EXISTS(SELECT 1 FROM {err_table_name} LIMIT 1)"))
