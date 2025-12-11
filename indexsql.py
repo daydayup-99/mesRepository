@@ -258,7 +258,6 @@ def getAllMachineNumSql():
     session.close()
     return json_data
 
-
 #机台平均点数 和 过滤率
 def SelectAiPass():
     session = Session()
@@ -363,6 +362,7 @@ def getErrRate():
     json_data = json.dumps(data_points, ensure_ascii=False)
     session.close()
     return json_data
+
 def getErrJob():
     session = Session()
     ai_err_type_counts = {}
@@ -413,7 +413,10 @@ def getErrJob():
     json_data = json.dumps(lstJob, ensure_ascii=False)
     session.close()
     return json_data
+
 def getAllErrRateSql(start_date, end_date, machinecode):
+    if len(machinecode) <= 0:
+        return None
     session = Session()
     current_date = start_date
     JobErrAllNum = 0
@@ -483,6 +486,8 @@ def getAllErrRateSql(start_date, end_date, machinecode):
 
 #选取所有料号
 def selectJob(start_date,end_date,start_time_hour,end_time_hour,machinecode):
+    if len(machinecode) <= 0:
+        return None
     session = Session()
     machineCode = "('" + "', '".join(machinecode) + "')"
     start_datetime_str = f"{start_date} {start_time_hour}"
@@ -511,6 +516,8 @@ def selectJob(start_date,end_date,start_time_hour,end_time_hour,machinecode):
 
 #选取所有批量号
 def selectPlno(start_date,end_date,start_time_hour,end_time_hour,machinecode,jobname):
+    if len(machinecode) <= 0:
+        return None
     session = Session()
     start_datetime_str = f"{start_date} {start_time_hour}"
     end_datetime_str = f"{end_date} {end_time_hour}"
@@ -532,7 +539,6 @@ def selectPlno(start_date,end_date,start_time_hour,end_time_hour,machinecode,job
     session.close()
     return list(plnoData)
 
-
 #获取机台号
 def selectMachine():
     session = Session()
@@ -544,11 +550,17 @@ def selectMachine():
     session.close()
     return  MachineData
 
-
 #总过滤率(fAllAi) 、假点过滤率(fAi) 、Ai前后平均点数、 Pass率（fPass）
 def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machinecode):
+    if len(machinecode) <= 0:
+        return None
     # global MacTrueRate
     session = Session()
+    if true_point_filters:
+        placeholders = ", ".join([f"'{err_type}'" for err_type in true_point_filters])
+        filter_conditions = f"AND ai_err_type IN ({placeholders})"
+    else:
+        filter_conditions = ""
     machineCode = "('" + "', '".join(machinecode) + "')"
     start_datetime_str = f"{start_date} {start_time_hour}"
     end_datetime_str = f"{end_date} {end_time_hour}"
@@ -561,9 +573,42 @@ def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machi
         table_names = inspector.get_table_names()
         table_date = current_date.strftime('%Y%m%d')[0:]
         table_name = f"tab_test_{table_date}"
+        err_table_name = f"tab_err_{table_date}"
         if table_name in table_names:
             table = Table(table_name, Base.metadata, autoload_with=engine)
-            sql_query = text(f"""
+            if true_point_filters and err_table_name in table_names:
+                sql_query = text(f"""
+                        SELECT count(*),sum(total_errnum), sum(total_ai_num)
+                        FROM(
+                            WITH delete_num AS(
+                                select default_1,default_2,default_3,SUM(is_ai) as specify_ai_true_num_sum ,default_4
+                                FROM {err_table_name}
+                                WHERE default_4 in {machineCode}
+                                AND is_ai = 1
+                                {filter_conditions}
+                                GROUP BY default_1,default_2,default_4,default_3),
+                                board_info AS(													
+                                SELECT DISTINCT test_machine_code,job_name, plno, pcbno, SUM(errnum) as total_errnum, SUM(ai_num) as total_ai_num,IFNULL(b.specify_ai_true_num_sum, 0) as delete_num
+                                FROM {table_name} a
+                                LEFT JOIN delete_num b
+                                ON a.job_name = b.default_1 AND a.plno = b.default_2 AND a.pcbno = b.default_3 
+                                AND a.test_machine_code = b.default_4
+                                WHERE 
+                                test_machine_code in {machineCode}
+                                AND a.surface > 0
+                                AND test_time between '{start_datetime_str}' AND '{end_datetime_str}'
+                                GROUP BY a.job_name, a.plno, a.pcbno, b.specify_ai_true_num_sum,a.test_machine_code)
+                                SELECT
+                                    test_machine_code,
+                                    job_name, 
+                                    plno, 
+                                    pcbno,
+                                    total_errnum - delete_num as total_errnum,
+                                    total_ai_num - delete_num as total_ai_num 
+                                FROM board_info) AS subquery_result;
+                                """)
+            else:
+                sql_query = text(f"""
                                 SELECT count(*),sum(total_errnum), sum(total_ai_num)
                                 FROM(
                                     SELECT DISTINCT job_name, plno, pcbno, SUM(errnum) as total_errnum, SUM(ai_num) as total_ai_num
@@ -670,7 +715,14 @@ def getRateFilterTotal(start_date, end_date,start_time_hour,end_time_hour, machi
 
 #料号ai前后平均点数、过滤率
 def ReadJobSql(start_date, end_date,start_time_hour,end_time_hour, machinecode):
+    if len(machinecode) <= 0:
+        return None
     # global MacTrueRate
+    if true_point_filters:
+        placeholders = ", ".join([f"'{err_type}'" for err_type in true_point_filters])
+        filter_conditions = f"AND ai_err_type IN ({placeholders})"
+    else:
+        filter_conditions = ""
     session = Session()
     machineCode = "('" + "', '".join(machinecode) + "')"
     start_datetime_str = f"{start_date} {start_time_hour}"
@@ -682,27 +734,72 @@ def ReadJobSql(start_date, end_date,start_time_hour,end_time_hour, machinecode):
     table_names = inspector.get_table_names()
     while current_date <= end_date:
         table_name = f"tab_test_{current_date.strftime('%Y%m%d')[0:]}"
+        err_table_name = f"tab_err_{current_date.strftime('%Y%m%d')[0:]}"
         if table_name in table_names:
-            sql_query = text(f"""
-                WITH job_stats AS (
+            if true_point_filters and err_table_name in table_names:
+                sql_query = text(f"""
+                    WITH job_stats AS (
+                        SELECT 
+                            job_name,
+                            SUM(errnum) as total_errnum,
+                            SUM(ai_true_num) as total_ai_true_num,
+                            COUNT(DISTINCT CONCAT(plno, '|', pcbno)) as unique_plno_pcbno_count
+                        FROM {table_name}
+                        WHERE test_machine_code IN {machineCode}
+                        AND test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
+                        AND surface > 0
+                        GROUP BY job_name
+                    ),
+                    error_stats AS (
+                        SELECT 
+                            default_1,
+                            SUM(is_ai) as specify_ai_true_num_sum
+                        FROM {err_table_name}
+                        WHERE default_4 IN {machineCode}
+                        AND is_ai = 1
+                        {filter_conditions}
+                        GROUP BY default_1
+                    ),
+                    combined_stats AS (
+                        SELECT 
+                            a.job_name,
+                            a.total_errnum,
+                            a.total_ai_true_num,
+                            a.unique_plno_pcbno_count,
+                            IFNULL(MAX(b.specify_ai_true_num_sum), 0) as delete_num
+                        FROM job_stats a
+                        LEFT JOIN error_stats b
+                            ON a.job_name = b.default_1
+                        GROUP BY a.job_name, a.total_errnum, a.total_ai_true_num, a.unique_plno_pcbno_count
+                    )
                     SELECT 
                         job_name,
-                        SUM(errnum) as total_errnum,
-                        SUM(ai_true_num) as total_ai_true_num,
-                        COUNT(DISTINCT CONCAT(plno, '|', pcbno)) as unique_plno_pcbno_count
-                    FROM {table_name}
-                    WHERE test_machine_code IN {machineCode}
-                    AND test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
-                    AND surface > 0
-                    GROUP BY job_name
-                )
-                SELECT 
-                    job_name,
-                    total_errnum,
-                    total_ai_true_num,
-                    unique_plno_pcbno_count
-                FROM job_stats
-            """)
+                        total_errnum - delete_num,
+                        total_ai_true_num - delete_num,
+                        unique_plno_pcbno_count
+                    FROM combined_stats
+                """)
+            else:
+                sql_query = text(f"""
+                    WITH job_stats AS (
+                        SELECT 
+                            job_name,
+                            SUM(errnum) as total_errnum,
+                            SUM(ai_true_num) as total_ai_true_num,
+                            COUNT(DISTINCT CONCAT(plno, '|', pcbno)) as unique_plno_pcbno_count
+                        FROM {table_name}
+                        WHERE test_machine_code IN {machineCode}
+                        AND test_time BETWEEN '{start_datetime_str}' AND '{end_datetime_str}'
+                        AND surface > 0
+                        GROUP BY job_name
+                    )
+                    SELECT 
+                        job_name,
+                        total_errnum,
+                        total_ai_true_num,
+                        unique_plno_pcbno_count
+                    FROM job_stats
+                """)
             result = session.execute(sql_query).fetchall()
             for row in result:
                 jobname=row[0]
@@ -1014,6 +1111,8 @@ def getLayersql(start_date,end_date,machinecode,jobname):
     return json_string
 
 def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode,jobName):
+    if len(machinecode) <= 0:
+        return None
     inspector = inspect(engine)
     table_names = inspector.get_table_names()
 
@@ -1558,6 +1657,8 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode,j
     return job_file if os.path.exists(job_file) else None
 
 def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode,jobName):
+    if len(machinecode) <= 0:
+        return None
     inspector = inspect(engine)
     table_names = inspector.get_table_names()
     start_datetime_str = f"{start_date} {start_time_hour}"
@@ -2083,6 +2184,8 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
     return job_file if os.path.exists(job_file) else None
 
 def selectLowRatioJob(start_date,end_date,start_time_hour,end_time_hour,ratio,MacNum):
+    if len(MacNum) <= 0:
+        return None
     session = Session()
     start_datetime_str = f"{start_date} {start_time_hour}"
     end_datetime_str = f"{end_date} {end_time_hour}"
@@ -2134,6 +2237,8 @@ def selectLowRatioJob(start_date,end_date,start_time_hour,end_time_hour,ratio,Ma
     return json_string
 
 def selectTopNHighRatioJob(start_date,end_date,start_time_hour,end_time_hour,ratio,n,MacNum):
+    if len(MacNum) <= 0:
+        return None
     session = Session()
     current_date = start_date
     start_datetime_str = f"{start_date} {start_time_hour}"
@@ -2249,6 +2354,8 @@ def selectTopNHighRatioJob(start_date,end_date,start_time_hour,end_time_hour,rat
     return json_data
 
 def analyzeData(start_time, end_time, start_time_hour, end_time_hour, MacNum):
+    if len(MacNum) <= 0:
+        return None
     res = {'allJobNum': 0, 'allPcbNum': 0, 'allFilter': 0, 'fateFilter': 0, 'allErrNum': 0,
             'alltrueNum': 0, 'allAiTrueNum': 0, 'avgPoint': 0, 'avgAiPoint': 0, 'top_job_data': [], 'top_job_err_rate': {}}
     filePath = exportcsvbyjob(start_time, end_time, start_time_hour, end_time_hour, MacNum,'')
@@ -2329,6 +2436,8 @@ def analyzeData(start_time, end_time, start_time_hour, end_time_hour, MacNum):
     return json_data
 
 def updateAnalyzeData(start_date, end_date, start_time_hour, end_time_hour, MacNum, days):
+    if len(MacNum) <= 0:
+        return None
     time_ranges = []
 
     # 确保 start_date 和 end_date 类型一致 (转为 date 类型)
