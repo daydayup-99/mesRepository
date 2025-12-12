@@ -415,8 +415,6 @@ def getErrJob():
     return json_data
 
 def getAllErrRateSql(start_date, end_date, machinecode):
-    if len(machinecode) <= 0:
-        return None
     session = Session()
     current_date = start_date
     JobErrAllNum = 0
