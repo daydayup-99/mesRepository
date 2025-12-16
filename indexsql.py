@@ -1375,7 +1375,7 @@ def exportallcsv(start_date,end_date,start_time_hour,end_time_hour,machinecode,j
                 if t_ratio > 0.0:
                     nAviNum = int(nALLNum * t_ratio)
                     nAviNumT = int(nALLNumT * t_ratio)
-                    nAviNumB = int(nALLNumB * t_ratio)
+                    nAviNumB = nAviNum - nAviNumT
                 else:
                     nAviNum = int(i[14])
                     nAviNumT = int(i[15])
@@ -1908,7 +1908,7 @@ def exportcsvbyjob(start_date,end_date,start_time_hour,end_time_hour,machinecode
                 if t_ratio > 0.0:
                     nAviNum = int(nALLNum * t_ratio)
                     nAviNumT = int(nALLNumT * t_ratio)
-                    nAviNumB = int(nALLNumB * t_ratio)
+                    nAviNumB = nAviNum - nAviNumT
                 else:
                     nAviNum = int(i[13])
                     nAviNumT = int(i[14])
