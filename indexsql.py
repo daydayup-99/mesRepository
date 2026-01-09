@@ -5,7 +5,7 @@ from sqlalchemy import create_engine, inspect, Column, Integer, String, Table, f
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import declarative_base
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from decimal import Decimal
 import json
 import os
@@ -111,73 +111,116 @@ def max_free_space_storage():
             continue
     return s_max_free_path
 
-backup_dir = max_free_space_storage() + 'backup';
+backup_dir = max_free_space_storage() + 'backup'
 os.makedirs(backup_dir, exist_ok=True)
-today = datetime.now().date()
-cutoff_date = today - timedelta(days=deleteDays)
-inspector = inspect(engine)
-all_tables = inspector.get_table_names()
-tables_to_delete = []
-for table_name in all_tables:
-    if table_name.startswith('tab_test_') or table_name.startswith('tab_err_'):
-        try:
-            date_str = table_name.split('_')[-1]
-            if len(date_str) == 8 and date_str.isdigit():
-                table_date = datetime.strptime(date_str, '%Y%m%d').date()
-                if table_date < cutoff_date:
-                    tables_to_delete.append(table_name)
-        except ValueError:
-            continue
-if tables_to_delete:
-    print(f"找到 {len(tables_to_delete)} 个需要删除的表:")
-    confirm_delete = True
-    if confirm_delete:
+
+
+def clean_old_tables():
+    """后台清理旧表的函数"""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    today = datetime.now().date()
+    cutoff_date = today - timedelta(days=deleteDays)
+    inspector = inspect(engine)
+    all_tables = inspector.get_table_names()
+    tables_to_delete = []
+
+    for table_name in all_tables:
+        if table_name.startswith('tab_test_') or table_name.startswith('tab_err_'):
+            try:
+                date_str = table_name.split('_')[-1]
+                if len(date_str) == 8 and date_str.isdigit():
+                    table_date = datetime.strptime(date_str, '%Y%m%d').date()
+                    if table_date < cutoff_date:
+                        tables_to_delete.append(table_name)
+            except ValueError:
+                continue
+
+    if tables_to_delete:
+        print(f"[后台清理] 找到 {len(tables_to_delete)} 个需要删除的表")
+
+        # 第一步：多线程备份所有表
+        print(f"[后台清理] 开始备份...")
+        backup_results = {}
+        def backup_table(table_name):
+            """备份单个表"""
+            try:
+                backup_file = os.path.join(backup_dir, f"{table_name}.sql")
+                dump_cmd = [
+                    'mysqldump',
+                    f'--host={host}',
+                    f'--port={port}',
+                    f'--user={user}',
+                    f'--password={password}',
+                    '--single-transaction',
+                    '--routines',
+                    '--triggers',
+                    dbname,
+                    table_name
+                ]
+
+                with open(backup_file, 'w', encoding='utf-8') as f:
+                    result = subprocess.run(
+                        dump_cmd,
+                        stdout=f,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                        creationflags=subprocess.CREATE_NO_WINDOW
+                    )
+
+                if result.returncode == 0:
+                    return (table_name, True, None)
+                else:
+                    return (table_name, False, result.stderr)
+            except Exception as e:
+                return (table_name, False, str(e))
+
+        # 使用线程池备份
+        max_workers = min(8, os.cpu_count() or 4)
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_table = {executor.submit(backup_table, table_name): table_name for table_name in tables_to_delete}
+            completed = 0
+            for future in as_completed(future_to_table):
+                table_name, success, error = future.result()
+                backup_results[table_name] = success
+                completed += 1
+                if success:
+                    print(f"[后台清理] 备份 [{completed}/{len(tables_to_delete)}]: {table_name}")
+                else:
+                    print(f"[后台清理] 备份失败 [{completed}/{len(tables_to_delete)}]: {table_name} - {error}")
+
+        # 第二步：删除备份成功的表
+        backup_success = [name for name, success in backup_results.items() if success]
+        print(f"[后台清理] 开始删除 {len(backup_success)} 个表...")
+
         session = Session()
         try:
-            print("开始备份表...")
-            for table_name in tables_to_delete:
+            deleted = 0
+            for idx, table_name in enumerate(backup_success, 1):
                 try:
-                    # 使用 mysqldump 备份单个表
-                    backup_file = os.path.join(backup_dir, f"{table_name}.sql")
-                    # 构建 mysqldump 命令
-                    dump_cmd = [
-                        'mysqldump',
-                        f'--host={host}',
-                        f'--port={port}',
-                        f'--user={user}',
-                        f'--password={password}',
-                        '--single-transaction',
-                        '--routines',
-                        '--triggers',
-                        dbname,
-                        table_name
-                    ]
-                    # 执行备份
-                    with open(backup_file, 'w', encoding='utf-8') as f:
-                        result = subprocess.run(dump_cmd, stdout=f, stderr=subprocess.PIPE, text=True)
-                    if result.returncode == 0:
-                        print(f"已备份表: {table_name} -> {backup_file}")
-                    else:
-                        print(f"备份表 {table_name} 失败: {result.stderr}")
-                        continue
-                except Exception as backup_error:
-                    print(f"备份表 {table_name} 时出错: {backup_error}")
-                    continue
-            for table_name in tables_to_delete:
-                drop_sql = text(f"DROP TABLE IF EXISTS `{table_name}`")
-                session.execute(drop_sql)
-                print(f"已删除表: {table_name}")
-            session.commit()
-        except Exception as e:
-            session.rollback()
-            print(f"删除表时出错: {e}")
-        finally:
-            session.close()
-    else:
-        print("删除操作已取消")
-else:
-    print("没有找到需要删除的表")
+                    drop_sql = text(f"DROP TABLE IF EXISTS `{table_name}`")
+                    session.execute(drop_sql)
+                    session.commit()
+                    deleted += 1
+                    print(f"[后台清理] 删除 [{idx}/{len(backup_success)}]: {table_name}")
+                except Exception as e:
+                    print(f"[后台清理] 删除失败: {table_name} - {e}")
+                    session.rollback()
 
+                # 稍微延迟，避免数据库压力过大
+                time.sleep(0.2)
+
+            session.close()
+            print(f"[后台清理] 任务完成 - 备份成功: {len(backup_success)}, 删除成功: {deleted}")
+        except Exception as e:
+            session.close()
+            print(f"[后台清理] 发生错误: {e}")
+    else:
+        print("[后台清理] 没有需要删除的表")
+
+import threading
+clean_thread = threading.Thread(target=clean_old_tables, daemon=True)
+clean_thread.start()
 
 curent_date = datetime.now()
 # curent_date = datetime(2024, 6, 25)
